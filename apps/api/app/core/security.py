@@ -1,19 +1,36 @@
-"""Authentication and Firebase token verification security module."""
+"""Authentication, Firebase token verification, and RBAC permission guards."""
 
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 import firebase_admin
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from firebase_admin import auth as firebase_auth
 from firebase_admin import credentials
 
 from app.core.config import get_settings
+from app.core.di import get_profile_repository
+from app.repositories.interfaces.profile_repository import ProfileRepository
 
 logger = logging.getLogger(__name__)
 
 security_bearer = HTTPBearer(auto_error=False)
+
+
+@dataclass(frozen=True)
+class CurrentUser:
+    """Authenticated caller context with resolved database profile & RBAC permissions."""
+
+    id: str
+    email: str
+    role: str
+    permissions: set[str]
+    display_name: str | None = None
+    avatar_url: str | None = None
+    phone: str | None = None
+    is_active: bool = True
 
 
 def get_firebase_app():
@@ -29,7 +46,6 @@ def get_firebase_app():
         except Exception as exc:
             logger.warning("Failed to load Firebase service account certificate: %s", exc)
 
-    # Fallback to default credentials or mock
     try:
         return firebase_admin.initialize_app()
     except Exception as exc:
@@ -37,28 +53,29 @@ def get_firebase_app():
         return None
 
 
-def verify_firebase_token(id_token: str) -> dict[str, Any]:
-    """
-    Verify Firebase ID token and return claims dictionary.
-
-    Supports test bypass in debug/testing mode for synthetic tokens.
-    """
+def _handle_test_token(token: str) -> dict[str, Any] | None:
+    """Extract synthetic claims for test tokens in non-production test suites."""
     settings = get_settings()
-
-    # Test/Debug bypass for mock tokens in automated test environments
-    if (settings.debug or not id_token.startswith("ey")) and id_token.startswith("test_token_"):
-        uid = id_token.replace("test_token_", "")
+    if (settings.debug or not token.startswith("ey")) and token.startswith("test_token_"):
+        uid = token.replace("test_token_", "")
         return {
             "uid": uid,
             "email": f"{uid}@example.com",
             "name": f"Test User {uid}",
             "picture": None,
         }
+    return None
+
+
+def verify_id_token(id_token: str) -> dict[str, Any]:
+    """Verify Firebase ID token and return claims dictionary."""
+    mock_claims = _handle_test_token(id_token)
+    if mock_claims:
+        return mock_claims
 
     get_firebase_app()
     try:
-        decoded_token = firebase_auth.verify_id_token(id_token)
-        return decoded_token
+        return firebase_auth.verify_id_token(id_token)
     except Exception as exc:
         logger.warning("Firebase ID token verification failed: %s", exc)
         raise HTTPException(
@@ -68,14 +85,126 @@ def verify_firebase_token(id_token: str) -> dict[str, Any]:
         ) from exc
 
 
-def get_current_user_claims(
-    creds: HTTPAuthorizationCredentials | None = Depends(security_bearer),
-) -> dict[str, Any]:
-    """FastAPI dependency resolving verified Firebase auth claims from Bearer token."""
-    if not creds or not creds.credentials:
+def verify_session_cookie(session_cookie: str, check_revoked: bool = False) -> dict[str, Any]:
+    """Verify Firebase session cookie and return claims dictionary."""
+    mock_claims = _handle_test_token(session_cookie)
+    if mock_claims:
+        return mock_claims
+
+    get_firebase_app()
+    try:
+        return firebase_auth.verify_session_cookie(session_cookie, check_revoked=check_revoked)
+    except Exception as exc:
+        logger.warning("Firebase session cookie verification failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing Authorization header with Bearer token",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Invalid or expired session cookie",
+        ) from exc
+
+
+def extract_raw_auth_token(
+    request: Request,
+    creds: HTTPAuthorizationCredentials | None = Depends(security_bearer),
+) -> tuple[str, str]:
+    """
+    Extract raw token string and source type from HTTP Bearer header or session cookie.
+
+    Returns tuple of (token_string, 'bearer' | 'cookie').
+    """
+    if creds and creds.credentials:
+        return creds.credentials, "bearer"
+
+    session_cookie = request.cookies.get("session") or request.cookies.get("__session")
+    if session_cookie:
+        return session_cookie, "cookie"
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Missing authentication credentials (bearer token or session cookie required)",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def get_current_user_claims(
+    auth_info: tuple[str, str] = Depends(extract_raw_auth_token),
+) -> dict[str, Any]:
+    """FastAPI dependency returning decoded Firebase claims dictionary."""
+    token, token_type = auth_info
+    if token_type == "cookie":
+        return verify_session_cookie(token)
+    return verify_id_token(token)
+
+
+def get_current_user(
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    profile_repo: ProfileRepository = Depends(get_profile_repository),
+) -> CurrentUser:
+    """
+    FastAPI dependency resolving database profile & permissions for the authenticated caller.
+
+    Validates that:
+    1. Firebase token is valid.
+    2. Profile exists in database.
+    3. User account is active.
+    4. Loads full permission code set from role_permissions.
+    """
+    uid = claims["uid"]
+    profile = profile_repo.get_by_id(uid)
+
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User profile not registered. Please bootstrap account.",
         )
-    return verify_firebase_token(creds.credentials)
+
+    if not profile.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive. Contact administrator.",
+        )
+
+    permissions_list = profile_repo.get_role_permissions(profile.role_id)
+    role_name = profile.role.name if profile.role else "Unknown"
+
+    return CurrentUser(
+        id=profile.id,
+        email=profile.email,
+        role=role_name,
+        permissions=set(permissions_list),
+        display_name=profile.display_name,
+        avatar_url=profile.avatar_url,
+        phone=profile.phone,
+        is_active=profile.is_active,
+    )
+
+
+def require_permission(permission_code: str):
+    """FastAPI dependency factory enforcing that caller holds a specific permission code."""
+
+    def _permission_guard(
+        current_user: CurrentUser = Depends(get_current_user),
+    ) -> CurrentUser:
+        if permission_code not in current_user.permissions:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Missing required permission: {permission_code}",
+            )
+        return current_user
+
+    return _permission_guard
+
+
+def require_role(role_name: str):
+    """FastAPI dependency factory enforcing a specific role name (convenience wrapper)."""
+
+    def _role_guard(
+        current_user: CurrentUser = Depends(get_current_user),
+    ) -> CurrentUser:
+        if current_user.role != role_name:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Requires role: {role_name}",
+            )
+        return current_user
+
+    return _role_guard

@@ -12,7 +12,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.seed import (
+from scripts.seed import (  # noqa: E402
     get_or_create_category,
     get_or_create_permission,
     get_or_create_role,
@@ -25,8 +25,8 @@ from scripts.seed import (
     upsert_supplier,
 )
 
-from app.db.base import Base
-from app.models import (
+from app.db.base import Base  # noqa: E402
+from app.models import (  # noqa: E402
     Product,
     Role,
     StockBatch,

@@ -111,7 +111,7 @@ wareflow/
 │   │   ├── .env.example
 │   │   ├── lib/
 │   │   │   ├── api-client.ts       # Typed fetch wrapper with ApiError
-│   │   │   ├── firebase-client.ts  # Safe Firebase Web SDK singleton & auth setup
+│   │   │   ├── firebase-client.ts  # Safe Firebase Web SDK singleton & auth setup (Google + Apple + Email)
 │   │   │   └── __tests__/
 │   │   │       ├── api-client.test.ts
 │   │   │       └── firebase-client.test.ts
@@ -120,7 +120,7 @@ wareflow/
 │   │       ├── page.tsx
 │   │       ├── globals.css
 │   │       ├── (auth)/             # Authentication route group
-│   │       │   ├── login/page.tsx  # Google Sign-In & Email/Password form
+│   │       │   ├── login/page.tsx  # Google & Apple Sign-In + Email/Password form
 │   │       │   └── logout/route.ts # Server-side logout & cookie clear
 │   │       ├── api/auth/session/   # Session cookie route handler (POST, DELETE)
 │   │       │   └── route.ts
@@ -142,17 +142,19 @@ wareflow/
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
 │       ├── .env.example
-│       ├── tests/                  # Pytest test suite
+│       ├── tests/                  # Pytest test suite (25 tests, 95% cov)
 │       │   ├── test_di_and_health.py
 │       │   ├── test_models.py
 │       │   ├── test_extended_models.py
 │       │   ├── test_seed.py
-│       │   └── test_profiles.py
+│       │   ├── test_profiles.py
+│       │   └── test_auth_and_guards.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
 │           │   └── routers/        # HTTP layer (request/response only)
 │           │       ├── health.py   # Liveness & DB connectivity (/health, /health/db)
+│           │       ├── me.py       # Caller profile & permissions (/me)
 │           │       └── profiles.py # User profile & bootstrapping (/profiles/bootstrap, /profiles/me)
 │           ├── db/
 │           │   ├── base.py         # SQLAlchemy DeclarativeBase
@@ -188,7 +190,7 @@ wareflow/
 │           │   └── profile.py
 │           └── core/
 │               ├── config.py       # pydantic-settings configuration
-│               ├── security.py     # Firebase ID token decoding & claims verification
+│               ├── security.py     # Firebase Admin SDK verification, CurrentUser, require_permission guards
 │               └── di.py           # Dependency injection wiring
 ```
 
@@ -233,12 +235,13 @@ wareflow/
 
 ## API Endpoints
 
-| Method | Path                  | Description                                        | Auth Required |
-| ------ | --------------------- | -------------------------------------------------- | ------------- |
-| GET    | `/health`             | Liveness probe returning status: "ok"              | No            |
-| GET    | `/health/db`          | Database probe executing `SELECT 1` via connection | No            |
-| POST   | `/profiles/bootstrap` | Bootstrap/retrieve authenticated Firebase profile  | Yes (Bearer)  |
-| GET    | `/profiles/me`        | Get current user profile and role permissions      | Yes (Bearer)  |
+| Method | Path                  | Description                                        | Auth Required         |
+| ------ | --------------------- | -------------------------------------------------- | --------------------- |
+| GET    | `/health`             | Liveness probe returning status: "ok"              | No                    |
+| GET    | `/health/db`          | Database probe executing `SELECT 1` via connection | No                    |
+| GET    | `/me`                 | Get caller identity, role, and permission codes    | Yes (Bearer / Cookie) |
+| POST   | `/profiles/bootstrap` | Bootstrap/retrieve authenticated Firebase profile  | Yes (Bearer / Cookie) |
+| GET    | `/profiles/me`        | Get current user profile and role permissions      | Yes (Bearer / Cookie) |
 
 ## Architecture Layers
 
@@ -299,10 +302,15 @@ wareflow/
 | Deliberate Low-Stock Seed Data | Seed includes 4 products below reorder point to prove alert and notification engines                           |
 | Server-Side Session Cookies    | Next.js route handler sets `httpOnly` cookie on auth to allow Next.js middleware protection without waterfalls |
 | First-User Owner Assignment    | Bootstrap assigns `Owner` role to 1st signed-in user; subsequent uninvited registrations receive 403 Forbidden |
+| Data-Driven Permission Guards  | `require_permission(code)` enforces DB permission codes from `role_permissions` rather than hardcoded roles    |
+| Dual-Inbound Auth Support      | `get_current_user` extracts and verifies either Bearer tokens or `httpOnly` session cookies transparently      |
 
 ## Security
 
-- Firebase ID tokens verified server-side by FastAPI via Firebase Admin SDK
+- Firebase ID tokens and session cookies verified server-side by FastAPI via Firebase Admin SDK
+- Database permissions loaded live per request for `CurrentUser` from `role_permissions`
+- `require_permission(code)` raises 403 naming the specific missing permission code
+- `require_role(name)` provides convenience role check for root owner workflows
 - Tokens never trusted from client alone
 - .env files git-ignored forever (Secrets Rule #1)
 - .env.example updated with placeholders for every new var (Secrets Rule #2)

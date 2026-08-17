@@ -10,6 +10,7 @@ import {
   browserLocalPersistence,
   getAuth,
   GoogleAuthProvider,
+  OAuthProvider,
   setPersistence,
   type Auth,
 } from "firebase/auth";
@@ -41,3 +42,8 @@ export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: "select_account",
 });
+
+// Configure Apple Provider
+export const appleProvider = new OAuthProvider("apple.com");
+appleProvider.addScope("email");
+appleProvider.addScope("name");

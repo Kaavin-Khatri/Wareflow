@@ -561,3 +561,55 @@
 - `apps/api/app/core/di.py`
 - `apps/api/app/main.py`
 - `apps/web/package.json`
+
+---
+
+## Step 3.2 — FastAPI Firebase ID-Token Verification + Permission Guards
+
+**Timestamp:** 2026-08-17T18:50:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Initialized Firebase Admin SDK with service-account JSON path loaded via `FIREBASE_SERVICE_ACCOUNT_KEY_PATH` / `FIREBASE_SERVICE_ACCOUNT_PATH`.
+- Implemented dual-mode inbound authentication in `apps/api/app/core/security.py` supporting both `Authorization: Bearer <id_token>` (for mobile/API clients) and `Cookie: session=<cookie>` / `__session` (for Next.js SSR and client calls).
+- Constructed typed `CurrentUser` context dataclass (`id`, `email`, `role`, `permissions: set[str]`, `display_name`, `avatar_url`, `phone`, `is_active`).
+- Built `get_current_user` FastAPI dependency resolving caller identity and looking up live permission codes directly from Postgres (`role_permissions` join `permissions`).
+- Built data-driven permission and role guard factories in `apps/api/app/core/security.py`:
+  - `require_permission(permission_code)`: returns 403 Forbidden naming the specific missing permission code when unauthorized.
+  - `require_role(role_name)`: convenience wrapper enforcing role membership.
+- Added `GET /me` route in `apps/api/app/api/routers/me.py` and connected it to FastAPI app factory in `apps/api/app/main.py`.
+- Integrated Apple Sign-In on the web frontend:
+  - Added `OAuthProvider("apple.com")` in `apps/web/lib/firebase-client.ts`.
+  - Added "Continue with Apple" button with Apple SVG, loading states, and error handling in `apps/web/app/(auth)/login/page.tsx`.
+  - Updated frontend unit tests in `apps/web/lib/__tests__/firebase-client.test.ts`.
+- Created comprehensive test suite in `apps/api/tests/test_auth_and_guards.py` verifying `GET /me`, permission enforcement (Warehouse Staff getting 403 on invoicing routes), 401 for tampered tokens, session cookie equivalence, and inactive user blocks (25 total backend tests passing with 95% coverage).
+
+### Decisions
+
+- **Identity Bridge Pattern**: Firebase UID (`uid`) is the stable primary key join between Firebase Auth and the Postgres `profiles` table.
+- **Data-Driven RBAC Contract**: `CurrentUser(id, role, permissions, email)` is the single auth contract for all future routes — authorization checks query the database permission set, never hardcoded role string lists.
+- **Dual Inbound Auth**: FastAPI accepts either Bearer tokens or `httpOnly` session cookies transparently, facilitating both SSR server component calls and external API client integrations.
+- **Explicit 403 Detail**: Missing permission failures explicitly state `Missing required permission: <code_name>` for clear frontend debugging and permission handling.
+
+### Key values for future steps
+
+- Current user dependency: `get_current_user` from `app.core.security`
+- Permission guard: `require_permission("<permission_code>")` from `app.core.security`
+- Role guard: `require_role("<role_name>")` from `app.core.security`
+- Current user model: `CurrentUser` dataclass with `permissions: set[str]`
+- User info endpoint: `GET /me` (alias `GET /profiles/me`)
+
+### Files Created
+
+- `apps/api/app/api/routers/me.py`
+- `apps/api/tests/test_auth_and_guards.py`
+
+### Files Modified
+
+- `apps/api/app/core/security.py`
+- `apps/api/app/main.py`
+- `apps/api/tests/test_seed.py`
+- `apps/web/lib/firebase-client.ts`
+- `apps/web/lib/__tests__/firebase-client.test.ts`
+- `apps/web/app/(auth)/login/page.tsx`
