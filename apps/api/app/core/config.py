@@ -1,5 +1,9 @@
 """Application configuration — loaded from environment variables via pydantic-settings."""
 
+import json
+from functools import lru_cache
+
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -9,6 +13,7 @@ class Settings(BaseSettings):
     # App
     app_name: str = "WareFlow API"
     debug: bool = False
+    allowed_origins: list[str] = ["http://localhost:3000"]
 
     # Supabase / Postgres
     database_url: str = ""
@@ -25,9 +30,21 @@ class Settings(BaseSettings):
     # Groq
     groq_api_key: str = ""
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, value: str | list[str]) -> list[str]:
+        """Support comma-separated strings or JSON arrays in env vars."""
+        if isinstance(value, str):
+            value = value.strip()
+            if value.startswith("[") and value.endswith("]"):
+                return json.loads(value)
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
+@lru_cache
 def get_settings() -> Settings:
     """Factory function for dependency injection of settings."""
     return Settings()

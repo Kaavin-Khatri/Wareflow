@@ -62,6 +62,7 @@
 | Variable                            | Description                       | Public?     |
 | ----------------------------------- | --------------------------------- | ----------- |
 | `DEBUG`                             | Enable debug mode                 | No          |
+| `ALLOWED_ORIGINS`                   | CORS allowed origins list/csv     | No          |
 | `DATABASE_URL`                      | Supabase pooler connection string | No (secret) |
 | `DIRECT_DATABASE_URL`               | Supabase direct connection string | No (secret) |
 | `SUPABASE_URL`                      | Supabase project URL              | No          |
@@ -91,24 +92,33 @@ wareflow/
 │   │   ├── postcss.config.mjs
 │   │   ├── eslint.config.mjs       # ESLint + eslint-config-prettier
 │   │   ├── .env.example
+│   │   ├── lib/
+│   │   │   └── api-client.ts       # Typed fetch wrapper with ApiError
 │   │   └── app/                    # App Router pages
 │   │       ├── layout.tsx
 │   │       ├── page.tsx
-│   │       └── globals.css
+│   │       ├── globals.css
+│   │       └── debug/              # Temporary handshake probe
+│   │           └── page.tsx
 │   └── api/                        # FastAPI backend (:8000)
 │       ├── requirements.txt
 │       ├── requirements-dev.txt    # ruff, pytest, httpx
 │       ├── pyproject.toml          # ruff config (line-length 100, py311)
 │       ├── .env.example
+│       ├── tests/                  # Pytest test suite
+│       │   └── test_di_and_health.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
 │           │   └── routers/        # HTTP layer (request/response only)
 │           │       └── health.py
 │           ├── services/           # Business logic (depends on abstractions)
+│           │   └── product_service.py
 │           ├── repositories/
 │           │   ├── interfaces/     # Protocol/ABC contracts
-│           │   └── impl/           # SQLAlchemy implementations
+│           │   │   └── product_repository.py
+│           │   └── impl/           # Concrete implementations
+│           │       └── product_repository.py
 │           ├── schemas/            # Pydantic request/response models
 │           └── core/
 │               ├── config.py       # pydantic-settings configuration
@@ -121,9 +131,9 @@ wareflow/
 
 ## API Endpoints
 
-| Method | Path      | Description    | Auth Required |
-| ------ | --------- | -------------- | ------------- |
-| GET    | `/health` | Liveness probe | No            |
+| Method | Path      | Description                           | Auth Required |
+| ------ | --------- | ------------------------------------- | ------------- |
+| GET    | `/health` | Liveness probe returning status: "ok" | No            |
 
 ## Architecture Layers
 
@@ -142,7 +152,7 @@ wareflow/
 │  ↑ implemented by                                 │
 ├──────────────────────────────────────────────────┤
 │  Repository Impls (app/repositories/impl/)         │
-│  Concrete data access (SQLAlchemy, etc.)           │
+│  Concrete data access (SQLAlchemy, InMemory, etc.) │
 │  Wired via core/di.py                              │
 ├──────────────────────────────────────────────────┤
 │  Schemas (app/schemas/)                            │
@@ -154,6 +164,25 @@ wareflow/
 ```
 
 **Rule:** Routers NEVER import repositories directly. Only services.
+
+### Worked Dependency Inversion Pattern:
+
+```python
+# 1. Interface (Abstraction)
+class ProductRepositoryInterface(Protocol):
+    def get_by_id(self, product_id: str) -> dict | None: ...
+
+# 2. Service (Depends only on Abstraction)
+class ProductService:
+    def __init__(self, repository: ProductRepositoryInterface) -> None:
+        self._repo = repository
+
+# 3. DI Container (Wired via FastAPI Depends)
+def get_product_service(
+    repo: ProductRepositoryInterface = Depends(get_product_repository)
+) -> ProductService:
+    return ProductService(repository=repo)
+```
 
 ## Decisions
 
@@ -168,6 +197,8 @@ wareflow/
 | Ruff (api)             | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N |
 | eslint-config-prettier | Disables ESLint rules that conflict with Prettier                        |
 | Local PG on 5433       | Avoid conflicts with system Postgres; Supabase stays primary             |
+| Typed API Client       | Type-safe fetch wrapper with ApiError extracting status & server message |
+| DIP Container          | Services receive repository Protocol interfaces via FastAPI Depends()    |
 
 ## Security
 
@@ -175,7 +206,7 @@ wareflow/
 - Tokens never trusted from client alone
 - .env files git-ignored forever (Secrets Rule #1)
 - .env.example updated with placeholders for every new var (Secrets Rule #2)
-- CORS restricted to localhost:3000 in development
+- CORS restricted to allowed origins loaded dynamically from `ALLOWED_ORIGINS` settings
 
 ## Known Issues
 

@@ -12,19 +12,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routers import health
+from app.core.config import get_settings
 
 
 def create_app() -> FastAPI:
     """Application factory — assembles the FastAPI app with middleware and routers."""
+    settings = get_settings()
+
     application = FastAPI(
-        title="WareFlow API",
+        title=settings.app_name,
         version="0.1.0",
         description="AI-assisted wholesale inventory management API",
     )
 
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000"],
+        allow_origins=settings.allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

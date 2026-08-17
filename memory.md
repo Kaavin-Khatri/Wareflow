@@ -210,3 +210,49 @@
 
 - package.json (format scripts)
 - apps/web/eslint.config.mjs (prettier integration)
+
+---
+
+## Step 1.3 — Typed API Client, DI Container & CORS Handshake
+
+**Timestamp:** 2026-08-17T17:25:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Implemented dependency injection container (`app/core/di.py`) wiring FastAPI `Depends()` factories
+- Created `ProductRepositoryInterface` protocol and decoupled `ProductService` for concrete DIP demonstration
+- Automated tests verifying DIP swappability (swapping repo implementation requires zero service code changes)
+- Configured dynamic `CORSMiddleware` reading `ALLOWED_ORIGINS` from `pydantic-settings`
+- Created typed API client in `apps/web/lib/api-client.ts` with custom `ApiError` class
+- Created temporary probe page `apps/web/app/debug/page.tsx` testing live `/health` status and `ApiError` contract
+- Successfully verified web-to-api handshake with live 200 responses
+
+### Decisions
+
+- DI pattern locked: services depend on Protocol interfaces, never on SQLAlchemy classes directly
+- Swapping a repository implementation in `di.py` requires touching zero service code (DIP proof verified in tests)
+- `ALLOWED_ORIGINS` supports comma-separated strings or JSON arrays in env vars
+- `NEXT_PUBLIC_API_URL` defaults to `http://localhost:8000` for local dev ergonomics
+
+### Key values for future steps
+
+- DI factory convention: `def get_<domain>_service(repo: <Domain>RepositoryInterface = Depends(get_<domain>_repository)) -> <Domain>Service`
+- Frontend API helper: `apiClient.get<T>()`, `apiClient.post<T>()`, throwing typed `ApiError`
+
+### Files Created
+
+- `apps/api/app/repositories/interfaces/product_repository.py`
+- `apps/api/app/repositories/impl/product_repository.py`
+- `apps/api/app/services/product_service.py`
+- `apps/api/tests/test_di_and_health.py`
+- `apps/web/lib/api-client.ts`
+- `apps/web/app/debug/page.tsx`
+
+### Files Modified
+
+- `apps/api/app/core/config.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/api/pyproject.toml`
+- `apps/api/.env.example`

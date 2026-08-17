@@ -21,6 +21,7 @@ select = [
 ]
 ignore = [
     "E501",  # line too long — handled by formatter
+    "B008",  # do not perform function calls in argument defaults (standard for FastAPI Depends)
 ]
 
 [tool.ruff.lint.isort]
@@ -33,4 +34,5 @@ line-ending = "auto"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 asyncio_mode = "auto"
