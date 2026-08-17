@@ -20,6 +20,7 @@ from app.repositories.interfaces.profile_repository import ProfileRepository
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
 from app.services.staff_service import StaffService
+from app.services.two_factor_service import TwoFactorService
 
 
 @lru_cache
@@ -62,3 +63,10 @@ def get_staff_service(
 ) -> StaffService:
     """Factory for StaffService."""
     return StaffService(profile_repo=repo)
+
+
+def get_two_factor_service(
+    repo: ProfileRepository = Depends(get_profile_repository),
+) -> TwoFactorService:
+    """Factory for TwoFactorService."""
+    return TwoFactorService(profile_repo=repo)

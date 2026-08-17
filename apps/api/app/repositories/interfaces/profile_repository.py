@@ -60,3 +60,19 @@ class ProfileRepository(Protocol):
     def update_role_permissions(self, role_id: str, permission_codes: list[str]) -> list[str]:
         """Sync granted permissions for a role by permission codes."""
         ...
+
+    def update_two_factor(
+        self,
+        profile_id: str,
+        totp_secret_encrypted: str | None,
+        totp_enabled: bool,
+        backup_codes_encrypted: str | None,
+    ) -> Profile | None:
+        """Update 2FA credentials and activation state for a profile."""
+        ...
+
+    def update_backup_codes(
+        self, profile_id: str, backup_codes_encrypted: str | None
+    ) -> Profile | None:
+        """Update remaining encrypted backup codes list for a profile."""
+        ...

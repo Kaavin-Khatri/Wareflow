@@ -26,6 +26,12 @@ class Profile(Base):
         String(36), ForeignKey("roles.id", ondelete="RESTRICT"), nullable=False, index=True
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    totp_secret_encrypted: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    totp_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    backup_codes_encrypted: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    totp_enrolled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -24,7 +24,7 @@ function LoginForm() {
   const [isAppleLoading, setIsAppleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const syncSessionAndBootstrap = async (idToken: string) => {
+  const syncSessionAndBootstrap = async (idToken: string): Promise<boolean> => {
     // 1. Establish httpOnly session cookie
     await fetch("/api/auth/session", {
       method: "POST",
@@ -53,6 +53,23 @@ function LoginForm() {
       }
       console.warn("Backend bootstrap warning:", err);
     }
+
+    // 3. Check 2FA status
+    try {
+      const statusRes = await fetch(`${apiUrl}/auth/2fa/status`, {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (statusRes.ok) {
+        const statusData = await statusRes.json();
+        if (statusData.is_enabled) {
+          return true;
+        }
+      }
+    } catch (err) {
+      console.warn("2FA status check warning:", err);
+    }
+
+    return false;
   };
 
   const handleGoogleSignIn = async () => {
@@ -61,8 +78,12 @@ function LoginForm() {
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const idToken = await userCredential.user.getIdToken();
-      await syncSessionAndBootstrap(idToken);
-      router.push(from);
+      const requires2FA = await syncSessionAndBootstrap(idToken);
+      if (requires2FA) {
+        router.push(`/login/2fa?from=${encodeURIComponent(from)}`);
+      } else {
+        router.push(from);
+      }
       router.refresh();
     } catch (err: unknown) {
       const authErr = err as AuthError;
@@ -86,8 +107,12 @@ function LoginForm() {
     try {
       const userCredential = await signInWithPopup(auth, appleProvider);
       const idToken = await userCredential.user.getIdToken();
-      await syncSessionAndBootstrap(idToken);
-      router.push(from);
+      const requires2FA = await syncSessionAndBootstrap(idToken);
+      if (requires2FA) {
+        router.push(`/login/2fa?from=${encodeURIComponent(from)}`);
+      } else {
+        router.push(from);
+      }
       router.refresh();
     } catch (err: unknown) {
       const authErr = err as AuthError;
@@ -124,8 +149,12 @@ function LoginForm() {
       }
 
       const idToken = await userCredential.user.getIdToken();
-      await syncSessionAndBootstrap(idToken);
-      router.push(from);
+      const requires2FA = await syncSessionAndBootstrap(idToken);
+      if (requires2FA) {
+        router.push(`/login/2fa?from=${encodeURIComponent(from)}`);
+      } else {
+        router.push(from);
+      }
       router.refresh();
     } catch (err: unknown) {
       const authErr = err as AuthError;

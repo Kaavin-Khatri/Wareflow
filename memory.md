@@ -685,3 +685,75 @@
 - `scripts/seed.py`
 - `apps/web/middleware.ts`
 - `apps/web/app/dashboard/page.tsx`
+
+---
+
+## Step 3.4 — TOTP Two-Factor Authentication (Owner/Admin/Accountant)
+
+**Timestamp:** 2026-08-17T19:35:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Implemented RFC 6238 Time-based One-Time Password (TOTP) two-factor authentication in FastAPI using `pyotp`, `qrcode`, and `cryptography`:
+  - `POST /auth/2fa/enroll`: Generates random base32 TOTP secret, provisioning URI, scannable PNG QR code (base64 Data URL), and 10 single-use recovery backup codes. Encrypts secret and codes at rest.
+  - `POST /auth/2fa/verify-enrollment`: Confirms the first 6-digit TOTP code before activating 2FA on the user's profile (`totp_enabled = True`).
+  - `POST /auth/2fa/verify`: Validates 6-digit TOTP codes or single-use recovery backup codes during login challenges. Reused backup codes are strictly rejected.
+  - `POST /auth/2fa/disable`: Disables 2FA upon valid TOTP verification and clears stored secrets.
+  - `GET /auth/2fa/status`: Returns current 2FA status, requirement policy, and remaining active backup code count.
+  - `POST /auth/2fa/regenerate-backup-codes`: Generates 10 fresh recovery backup codes after verifying live TOTP.
+- 2FA Policy & Route Guard Enforcement:
+  - 2FA is mandatory for financial and administrative roles (`Owner`, `Manager`, `Accountant`) and routes touching sensitive permissions.
+  - Warehouse Staff and Sales Staff are exempt by default for rapid shop-floor operations.
+  - Enforced via `require_2fa_if_enrolled` and sensitive permission checks in `app.core.security`.
+- Built frontend 2FA user flows and security dashboard in Next.js:
+  - `apps/web/app/(auth)/login/2fa/page.tsx`: Glassmorphic 6-digit PIN input with automatic focus, numeric paste support, backup code recovery fallback, and countdown/resubmit.
+  - `apps/web/app/(auth)/login/page.tsx`: Checks 2FA status after Firebase primary sign-in and routes 2FA-enabled accounts directly to `/login/2fa`.
+  - `apps/web/app/admin/settings/security/page.tsx`: 2FA management console with status badge, QR code setup wizard, downloadable `.txt` backup codes, remaining codes counter, and regeneration/disable modals.
+  - `apps/web/app/api/auth/session/route.ts`: Added `PATCH` handler establishing verified 2FA session cookies.
+  - `apps/web/lib/nav.ts`: Added "Security & 2FA" navigation link under Organization & Admin.
+- Created automated test suites in `apps/api/tests/test_2fa.py` validating enrollment, verification, single-use backup code consumption, sensitive route protection, and operational staff exemption (all 43 monorepo tests passing with 94% backend coverage).
+
+### Decisions
+
+- **In-House TOTP over Paid Firebase SMS MFA**: Free-tier RFC 6238 TOTP with Google Authenticator / Authy compatibility avoids paid Firebase Blaze plan SMS fees.
+- **Symmetric Secret Encryption at Rest**: `totp_secret_encrypted` and `backup_codes_encrypted` are encrypted using Fernet (AES-128-CBC + HMAC-SHA256) with keys derived deterministically from application secrets.
+- **Single-Use Atomic Backup Code Consumption**: Each backup code is removed from the encrypted array upon first successful verification, preventing replay attacks.
+- **Operational Staff Exemption**: Floor staff are exempt by default from 2FA to prevent operational delays during high-speed barcode scanning and order packing.
+
+### Key values for future steps
+
+- 2FA Enroll API: `POST /auth/2fa/enroll`
+- 2FA Verify Enrollment API: `POST /auth/2fa/verify-enrollment`
+- 2FA Challenge Verify API: `POST /auth/2fa/verify`
+- 2FA Status API: `GET /auth/2fa/status`
+- 2FA Guard dependency: `require_2fa_if_enrolled` from `app.core.security`
+- Web 2FA Login Challenge: `/login/2fa`
+- Web Security Settings: `/admin/settings/security`
+
+### Files Created
+
+- `apps/api/alembic/versions/0005_two_factor_auth.py`
+- `apps/api/app/core/crypto.py`
+- `apps/api/app/schemas/two_factor.py`
+- `apps/api/app/services/two_factor_service.py`
+- `apps/api/app/api/routers/two_factor.py`
+- `apps/api/tests/test_2fa.py`
+- `apps/web/app/(auth)/login/2fa/page.tsx`
+- `apps/web/app/admin/settings/security/page.tsx`
+
+### Files Modified
+
+- `apps/api/requirements.txt`
+- `apps/api/.env.example`
+- `apps/api/app/core/config.py`
+- `apps/api/app/core/security.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/api/app/models/profile.py`
+- `apps/api/app/repositories/interfaces/profile_repository.py`
+- `apps/api/app/repositories/impl/profile_repository.py`
+- `apps/web/app/(auth)/login/page.tsx`
+- `apps/web/app/api/auth/session/route.ts`
+- `apps/web/middleware.ts`
+- `apps/web/lib/nav.ts`

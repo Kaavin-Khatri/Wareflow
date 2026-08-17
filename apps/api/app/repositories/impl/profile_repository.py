@@ -1,4 +1,4 @@
-"""SQLAlchemy concrete implementation of ProfileRepository."""
+from datetime import UTC, datetime
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, joinedload
@@ -105,3 +105,32 @@ class SqlAlchemyProfileRepository:
 
         self._session.commit()
         return self.get_role_permissions(role_id)
+
+    def update_two_factor(
+        self,
+        profile_id: str,
+        totp_secret_encrypted: str | None,
+        totp_enabled: bool,
+        backup_codes_encrypted: str | None,
+    ) -> Profile | None:
+        profile = self.get_by_id(profile_id)
+        if not profile:
+            return None
+        profile.totp_secret_encrypted = totp_secret_encrypted
+        profile.totp_enabled = totp_enabled
+        profile.backup_codes_encrypted = backup_codes_encrypted
+        profile.totp_enrolled_at = datetime.now(UTC) if totp_enabled else None
+        self._session.commit()
+        self._session.refresh(profile)
+        return profile
+
+    def update_backup_codes(
+        self, profile_id: str, backup_codes_encrypted: str | None
+    ) -> Profile | None:
+        profile = self.get_by_id(profile_id)
+        if not profile:
+            return None
+        profile.backup_codes_encrypted = backup_codes_encrypted
+        self._session.commit()
+        self._session.refresh(profile)
+        return profile

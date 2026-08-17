@@ -11,7 +11,7 @@ Repositories implement data-access contracts defined by interfaces.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routers import health, me, profiles, roles, staff
+from app.api.routers import health, me, profiles, roles, staff, two_factor
 from app.core.config import get_settings
 
 
@@ -38,6 +38,7 @@ def create_app() -> FastAPI:
     application.include_router(profiles.router)
     application.include_router(staff.router)
     application.include_router(roles.router)
+    application.include_router(two_factor.router)
 
     return application
 

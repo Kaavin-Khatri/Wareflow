@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     # Groq
     groq_api_key: str = ""
 
+    # Security & 2FA
+    totp_encryption_key: str = ""
+
     @field_validator("allowed_origins", mode="after")
     @classmethod
     def parse_allowed_origins(cls, value: str | list[str]) -> list[str]:

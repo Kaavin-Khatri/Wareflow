@@ -75,6 +75,12 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         requiredPermission: "settings:manage",
       },
       {
+        name: "Security & 2FA",
+        href: "/admin/settings/security",
+        icon: "KeyRound",
+        requiredPermission: "settings:manage",
+      },
+      {
         name: "Audit Log",
         href: "/admin/audit",
         icon: "History",

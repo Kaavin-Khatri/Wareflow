@@ -30,6 +30,9 @@ class CurrentUser:
     avatar_url: str | None = None
     phone: str | None = None
     is_active: bool = True
+    is_2fa_enabled: bool = False
+    is_2fa_required: bool = False
+    is_2fa_verified: bool = False
 
 
 def _handle_test_token(token: str) -> dict[str, Any] | None:
@@ -115,6 +118,7 @@ def get_current_user_claims(
 
 
 def get_current_user(
+    request: Request,
     claims: dict[str, Any] = Depends(get_current_user_claims),
     profile_repo: ProfileRepository = Depends(get_profile_repository),
 ) -> CurrentUser:
@@ -126,6 +130,7 @@ def get_current_user(
     2. Profile exists in database.
     3. User account is active.
     4. Loads full permission code set from role_permissions.
+    5. Resolves 2FA enrollment and verification status.
     """
     uid = claims["uid"]
     profile = profile_repo.get_by_id(uid)
@@ -145,6 +150,22 @@ def get_current_user(
     permissions_list = profile_repo.get_role_permissions(profile.role_id)
     role_name = profile.role.name if profile.role else "Unknown"
 
+    # Check 2FA requirement policy (financial / owner roles require 2FA)
+    required_roles = {"Owner", "Manager", "Accountant"}
+    is_2fa_required = role_name in required_roles
+    is_2fa_enabled = bool(profile.totp_enabled)
+
+    # 2FA verification check: if enabled, check header, cookie, or claims
+    two_fa_verified = False
+    if not is_2fa_enabled:
+        two_fa_verified = True
+    else:
+        header_val = request.headers.get("X-2FA-Verified")
+        cookie_val = request.cookies.get("wareflow_2fa_verified")
+        claims_val = claims.get("2fa_verified") or claims.get("is_2fa_verified")
+        if header_val == "true" or cookie_val == "true" or bool(claims_val):
+            two_fa_verified = True
+
     return CurrentUser(
         id=profile.id,
         email=profile.email,
@@ -154,7 +175,22 @@ def get_current_user(
         avatar_url=profile.avatar_url,
         phone=profile.phone,
         is_active=profile.is_active,
+        is_2fa_enabled=is_2fa_enabled,
+        is_2fa_required=is_2fa_required,
+        is_2fa_verified=two_fa_verified,
     )
+
+
+def require_2fa_if_enrolled(
+    current_user: CurrentUser = Depends(get_current_user),
+) -> CurrentUser:
+    """FastAPI dependency enforcing that 2FA verification is passed if enabled on this account."""
+    if current_user.is_2fa_enabled and not current_user.is_2fa_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Two-factor authentication required. Complete TOTP verification.",
+        )
+    return current_user
 
 
 def require_permission(permission_code: str):
@@ -167,6 +203,11 @@ def require_permission(permission_code: str):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Missing required permission: {permission_code}",
+            )
+        if current_user.is_2fa_enabled and not current_user.is_2fa_verified:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Two-factor authentication required for sensitive operations.",
             )
         return current_user
 

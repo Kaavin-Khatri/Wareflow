@@ -32,6 +32,8 @@
 | Migrations         | Alembic              | >=1.13.0  |
 | Validation         | Pydantic             | >=2.0.0   |
 | Auth (backend)     | Firebase Admin SDK   | >=6.0.0   |
+| 2FA (TOTP & QR)    | pyotp + qrcode       | >=2.9.0   |
+| Encryption         | cryptography         | >=42.0.0  |
 | Test Runner (api)  | Pytest + pytest-cov  | >=8.0.0   |
 
 ## Services
@@ -78,6 +80,7 @@
 | `SUPABASE_URL`                      | Supabase project URL                          | No          |
 | `SUPABASE_SERVICE_ROLE_KEY`         | Supabase admin secret key                     | No (secret) |
 | `FIREBASE_SERVICE_ACCOUNT_KEY_PATH` | Path to Firebase Admin SDK JSON               | No (secret) |
+| `TOTP_ENCRYPTION_KEY`               | Secret encryption key for TOTP secrets/backup | No (secret) |
 | `RESEND_API_KEY`                    | Resend email API key                          | No (secret) |
 | `GROQ_API_KEY`                      | Groq LLM API key                              | No (secret) |
 
@@ -125,16 +128,20 @@ wareflow/
 │   │       ├── page.tsx
 │   │       ├── globals.css
 │   │       ├── (auth)/             # Authentication route group
-│   │       │   ├── login/page.tsx  # Google & Apple Sign-In + Email/Password form
+│   │       │   ├── login/
+│   │       │   │   ├── page.tsx    # Primary login (Google/Apple/Email) + 2FA redirect
+│   │       │   │   └── 2fa/
+│   │       │   │       └── page.tsx# 6-digit TOTP challenge + backup recovery code
 │   │       │   └── logout/route.ts # Server-side logout & cookie clear
-│   │       ├── api/auth/session/   # Session cookie route handler (POST, DELETE)
+│   │       ├── api/auth/session/   # Session cookie handler (POST, PATCH for 2FA, DELETE)
 │   │       │   └── route.ts
 │   │       ├── dashboard/          # Authenticated workspace dashboard
 │   │       │   └── page.tsx
 │   │       ├── admin/
 │   │       │   └── settings/
 │   │       │       ├── staff/page.tsx       # Staff invite & role management UI
-│   │       │       └── permissions/page.tsx # Live role-permission matrix editor
+│   │       │       ├── permissions/page.tsx # Live role-permission matrix editor
+│   │       │       └── security/page.tsx    # 2FA enrollment, QR code, backup codes
 │   │       └── debug/              # Temporary handshake probe
 │   │           └── page.tsx
 │   └── api/                        # FastAPI backend (:8000)
@@ -146,19 +153,21 @@ wareflow/
 │       │       ├── 0001_initial_schema_probe.py
 │       │       ├── 0002_core_wholesale_schema.py
 │       │       ├── 0003_extended_wholesale_schema.py
-│       │       └── 0004_user_profiles.py
+│       │       ├── 0004_user_profiles.py
+│       │       └── 0005_two_factor_auth.py
 │       ├── requirements.txt
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
 │       ├── .env.example
-│       ├── tests/                  # Pytest test suite (31 tests, 95% cov)
+│       ├── tests/                  # Pytest test suite (36 tests, 94% cov)
 │       │   ├── test_di_and_health.py
 │       │   ├── test_models.py
 │       │   ├── test_extended_models.py
 │       │   ├── test_seed.py
 │       │   ├── test_profiles.py
 │       │   ├── test_auth_and_guards.py
-│       │   └── test_staff_and_roles.py
+│       │   ├── test_staff_and_roles.py
+│       │   └── test_2fa.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
@@ -167,13 +176,14 @@ wareflow/
 │           │       ├── me.py       # Caller profile & permissions (/me)
 │           │       ├── profiles.py # User profile & bootstrapping (/profiles/bootstrap, /profiles/me)
 │           │       ├── staff.py    # Staff invitation & roles (/staff/invite, /staff)
-│           │       └── roles.py    # Role permissions matrix (/roles, /permissions)
+│           │       ├── roles.py    # Role permissions matrix (/roles, /permissions)
+│           │       └── two_factor.py# 2FA endpoints (/auth/2fa/*)
 │           ├── db/
 │           │   ├── base.py         # SQLAlchemy DeclarativeBase
 │           │   └── session.py      # Engine (NullPool) + get_db_session dependency
 │           ├── models/             # Domain ORM models
 │           │   ├── __init__.py
-│           │   ├── profile.py      # Staff & Admin user profiles bound to Firebase UID
+│           │   ├── profile.py      # Staff & Admin user profiles with 2FA fields
 │           │   ├── uom.py          # Units of Measure & Conversions
 │           │   ├── catalog.py      # Categories & Products
 │           │   ├── warehouse.py    # Warehouses & StockBatches
@@ -191,7 +201,8 @@ wareflow/
 │           ├── services/           # Business logic (depends on abstractions)
 │           │   ├── product_service.py
 │           │   ├── profile_service.py
-│           │   └── staff_service.py
+│           │   ├── staff_service.py
+│           │   └── two_factor_service.py
 │           ├── repositories/
 │           │   ├── interfaces/     # Protocol/ABC contracts
 │           │   │   ├── product_repository.py
@@ -201,9 +212,11 @@ wareflow/
 │           │       └── profile_repository.py
 │           ├── schemas/            # Pydantic request/response models
 │           │   ├── profile.py
-│           │   └── staff.py
+│           │   ├── staff.py
+│           │   └── two_factor.py
 │           └── core/
 │               ├── config.py       # pydantic-settings configuration
+│               ├── crypto.py       # Symmetric Fernet secret encryption at rest
 │               ├── firebase.py     # Firebase Admin SDK singleton management
 │               ├── security.py     # Firebase ID verification & require_permission guards
 │               └── di.py           # Dependency injection wiring
@@ -213,7 +226,7 @@ wareflow/
 
 | Table                     | Purpose                            | Columns                                                                                                                                                                                                                                                       | Indexes / Constraints                                                                   |
 | ------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `profiles`                | User profiles tied to Firebase UID | `id` (PK, str), `email`, `display_name`, `avatar_url`, `phone`, `role_id` (FK), `is_active`, `created_at`, `updated_at`                                                                                                                                       | `UNIQUE(email)`, `INDEX(email)`, `INDEX(role_id)`, `FK(role_id -> roles.id RESTRICT)`   |
+| `profiles`                | User profiles with 2FA & roles     | `id` (PK, str), `email`, `display_name`, `avatar_url`, `phone`, `role_id` (FK), `is_active`, `totp_secret_encrypted`, `totp_enabled`, `backup_codes_encrypted`, `totp_enrolled_at`, `created_at`, `updated_at`                                           | `UNIQUE(email)`, `INDEX(email)`, `INDEX(role_id)`, `FK(role_id -> roles.id RESTRICT)`   |
 | `units_of_measure`        | Measurement units (pcs, box, kg)   | `id` (PK, str), `name`, `abbreviation`, `created_at`                                                                                                                                                                                                          | `UNIQUE(abbreviation)`                                                                  |
 | `categories`              | Product hierarchy                  | `id` (PK, str), `name`, `parent_id` (FK), `created_at`                                                                                                                                                                                                        | `FK(parent_id -> categories.id)`                                                        |
 | `products`                | Core product catalog               | `id` (PK, str), `sku`, `name`, `description`, `content_details`, `image_url`, `hsn_code`, `category_id` (FK), `base_uom_id` (FK), `unit`, `cost_price`, `wholesale_price`, `reorder_point`, `reorder_qty`, `barcode`, `is_active`, `created_at`, `updated_at` | `UNIQUE(sku)`, `INDEX(sku)`, `INDEX(barcode)`                                           |
@@ -250,20 +263,26 @@ wareflow/
 
 ## API Endpoints
 
-| Method | Path                      | Description                                        | Auth Required                   |
-| ------ | ------------------------- | -------------------------------------------------- | ------------------------------- |
-| GET    | `/health`                 | Liveness probe returning status: "ok"              | No                              |
-| GET    | `/health/db`              | Database probe executing `SELECT 1` via connection | No                              |
-| GET    | `/me`                     | Get caller identity, role, and permission codes    | Yes (Bearer / Cookie)           |
-| POST   | `/profiles/bootstrap`     | Bootstrap/retrieve authenticated Firebase profile  | Yes (Bearer / Cookie)           |
-| GET    | `/profiles/me`            | Get current user profile and role permissions      | Yes (Bearer / Cookie)           |
-| POST   | `/staff/invite`           | Invite new staff member with assigned role         | Yes (`staff:manage` / Owner)    |
-| GET    | `/staff`                  | List all staff members and active roles            | Yes (`staff:view`)              |
-| PATCH  | `/staff/{id}/role`        | Update a staff member's assigned role              | Yes (`staff:manage`)            |
-| PATCH  | `/staff/{id}/status`      | Toggle staff account active/suspended state        | Yes (`staff:manage`)            |
-| GET    | `/roles`                  | List all defined roles with permission codes       | Yes (Authenticated)             |
-| GET    | `/permissions`            | List all defined system permissions                | Yes (Authenticated)             |
-| PATCH  | `/roles/{id}/permissions` | Update permission matrix mapping for a role        | Yes (`settings:manage` / Owner) |
+| Method | Path                               | Description                                        | Auth Required                  |
+| ------ | ---------------------------------- | -------------------------------------------------- | ------------------------------ |
+| GET    | `/health`                          | Liveness probe returning status: "ok"              | No                             |
+| GET    | `/health/db`                       | Database probe executing `SELECT 1` via connection | No                             |
+| GET    | `/me`                              | Get caller identity, role, and permission codes    | Yes (Bearer / Cookie)          |
+| POST   | `/profiles/bootstrap`              | Bootstrap/retrieve authenticated Firebase profile  | Yes (Bearer / Cookie)          |
+| GET    | `/profiles/me`                     | Get current user profile and role permissions      | Yes (Bearer / Cookie)          |
+| POST   | `/staff/invite`                    | Invite new staff member with assigned role         | Yes (`staff:manage` / Owner)   |
+| GET    | `/staff`                           | List all staff members and active roles            | Yes (`staff:view`)             |
+| PATCH  | `/staff/{id}/role`                 | Update a staff member's assigned role              | Yes (`staff:manage`)           |
+| PATCH  | `/staff/{id}/status`               | Toggle staff account active/suspended state        | Yes (`staff:manage`)           |
+| GET    | `/roles`                           | List all defined roles with permission codes       | Yes (Authenticated)            |
+| GET    | `/permissions`                     | List all defined system permissions                | Yes (Authenticated)            |
+| PATCH  | `/roles/{id}/permissions`          | Update permission matrix mapping for a role        | Yes (`settings:manage` / Owner)|
+| GET    | `/auth/2fa/status`                 | Get 2FA status, requirement policy, backup count   | Yes (Authenticated)            |
+| POST   | `/auth/2fa/enroll`                 | Generate TOTP secret, QR code, and 10 backup codes | Yes (Authenticated)            |
+| POST   | `/auth/2fa/verify-enrollment`      | Confirm 6-digit TOTP code and activate 2FA         | Yes (Authenticated)            |
+| POST   | `/auth/2fa/verify`                 | Verify 2FA challenge via TOTP or single-use backup | Yes (Authenticated)            |
+| POST   | `/auth/2fa/disable`                | Disable 2FA after verifying code confirmation      | Yes (Authenticated)            |
+| POST   | `/auth/2fa/regenerate-backup-codes`| Regenerate 10 fresh recovery backup codes          | Yes (Authenticated)            |
 
 ## Architecture Layers
 
@@ -289,7 +308,7 @@ wareflow/
 │  Pydantic request/response & SQLAlchemy ORM models │
 ├──────────────────────────────────────────────────┤
 │  Core & DB (app/core/, app/db/)                    │
-│  Config, security, DI wiring, DB session manager   │
+│  Config, crypto, security, DI wiring, DB session   │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -301,6 +320,10 @@ wareflow/
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------- |
 | Supabase = DB only             | Need SQL joins, transactions, referential integrity for accounting                                             |
 | Firebase = Auth only           | Best-in-class free Google/Apple Sign-In with minimal setup                                                     |
+| In-House RFC 6238 TOTP 2FA    | Standard TOTP avoids paid Firebase SMS MFA costs while delivering universal Google Authenticator/Authy support  |
+| Symmetric Secret Encryption    | TOTP secrets and backup codes encrypted at rest with Fernet (AES-128-CBC + HMAC-SHA256)                        |
+| Single-Use Atomic Backup Codes | 10 backup codes generated at enrollment, permanently consumed upon single use                                  |
+| Operational Staff Exemption    | Warehouse/Sales staff exempt from mandatory 2FA to prevent delays during high-speed packing and shop-floor runs |
 | SOLID from day one             | Prevents spaghetti; makes testing and swapping implementations easy                                            |
 | Application factory            | Testable app creation, supports different configs per environment                                              |
 | pydantic-settings              | Single source of truth for env vars, validates on startup                                                      |
@@ -326,15 +349,18 @@ wareflow/
 | First-User Owner Assignment    | Bootstrap assigns `Owner` role to 1st signed-in user; subsequent uninvited registrations receive 403 Forbidden |
 | Data-Driven Permission Guards  | `require_permission(code)` enforces DB permission codes from `role_permissions` rather than hardcoded roles    |
 | Dual-Inbound Auth Support      | `get_current_user` extracts and verifies either Bearer tokens or `httpOnly` session cookies transparently      |
-| Dynamic RBAC Navigation        | Navigation menus filter items strictly against user's active permissions without hardcoded role branches       |
+| Dynamic RBAC Navigation        | Navigation menus filter items strictly against user's active permissions without hardcoded role branches        |
 | Server-Side User Provisioning  | Firebase Admin SDK creates users server-side only; service keys are never exposed to client bundles            |
 
 ## Security
 
 - Firebase ID tokens and session cookies verified server-side by FastAPI via Firebase Admin SDK
+- RFC 6238 TOTP two-factor authentication mandatory for financial and administrative roles (`Owner`, `Manager`, `Accountant`)
+- TOTP secrets and backup codes encrypted at rest with Fernet symmetric cryptography
+- Single-use recovery backup codes permanently deleted from database record on use
 - Database permissions loaded live per request for `CurrentUser` from `role_permissions`
 - `require_permission(code)` raises 403 naming the specific missing permission code
-- `require_role(name)` provides convenience role check for root owner workflows
+- `require_2fa_if_enrolled` enforces 2FA challenge completion before sensitive operations
 - Tokens never trusted from client alone
 - .env files git-ignored forever (Secrets Rule #1)
 - .env.example updated with placeholders for every new var (Secrets Rule #2)

@@ -5,8 +5,8 @@ export function middleware(request: NextRequest) {
   const sessionCookie = request.cookies.get("session")?.value;
   const { pathname } = request.nextUrl;
 
-  // 1. If authenticated user visits login page, redirect to dashboard
-  if (pathname.startsWith("/login") && sessionCookie) {
+  // 1. If authenticated user visits login page, redirect to dashboard (except /login/2fa challenge)
+  if (pathname === "/login" && sessionCookie) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

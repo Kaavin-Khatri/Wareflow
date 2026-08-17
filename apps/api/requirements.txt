@@ -11,8 +11,11 @@ sqlalchemy>=2.0.0,<3.0.0
 alembic>=1.13.0,<2.0.0
 psycopg[binary]>=3.1.0,<4.0.0
 
-# Auth
+# Auth & 2FA
 firebase-admin>=6.0.0,<7.0.0
+pyotp>=2.9.0,<3.0.0
+qrcode[pil]>=7.4.0,<8.0.0
+cryptography>=42.0.0,<45.0.0
 
 # Email
 resend>=2.0.0,<3.0.0
