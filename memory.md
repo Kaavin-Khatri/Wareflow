@@ -297,3 +297,46 @@
 - `apps/web/package.json`
 - `package.json`
 - `README.md`
+
+---
+
+## Step 2.1 — SQLAlchemy + Alembic Wired to Supabase
+
+**Timestamp:** 2026-08-17T17:45:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Configured SQLAlchemy 2.0 engine in `app/db/session.py` with `NullPool` and `pool_pre_ping=True`
+- Initialized Alembic migrations in `apps/api/alembic` reading `DIRECT_DATABASE_URL` for migration execution
+- Created initial probe migration `0001_initial_schema_probe.py` and executed `alembic upgrade head` cleanly against live Supabase Postgres
+- Added `GET /health/db` endpoint executing `SELECT 1` through `get_db_session` dependency, returning `{"status": "ok", "database": "connected"}`
+- Verified zero credentials in git tracking
+
+### Decisions
+
+- Connection split in force: port 6543 pooler + NullPool at runtime (Supavisor transaction mode), port 5432 session pooler for migrations (supports DDL & advisory locks over IPv4)
+- Percent-encoding (`%40`) required for special characters in PostgreSQL URL passwords
+- NullPool prevents double-pooling overhead and connection leaks with Supabase's server-side pooler
+
+### Key values for future steps
+
+- Runtime session dependency: `get_db_session()` from `app.db.session`
+- Migration execution: `alembic upgrade head`
+- Database health check: `GET /health/db`
+
+### Files Created
+
+- `apps/api/alembic.ini`
+- `apps/api/alembic/env.py`
+- `apps/api/alembic/script.py.mako`
+- `apps/api/alembic/versions/0001_initial_schema_probe.py`
+- `apps/api/app/db/__init__.py`
+- `apps/api/app/db/session.py`
+- `apps/api/app/db/base.py`
+
+### Files Modified
+
+- `apps/api/app/api/routers/health.py`
+- `apps/api/app/core/config.py`
+- `apps/api/tests/test_di_and_health.py`

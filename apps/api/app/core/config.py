@@ -4,7 +4,7 @@ import json
 from functools import lru_cache
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     # App
     app_name: str = "WareFlow API"
     debug: bool = False
-    allowed_origins: list[str] = ["http://localhost:3000"]
+    allowed_origins: list[str] | str = ["http://localhost:3000"]
 
     # Supabase / Postgres
     database_url: str = ""
@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     # Groq
     groq_api_key: str = ""
 
-    @field_validator("allowed_origins", mode="before")
+    @field_validator("allowed_origins", mode="after")
     @classmethod
     def parse_allowed_origins(cls, value: str | list[str]) -> list[str]:
         """Support comma-separated strings or JSON arrays in env vars."""
@@ -39,9 +39,13 @@ class Settings(BaseSettings):
             if value.startswith("[") and value.endswith("]"):
                 return json.loads(value)
             return [item.strip() for item in value.split(",") if item.strip()]
-        return value
+        return list(value)
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 
 @lru_cache

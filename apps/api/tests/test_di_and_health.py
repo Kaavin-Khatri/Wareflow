@@ -1,4 +1,4 @@
-"""Tests for health endpoint and DIP container verification."""
+"""Tests for health endpoint, DB health probe, and DIP container verification."""
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -17,6 +17,15 @@ async def test_health_endpoint():
         response = await client.get("/health")
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
+
+
+@pytest.mark.asyncio
+async def test_db_health_endpoint():
+    """Verify /health/db executes SELECT 1 and returns connected."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/health/db")
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok", "database": "connected"}
 
 
 def test_dip_swappable_repository_zero_service_change():

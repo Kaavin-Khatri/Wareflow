@@ -34,14 +34,19 @@
 
 ## Services
 
-| Service  | Role                              | Project/ID           | Region                 | Tier            |
-| -------- | --------------------------------- | -------------------- | ---------------------- | --------------- |
-| Supabase | Postgres DB (system of record)    | yappumzftkltlybmztgg | Seoul (ap-northeast-2) | Free (t3a.nano) |
-| Firebase | Auth (Google/Apple/Email)         | wareflow-d17a4       | —                      | Free (Spark)    |
-| Resend   | Email alerts (low-stock, reorder) | —                    | —                      | Free (3k/mo)    |
-| Groq     | LLM API (AI features)             | —                    | —                      | Free            |
-| Vercel   | Frontend hosting (Next.js)        | pending              | —                      | Free (Hobby)    |
-| Render   | Backend hosting (FastAPI)         | pending              | —                      | Free            |
+| Service  | Role                              | Project/ID           | Region                 | Tier            | Connection Mode                                                                                 |
+| -------- | --------------------------------- | -------------------- | ---------------------- | --------------- | ----------------------------------------------------------------------------------------------- |
+| Supabase | Postgres DB (system of record)    | yappumzftktliybmztgg | Seoul (ap-northeast-2) | Free (t3a.nano) | **Split**: Port 6543 (transaction pooler) at runtime, Port 5432 (session pooler) for migrations |
+| Firebase | Auth (Google/Apple/Email)         | wareflow-d17a4       | —                      | Free (Spark)    | Client SDK + Server Admin SDK                                                                   |
+| Resend   | Email alerts (low-stock, reorder) | —                    | —                      | Free (3k/mo)    | HTTPS API                                                                                       |
+| Groq     | LLM API (AI features)             | —                    | —                      | Free            | HTTPS API                                                                                       |
+| Vercel   | Frontend hosting (Next.js)        | pending              | —                      | Free (Hobby)    | —                                                                                               |
+| Render   | Backend hosting (FastAPI)         | pending              | —                      | Free            | —                                                                                               |
+
+### Supabase Connection Modes Explained:
+
+1. **Runtime (`DATABASE_URL`, Port 6543)**: Connects to Supavisor transaction pooler with SQLAlchemy `NullPool`. Because Supabase handles pooling on the server, client-side pooling causes double-pooling and connection limits exhaustion. `NullPool` opens connections on demand and returns them immediately.
+2. **Migrations (`DIRECT_DATABASE_URL`, Port 5432)**: Connects to the session mode pooler (IPv4 compatible) to execute DDL operations and hold schema locks during Alembic migrations.
 
 ## Env Var Registry
 
@@ -61,17 +66,17 @@
 
 ### apps/api (FastAPI Backend) → `.env`
 
-| Variable                            | Description                       | Public?     |
-| ----------------------------------- | --------------------------------- | ----------- |
-| `DEBUG`                             | Enable debug mode                 | No          |
-| `ALLOWED_ORIGINS`                   | CORS allowed origins list/csv     | No          |
-| `DATABASE_URL`                      | Supabase pooler connection string | No (secret) |
-| `DIRECT_DATABASE_URL`               | Supabase direct connection string | No (secret) |
-| `SUPABASE_URL`                      | Supabase project URL              | No          |
-| `SUPABASE_SERVICE_ROLE_KEY`         | Supabase admin key                | No (secret) |
-| `FIREBASE_SERVICE_ACCOUNT_KEY_PATH` | Path to Firebase Admin SDK JSON   | No (secret) |
-| `RESEND_API_KEY`                    | Resend email API key              | No (secret) |
-| `GROQ_API_KEY`                      | Groq LLM API key                  | No (secret) |
+| Variable                            | Description                                   | Public?     |
+| ----------------------------------- | --------------------------------------------- | ----------- |
+| `DEBUG`                             | Enable debug mode                             | No          |
+| `ALLOWED_ORIGINS`                   | CORS allowed origins list/csv                 | No          |
+| `DATABASE_URL`                      | Supabase transaction pooler (port 6543)       | No (secret) |
+| `DIRECT_DATABASE_URL`               | Supabase migration session pooler (port 5432) | No (secret) |
+| `SUPABASE_URL`                      | Supabase project URL                          | No          |
+| `SUPABASE_SERVICE_ROLE_KEY`         | Supabase admin secret key                     | No (secret) |
+| `FIREBASE_SERVICE_ACCOUNT_KEY_PATH` | Path to Firebase Admin SDK JSON               | No (secret) |
+| `RESEND_API_KEY`                    | Resend email API key                          | No (secret) |
+| `GROQ_API_KEY`                      | Groq LLM API key                              | No (secret) |
 
 ## File Tree
 
@@ -109,6 +114,12 @@ wareflow/
 │   │       └── debug/              # Temporary handshake probe
 │   │           └── page.tsx
 │   └── api/                        # FastAPI backend (:8000)
+│       ├── alembic.ini             # Alembic migration configuration
+│       ├── alembic/                # Migration scripts
+│       │   ├── env.py              # Migration runner with DIRECT_DATABASE_URL
+│       │   ├── script.py.mako
+│       │   └── versions/
+│       │       └── 0001_initial_schema_probe.py
 │       ├── requirements.txt
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
@@ -119,7 +130,10 @@ wareflow/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
 │           │   └── routers/        # HTTP layer (request/response only)
-│           │       └── health.py
+│           │       └── health.py   # Liveness & DB connectivity (/health, /health/db)
+│           ├── db/
+│           │   ├── base.py         # SQLAlchemy DeclarativeBase
+│           │   └── session.py      # Engine (NullPool) + get_db_session dependency
 │           ├── services/           # Business logic (depends on abstractions)
 │           │   └── product_service.py
 │           ├── repositories/
@@ -135,13 +149,16 @@ wareflow/
 
 ## Database Schema
 
-> No tables created yet. Schema will be defined in Phase 2 via Alembic migrations.
+| Table           | Purpose                     | Migration                   | Status              |
+| --------------- | --------------------------- | --------------------------- | ------------------- |
+| `_schema_probe` | Pipeline verification table | `0001_initial_schema_probe` | Applied to Supabase |
 
 ## API Endpoints
 
-| Method | Path      | Description                           | Auth Required |
-| ------ | --------- | ------------------------------------- | ------------- |
-| GET    | `/health` | Liveness probe returning status: "ok" | No            |
+| Method | Path         | Description                                        | Auth Required |
+| ------ | ------------ | -------------------------------------------------- | ------------- |
+| GET    | `/health`    | Liveness probe returning status: "ok"              | No            |
+| GET    | `/health/db` | Database probe executing `SELECT 1` via connection | No            |
 
 ## Architecture Layers
 
@@ -166,8 +183,8 @@ wareflow/
 │  Schemas (app/schemas/)                            │
 │  Pydantic models — pure data contracts             │
 ├──────────────────────────────────────────────────┤
-│  Core (app/core/)                                  │
-│  Config, security, DI wiring, database setup       │
+│  Core & DB (app/core/, app/db/)                    │
+│  Config, security, DI wiring, DB session manager   │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -194,21 +211,22 @@ def get_product_service(
 
 ## Decisions
 
-| Decision               | Rationale                                                                |
-| ---------------------- | ------------------------------------------------------------------------ |
-| Supabase = DB only     | Need SQL joins, transactions, referential integrity for accounting       |
-| Firebase = Auth only   | Best-in-class free Google/Apple Sign-In with minimal setup               |
-| SOLID from day one     | Prevents spaghetti; makes testing and swapping implementations easy      |
-| Application factory    | Testable app creation, supports different configs per environment        |
-| pydantic-settings      | Single source of truth for env vars, validates on startup                |
-| Prettier (web)         | Consistent formatting, 100 char line width matching ruff                 |
-| Ruff (api)             | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N |
-| eslint-config-prettier | Disables ESLint rules that conflict with Prettier                        |
-| Local PG on 5433       | Avoid conflicts with system Postgres; Supabase stays primary             |
-| Typed API Client       | Type-safe fetch wrapper with ApiError extracting status & server message |
-| DIP Container          | Services receive repository Protocol interfaces via FastAPI Depends()    |
-| CI on Day One          | GitHub Actions pipeline runs lint + format + test + build on every push  |
-| Automated QA           | QA checklist items written as automated tests, enforced by CI            |
+| Decision                    | Rationale                                                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Supabase = DB only          | Need SQL joins, transactions, referential integrity for accounting                                       |
+| Firebase = Auth only        | Best-in-class free Google/Apple Sign-In with minimal setup                                               |
+| SOLID from day one          | Prevents spaghetti; makes testing and swapping implementations easy                                      |
+| Application factory         | Testable app creation, supports different configs per environment                                        |
+| pydantic-settings           | Single source of truth for env vars, validates on startup                                                |
+| Prettier (web)              | Consistent formatting, 100 char line width matching ruff                                                 |
+| Ruff (api)                  | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N                                 |
+| eslint-config-prettier      | Disables ESLint rules that conflict with Prettier                                                        |
+| Local PG on 5433            | Avoid conflicts with system Postgres; Supabase stays primary                                             |
+| Typed API Client            | Type-safe fetch wrapper with ApiError extracting status & server message                                 |
+| DIP Container               | Services receive repository Protocol interfaces via FastAPI Depends()                                    |
+| CI on Day One               | GitHub Actions pipeline runs lint + format + test + build on every push                                  |
+| Automated QA                | QA checklist items written as automated tests, enforced by CI                                            |
+| Connection Split (Supabase) | Port 6543 (transaction pooler) + NullPool for runtime; port 5432 (session pooler) for Alembic migrations |
 
 ## Security
 
@@ -217,7 +235,8 @@ def get_product_service(
 - .env files git-ignored forever (Secrets Rule #1)
 - .env.example updated with placeholders for every new var (Secrets Rule #2)
 - CORS restricted to allowed origins loaded dynamically from `ALLOWED_ORIGINS` settings
+- PostgreSQL connection passwords percent-encoded (`%40` for `@`) in connection strings
 
 ## Known Issues
 
-> None at this time.
+- **Supabase Free Project Inactivity Pause**: Supabase free-tier projects automatically pause after ~1 week of inactivity. If API endpoints return connection errors after an idle period, unpause the project from the Supabase dashboard.
