@@ -1,0 +1,171 @@
+# WareFlow — Codebase Audit
+
+> Auto-maintained by coding agents. Do not delete.
+> This file is **rewritten in-place** — it reflects the system as it is NOW.
+> History belongs in `memory.md`.
+
+## Environment
+
+| Property | Value |
+|----------|-------|
+| OS | Windows 11 (NT 10.0.26200.0) |
+| Shell | PowerShell 5.1 |
+| Node.js | v24.16.0 |
+| pnpm | 11.8.0 |
+| Python | 3.14.6 |
+| Git | 2.55.0.windows.4 |
+| AI Agent | Antigravity IDE |
+
+## Stack & Versions
+
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| Frontend framework | Next.js (App Router) | 16.3.1 |
+| Frontend language | TypeScript | 5.9.3 |
+| UI library | React | 19.2.8 |
+| CSS framework | Tailwind CSS | 4.3.3 |
+| Backend framework | FastAPI | >=0.115.0 |
+| Backend language | Python | 3.14.6 |
+| ORM | SQLAlchemy | >=2.0.0 |
+| Migrations | Alembic | >=1.13.0 |
+| Validation | Pydantic | >=2.0.0 |
+
+## Services
+
+| Service | Role | Project/ID | Region | Tier |
+|---------|------|-----------|--------|------|
+| Supabase | Postgres DB (system of record) | yappumzftkltlybmztgg | Seoul (ap-northeast-2) | Free (t3a.nano) |
+| Firebase | Auth (Google/Apple/Email) | wareflow-d17a4 | — | Free (Spark) |
+| Resend | Email alerts (low-stock, reorder) | — | — | Free (3k/mo) |
+| Groq | LLM API (AI features) | — | — | Free |
+| Vercel | Frontend hosting (Next.js) | pending | — | Free (Hobby) |
+| Render | Backend hosting (FastAPI) | pending | — | Free |
+
+## Env Var Registry
+
+### apps/web (Next.js Frontend) → `.env.local`
+
+| Variable | Description | Public? |
+|----------|-------------|---------|
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase web API key | Yes (client) |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase auth domain | Yes (client) |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase project ID | Yes (client) |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket | Yes (client) |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging sender | Yes (client) |
+| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase app ID | Yes (client) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes (client) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (RLS protected) | Yes (client) |
+| `NEXT_PUBLIC_API_URL` | FastAPI backend URL | Yes (client) |
+
+### apps/api (FastAPI Backend) → `.env`
+
+| Variable | Description | Public? |
+|----------|-------------|---------|
+| `DEBUG` | Enable debug mode | No |
+| `DATABASE_URL` | Supabase pooler connection string | No (secret) |
+| `DIRECT_DATABASE_URL` | Supabase direct connection string | No (secret) |
+| `SUPABASE_URL` | Supabase project URL | No |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase admin key | No (secret) |
+| `FIREBASE_SERVICE_ACCOUNT_KEY_PATH` | Path to Firebase Admin SDK JSON | No (secret) |
+| `RESEND_API_KEY` | Resend email API key | No (secret) |
+| `GROQ_API_KEY` | Groq LLM API key | No (secret) |
+
+## File Tree
+
+```
+wareflow/
+├── package.json                    # Root monorepo config (pnpm workspaces)
+├── pnpm-workspace.yaml             # Workspace definition
+├── memory.md                       # Append-only project history
+├── codebase_audit.md               # Living system state (this file)
+├── .gitignore                      # Git ignore rules
+├── apps/
+│   ├── web/                        # Next.js frontend (:3000)
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   ├── next.config.ts
+│   │   ├── postcss.config.mjs
+│   │   ├── .env.example
+│   │   └── src/app/                # App Router pages
+│   │       ├── layout.tsx
+│   │       ├── page.tsx
+│   │       └── globals.css
+│   └── api/                        # FastAPI backend (:8000)
+│       ├── requirements.txt
+│       ├── .env.example
+│       └── app/
+│           ├── main.py             # Application factory + ASGI entry
+│           ├── api/
+│           │   └── routers/        # HTTP layer (request/response only)
+│           │       └── health.py
+│           ├── services/           # Business logic (depends on abstractions)
+│           ├── repositories/
+│           │   ├── interfaces/     # Protocol/ABC contracts
+│           │   └── impl/           # SQLAlchemy implementations
+│           ├── schemas/            # Pydantic request/response models
+│           └── core/
+│               ├── config.py       # pydantic-settings configuration
+│               └── di.py           # Dependency injection wiring
+```
+
+## Database Schema
+
+> No tables created yet. Schema will be defined in Phase 2 via Alembic migrations.
+
+## API Endpoints
+
+| Method | Path | Description | Auth Required |
+|--------|------|-------------|---------------|
+| GET | `/health` | Liveness probe | No |
+
+## Architecture Layers
+
+```
+┌──────────────────────────────────────────────────┐
+│  Routers (app/api/routers/)                       │
+│  HTTP concerns only: parse request, return response│
+│  ↓ calls                                          │
+├──────────────────────────────────────────────────┤
+│  Services (app/services/)                         │
+│  Business logic, orchestration, validation        │
+│  ↓ depends on (interfaces)                        │
+├──────────────────────────────────────────────────┤
+│  Repository Interfaces (app/repositories/interfaces/) │
+│  Protocol/ABC contracts — what data ops exist      │
+│  ↑ implemented by                                 │
+├──────────────────────────────────────────────────┤
+│  Repository Impls (app/repositories/impl/)         │
+│  Concrete data access (SQLAlchemy, etc.)           │
+│  Wired via core/di.py                              │
+├──────────────────────────────────────────────────┤
+│  Schemas (app/schemas/)                            │
+│  Pydantic models — pure data contracts             │
+├──────────────────────────────────────────────────┤
+│  Core (app/core/)                                  │
+│  Config, security, DI wiring, database setup       │
+└──────────────────────────────────────────────────┘
+```
+
+**Rule:** Routers NEVER import repositories directly. Only services.
+
+## Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| Supabase = DB only | Need SQL joins, transactions, referential integrity for accounting |
+| Firebase = Auth only | Best-in-class free Google/Apple Sign-In with minimal setup |
+| SOLID from day one | Prevents spaghetti; makes testing and swapping implementations easy |
+| Application factory | Testable app creation, supports different configs per environment |
+| pydantic-settings | Single source of truth for env vars, validates on startup |
+
+## Security
+
+- Firebase ID tokens verified server-side by FastAPI via Firebase Admin SDK
+- Tokens never trusted from client alone
+- .env files git-ignored forever (Secrets Rule #1)
+- .env.example updated with placeholders for every new var (Secrets Rule #2)
+- CORS restricted to localhost:3000 in development
+
+## Known Issues
+
+> None at this time.

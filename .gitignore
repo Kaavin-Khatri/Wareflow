@@ -1,0 +1,51 @@
+# ===== Dependencies =====
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# ===== Environment (SECRETS RULE #1: never committed) =====
+.env
+.env.local
+.env.*.local
+*.env
+
+# ===== Build artifacts =====
+.next/
+out/
+dist/
+build/
+*.egg-info/
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Firebase =====
+*-firebase-adminsdk-*.json
+firebase-service-account*.json
+
+# ===== Phase 0 temp =====
+_phase0_outcomes.md
+
+# ===== Testing =====
+coverage/
+htmlcov/
+.coverage
+.pytest_cache/
+
+# ===== Misc =====
+*.log
+.vercel
+.render
