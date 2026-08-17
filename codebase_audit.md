@@ -138,7 +138,9 @@ wareflow/
 │   │       ├── dashboard/          # Authenticated workspace dashboard
 │   │       │   └── page.tsx
 │   │       ├── admin/
+│   │       │   ├── audit/page.tsx  # General Action Audit Log timeline & diff inspector
 │   │       │   └── settings/
+│   │       │       ├── audit-log/page.tsx   # Alias route for audit timeline
 │   │       │       ├── staff/page.tsx       # Staff invite & role management UI
 │   │       │       ├── permissions/page.tsx # Live role-permission matrix editor
 │   │       │       └── security/page.tsx    # 2FA enrollment, QR code, backup codes
@@ -159,7 +161,7 @@ wareflow/
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
 │       ├── .env.example
-│       ├── tests/                  # Pytest test suite (36 tests, 94% cov)
+│       ├── tests/                  # Pytest test suite (40 tests, 92% cov)
 │       │   ├── test_di_and_health.py
 │       │   ├── test_models.py
 │       │   ├── test_extended_models.py
@@ -167,7 +169,8 @@ wareflow/
 │       │   ├── test_profiles.py
 │       │   ├── test_auth_and_guards.py
 │       │   ├── test_staff_and_roles.py
-│       │   └── test_2fa.py
+│       │   ├── test_2fa.py
+│       │   └── test_audit_log.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
@@ -177,7 +180,10 @@ wareflow/
 │           │       ├── profiles.py # User profile & bootstrapping (/profiles/bootstrap, /profiles/me)
 │           │       ├── staff.py    # Staff invitation & roles (/staff/invite, /staff)
 │           │       ├── roles.py    # Role permissions matrix (/roles, /permissions)
-│           │       └── two_factor.py# 2FA endpoints (/auth/2fa/*)
+│           │       ├── two_factor.py# 2FA endpoints (/auth/2fa/*)
+│           │       ├── audit.py    # Admin Audit Log endpoint (/admin/audit-log)
+│           │       ├── products.py # Wholesale Products & Pricing (/products)
+│           │       └── retailers.py# Retailer accounts & credit limits (/retailers)
 │           ├── db/
 │           │   ├── base.py         # SQLAlchemy DeclarativeBase
 │           │   └── session.py      # Engine (NullPool) + get_db_session dependency
@@ -199,19 +205,28 @@ wareflow/
 │           │   ├── notification.py # Alert Notifications
 │           │   └── audit_and_settings.py # AdminAuditLog, BusinessSettings
 │           ├── services/           # Business logic (depends on abstractions)
+│           │   ├── audit_service.py
 │           │   ├── product_service.py
 │           │   ├── profile_service.py
+│           │   ├── retailer_service.py
 │           │   ├── staff_service.py
 │           │   └── two_factor_service.py
 │           ├── repositories/
 │           │   ├── interfaces/     # Protocol/ABC contracts
+│           │   │   ├── audit_repository.py
 │           │   │   ├── product_repository.py
-│           │   │   └── profile_repository.py
+│           │   │   ├── profile_repository.py
+│           │   │   └── retailer_repository.py
 │           │   └── impl/           # Concrete implementations
+│           │       ├── audit_repository.py
 │           │       ├── product_repository.py
-│           │       └── profile_repository.py
+│           │       ├── profile_repository.py
+│           │       └── retailer_repository.py
 │           ├── schemas/            # Pydantic request/response models
+│           │   ├── audit.py
+│           │   ├── products.py
 │           │   ├── profile.py
+│           │   ├── retailers.py
 │           │   ├── staff.py
 │           │   └── two_factor.py
 │           └── core/
@@ -226,7 +241,8 @@ wareflow/
 
 | Table                     | Purpose                            | Columns                                                                                                                                                                                                                                                       | Indexes / Constraints                                                                   |
 | ------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `profiles`                | User profiles with 2FA & roles     | `id` (PK, str), `email`, `display_name`, `avatar_url`, `phone`, `role_id` (FK), `is_active`, `totp_secret_encrypted`, `totp_enabled`, `backup_codes_encrypted`, `totp_enrolled_at`, `created_at`, `updated_at`                                           | `UNIQUE(email)`, `INDEX(email)`, `INDEX(role_id)`, `FK(role_id -> roles.id RESTRICT)`   |
+| `admin_audit_log`         | Sensitive operation change audit   | `id` (PK, str), `actor_id`, `action`, `entity_type`, `entity_id`, `before_value` (JSON), `after_value` (JSON), `created_at`                                                                                                                                   | `INDEX(actor_id)`, `INDEX(entity_type)`, `INDEX(entity_id)`, `INDEX(created_at)`        |
+| `profiles`                | User profiles with 2FA & roles     | `id` (PK, str), `email`, `display_name`, `avatar_url`, `phone`, `role_id` (FK), `is_active`, `totp_secret_encrypted`, `totp_enabled`, `backup_codes_encrypted`, `totp_enrolled_at`, `created_at`, `updated_at`                                                | `UNIQUE(email)`, `INDEX(email)`, `INDEX(role_id)`, `FK(role_id -> roles.id RESTRICT)`   |
 | `units_of_measure`        | Measurement units (pcs, box, kg)   | `id` (PK, str), `name`, `abbreviation`, `created_at`                                                                                                                                                                                                          | `UNIQUE(abbreviation)`                                                                  |
 | `categories`              | Product hierarchy                  | `id` (PK, str), `name`, `parent_id` (FK), `created_at`                                                                                                                                                                                                        | `FK(parent_id -> categories.id)`                                                        |
 | `products`                | Core product catalog               | `id` (PK, str), `sku`, `name`, `description`, `content_details`, `image_url`, `hsn_code`, `category_id` (FK), `base_uom_id` (FK), `unit`, `cost_price`, `wholesale_price`, `reorder_point`, `reorder_qty`, `barcode`, `is_active`, `created_at`, `updated_at` | `UNIQUE(sku)`, `INDEX(sku)`, `INDEX(barcode)`                                           |
@@ -258,31 +274,35 @@ wareflow/
 | `recall_affected_orders`  | Traceability for recalled orders   | `id` (PK, str), `recall_id` (FK), `sales_order_id` (FK), `retailer_id` (FK), `customer_id` (FK), `notified_at`                                                                                                                                                | `INDEX(recall_id)`, `INDEX(sales_order_id)`, `INDEX(retailer_id)`, `INDEX(customer_id)` |
 | `stock_movements`         | Append-only inventory ledger       | `id` (PK, str), `product_id` (FK), `warehouse_id` (FK), `batch_id` (FK), `type` (enum), `quantity`, `reference_type`, `reference_id`, `created_by`, `created_at`                                                                                              | `INDEX(product_id)`, `INDEX(warehouse_id)`, `INDEX(created_at)`                         |
 | `notifications`           | System alerts & notices            | `id` (PK, str), `user_id`, `type`, `title`, `body`, `is_read`, `created_at`                                                                                                                                                                                   | `INDEX(user_id)`                                                                        |
-| `admin_audit_log`         | Sensitive operation change audit   | `id` (PK, str), `actor_id`, `action`, `entity_type`, `entity_id`, `before_value` (JSON), `after_value` (JSON), `created_at`                                                                                                                                   | `INDEX(actor_id)`, `INDEX(entity_type)`, `INDEX(entity_id)`, `INDEX(created_at)`        |
 | `business_settings`       | Single-row business profile & GST  | `id` (PK, str), `business_name`, `gstin`, `fssai_license_no`, `fssai_expiry_date`, `address`, `phone`, `email`, `updated_at`                                                                                                                                  | —                                                                                       |
 
 ## API Endpoints
 
-| Method | Path                               | Description                                        | Auth Required                  |
-| ------ | ---------------------------------- | -------------------------------------------------- | ------------------------------ |
-| GET    | `/health`                          | Liveness probe returning status: "ok"              | No                             |
-| GET    | `/health/db`                       | Database probe executing `SELECT 1` via connection | No                             |
-| GET    | `/me`                              | Get caller identity, role, and permission codes    | Yes (Bearer / Cookie)          |
-| POST   | `/profiles/bootstrap`              | Bootstrap/retrieve authenticated Firebase profile  | Yes (Bearer / Cookie)          |
-| GET    | `/profiles/me`                     | Get current user profile and role permissions      | Yes (Bearer / Cookie)          |
-| POST   | `/staff/invite`                    | Invite new staff member with assigned role         | Yes (`staff:manage` / Owner)   |
-| GET    | `/staff`                           | List all staff members and active roles            | Yes (`staff:view`)             |
-| PATCH  | `/staff/{id}/role`                 | Update a staff member's assigned role              | Yes (`staff:manage`)           |
-| PATCH  | `/staff/{id}/status`               | Toggle staff account active/suspended state        | Yes (`staff:manage`)           |
-| GET    | `/roles`                           | List all defined roles with permission codes       | Yes (Authenticated)            |
-| GET    | `/permissions`                     | List all defined system permissions                | Yes (Authenticated)            |
-| PATCH  | `/roles/{id}/permissions`          | Update permission matrix mapping for a role        | Yes (`settings:manage` / Owner)|
-| GET    | `/auth/2fa/status`                 | Get 2FA status, requirement policy, backup count   | Yes (Authenticated)            |
-| POST   | `/auth/2fa/enroll`                 | Generate TOTP secret, QR code, and 10 backup codes | Yes (Authenticated)            |
-| POST   | `/auth/2fa/verify-enrollment`      | Confirm 6-digit TOTP code and activate 2FA         | Yes (Authenticated)            |
-| POST   | `/auth/2fa/verify`                 | Verify 2FA challenge via TOTP or single-use backup | Yes (Authenticated)            |
-| POST   | `/auth/2fa/disable`                | Disable 2FA after verifying code confirmation      | Yes (Authenticated)            |
-| POST   | `/auth/2fa/regenerate-backup-codes`| Regenerate 10 fresh recovery backup codes          | Yes (Authenticated)            |
+| Method | Path                                | Description                                        | Auth Required                   |
+| ------ | ----------------------------------- | -------------------------------------------------- | ------------------------------- |
+| GET    | `/health`                           | Liveness probe returning status: "ok"              | No                              |
+| GET    | `/health/db`                        | Database probe executing `SELECT 1` via connection | No                              |
+| GET    | `/me`                               | Get caller identity, role, and permission codes    | Yes (Bearer / Cookie)           |
+| POST   | `/profiles/bootstrap`               | Bootstrap/retrieve authenticated Firebase profile  | Yes (Bearer / Cookie)           |
+| GET    | `/profiles/me`                      | Get current user profile and role permissions      | Yes (Bearer / Cookie)           |
+| POST   | `/staff/invite`                     | Invite new staff member with assigned role         | Yes (`staff:manage` / Owner)    |
+| GET    | `/staff`                            | List all staff members and active roles            | Yes (`staff:view`)              |
+| PATCH  | `/staff/{id}/role`                  | Update a staff member's assigned role              | Yes (`staff:manage`)            |
+| PATCH  | `/staff/{id}/status`                | Toggle staff account active/suspended state        | Yes (`staff:manage`)            |
+| GET    | `/roles`                            | List all defined roles with permission codes       | Yes (Authenticated)             |
+| GET    | `/permissions`                      | List all defined system permissions                | Yes (Authenticated)             |
+| PATCH  | `/roles/{id}/permissions`           | Update permission matrix mapping for a role        | Yes (`settings:manage` / Owner) |
+| GET    | `/auth/2fa/status`                  | Get 2FA status, requirement policy, backup count   | Yes (Authenticated)             |
+| POST   | `/auth/2fa/enroll`                  | Generate TOTP secret, QR code, and 10 backup codes | Yes (Authenticated)             |
+| POST   | `/auth/2fa/verify-enrollment`       | Confirm 6-digit TOTP code and activate 2FA         | Yes (Authenticated)             |
+| POST   | `/auth/2fa/verify`                  | Verify 2FA challenge via TOTP or single-use backup | Yes (Authenticated)             |
+| POST   | `/auth/2fa/disable`                 | Disable 2FA after verifying code confirmation      | Yes (Authenticated)             |
+| POST   | `/auth/2fa/regenerate-backup-codes` | Regenerate 10 fresh recovery backup codes          | Yes (Authenticated)             |
+| GET    | `/admin/audit-log`                  | Get paginated admin action audit logs with diffs   | Yes (`audit:view` / Owner)      |
+| GET    | `/products`                         | List all wholesale products with pricing           | Yes (Authenticated)             |
+| PATCH  | `/products/{id}/price`              | Update product selling/cost prices (audited)       | Yes (`inventory:manage`)        |
+| GET    | `/retailers`                        | List all wholesale retailers                       | Yes (Authenticated)             |
+| PATCH  | `/retailers/{id}/credit-limit`      | Update retailer credit limit (audited)             | Yes (`settings:manage`)         |
 
 ## Architecture Layers
 
@@ -316,44 +336,53 @@ wareflow/
 
 ## Decisions
 
-| Decision                       | Rationale                                                                                                      |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| Supabase = DB only             | Need SQL joins, transactions, referential integrity for accounting                                             |
-| Firebase = Auth only           | Best-in-class free Google/Apple Sign-In with minimal setup                                                     |
-| In-House RFC 6238 TOTP 2FA    | Standard TOTP avoids paid Firebase SMS MFA costs while delivering universal Google Authenticator/Authy support  |
-| Symmetric Secret Encryption    | TOTP secrets and backup codes encrypted at rest with Fernet (AES-128-CBC + HMAC-SHA256)                        |
-| Single-Use Atomic Backup Codes | 10 backup codes generated at enrollment, permanently consumed upon single use                                  |
-| Operational Staff Exemption    | Warehouse/Sales staff exempt from mandatory 2FA to prevent delays during high-speed packing and shop-floor runs |
-| SOLID from day one             | Prevents spaghetti; makes testing and swapping implementations easy                                            |
-| Application factory            | Testable app creation, supports different configs per environment                                              |
-| pydantic-settings              | Single source of truth for env vars, validates on startup                                                      |
-| Prettier (web)                 | Consistent formatting, 100 char line width matching ruff                                                       |
-| Ruff (api)                     | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N                                       |
-| eslint-config-prettier         | Disables ESLint rules that conflict with Prettier                                                              |
-| Local PG on 5433               | Avoid conflicts with system Postgres; Supabase stays primary                                                   |
-| Typed API Client               | Type-safe fetch wrapper with ApiError extracting status & server message                                       |
-| DIP Container                  | Services receive repository Protocol interfaces via FastAPI Depends()                                          |
-| CI on Day One                  | GitHub Actions pipeline runs lint + format + test + build on every push                                        |
-| Automated QA                   | QA checklist items written as automated tests, enforced by CI                                                  |
-| Connection Split (Supabase)    | Port 6543 (transaction pooler) + NullPool for runtime; port 5432 (session pooler) for Alembic migrations       |
-| Prepared Statement Disabling   | `connect_args={"prepare_threshold": None}` prevents named prepared statement errors with Supavisor pooler      |
-| Schema v1 Completeness         | Core tables (UOM conversions, batch tracking, supplier FSSAI, retailer credit) created upfront                 |
-| Append-only Stock Ledger       | `stock_movements` is single source of truth for inventory balances                                             |
-| Frozen Invoicing Snapshot      | `invoice_items` freezes prices, taxes, and names at issuance time to ensure immutable accounting records       |
-| Single-Path Sales Orders       | `buyer_type` discriminator allows single order fulfillment engine to serve both B2B retailers and customers    |
-| Supplier Magic Links           | `supplier_access_tokens` provides no-login dispatch confirmations for suppliers                                |
-| Distributor Identity Model     | `business_settings` provides single source of truth for distributor's legal/FSSAI profile                      |
-| Natural-Key Upsert Seed        | `scripts/seed.py` matches on unique natural keys to guarantee complete idempotency across repeated runs        |
-| Deliberate Low-Stock Seed Data | Seed includes 4 products below reorder point to prove alert and notification engines                           |
-| Server-Side Session Cookies    | Next.js route handler sets `httpOnly` cookie on auth to allow Next.js middleware protection without waterfalls |
-| First-User Owner Assignment    | Bootstrap assigns `Owner` role to 1st signed-in user; subsequent uninvited registrations receive 403 Forbidden |
-| Data-Driven Permission Guards  | `require_permission(code)` enforces DB permission codes from `role_permissions` rather than hardcoded roles    |
-| Dual-Inbound Auth Support      | `get_current_user` extracts and verifies either Bearer tokens or `httpOnly` session cookies transparently      |
-| Dynamic RBAC Navigation        | Navigation menus filter items strictly against user's active permissions without hardcoded role branches        |
-| Server-Side User Provisioning  | Firebase Admin SDK creates users server-side only; service keys are never exposed to client bundles            |
+| Decision                       | Rationale                                                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Supabase = DB only             | Need SQL joins, transactions, referential integrity for accounting                                               |
+| Firebase = Auth only           | Best-in-class free Google/Apple Sign-In with minimal setup                                                       |
+| In-House RFC 6238 TOTP 2FA     | Standard TOTP avoids paid Firebase SMS MFA costs while delivering universal Google Authenticator/Authy support   |
+| Symmetric Secret Encryption    | TOTP secrets and backup codes encrypted at rest with Fernet (AES-128-CBC + HMAC-SHA256)                          |
+| Single-Use Atomic Backup Codes | 10 backup codes generated at enrollment, permanently consumed upon single use                                    |
+| Operational Staff Exemption    | Warehouse/Sales staff exempt from mandatory 2FA to prevent delays during high-speed packing and shop-floor runs  |
+| General Admin Action Audit Log | `admin_audit_log` records immutable before/after diffs for sensitive actions (price, credit, permissions, staff) |
+| Humanized Audit Narratives     | `AuditService` synthesizes readable business sentences from raw diffs while preserving JSON diff inspection      |
+| SOLID from day one             | Prevents spaghetti; makes testing and swapping implementations easy                                              |
+| Application factory            | Testable app creation, supports different configs per environment                                                |
+| pydantic-settings              | Single source of truth for env vars, validates on startup                                                        |
+| Prettier (web)                 | Consistent formatting, 100 char line width matching ruff                                                         |
+| Ruff (api)                     | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N                                         |
+| eslint-config-prettier         | Disables ESLint rules that conflict with Prettier                                                                |
+| Local PG on 5433               | Avoid conflicts with system Postgres; Supabase stays primary                                                     |
+| Typed API Client               | Type-safe fetch wrapper with ApiError extracting status & server message                                         |
+| DIP Container                  | Services receive repository Protocol interfaces via FastAPI Depends()                                            |
+| CI on Day One                  | GitHub Actions pipeline runs lint + format + test + build on every push                                          |
+| Automated QA                   | QA checklist items written as automated tests, enforced by CI                                                    |
+| Connection Split (Supabase)    | Port 6543 (transaction pooler) + NullPool for runtime; port 5432 (session pooler) for Alembic migrations         |
+| Prepared Statement Disabling   | `connect_args={"prepare_threshold": None}` prevents named prepared statement errors with Supavisor pooler        |
+| Schema v1 Completeness         | Core tables (UOM conversions, batch tracking, supplier FSSAI, retailer credit) created upfront                   |
+| Append-only Stock Ledger       | `stock_movements` is single source of truth for inventory balances                                               |
+| Frozen Invoicing Snapshot      | `invoice_items` freezes prices, taxes, and names at issuance time to ensure immutable accounting records         |
+| Single-Path Sales Orders       | `buyer_type` discriminator allows single order fulfillment engine to serve both B2B retailers and customers      |
+| Supplier Magic Links           | `supplier_access_tokens` provides no-login dispatch confirmations for suppliers                                  |
+| Distributor Identity Model     | `business_settings` provides single source of truth for distributor's legal/FSSAI profile                        |
+| Natural-Key Upsert Seed        | `scripts/seed.py` matches on unique natural keys to guarantee complete idempotency across repeated runs          |
+| Deliberate Low-Stock Seed Data | Seed includes 4 products below reorder point to prove alert and notification engines                             |
+| Server-Side Session Cookies    | Next.js route handler sets `httpOnly` cookie on auth to allow Next.js middleware protection without waterfalls   |
+| First-User Owner Assignment    | Bootstrap assigns `Owner` role to 1st signed-in user; subsequent uninvited registrations receive 403 Forbidden   |
+| Data-Driven Permission Guards  | `require_permission(code)` enforces DB permission codes from `role_permissions` rather than hardcoded roles      |
+| Dual-Inbound Auth Support      | `get_current_user` extracts and verifies either Bearer tokens or `httpOnly` session cookies transparently        |
+| Dynamic RBAC Navigation        | Navigation menus filter items strictly against user's active permissions without hardcoded role branches         |
+| Server-Side User Provisioning  | Firebase Admin SDK creates users server-side only; service keys are never exposed to client bundles              |
 
-## Security
+## Security & Audit Log Coverage
 
+- **Audited Operations**:
+  - `product_price_updated`: Product wholesale and cost price alterations (`PATCH /products/{id}/price`)
+  - `retailer_credit_limit_updated`: Retailer authorized credit limit adjustments (`PATCH /retailers/{id}/credit-limit`)
+  - `role_permissions_updated`: Permission matrix role-to-permission mapping updates (`PATCH /roles/{id}/permissions`)
+  - `staff_role_updated`: Staff member role reassignments (`PATCH /staff/{id}/role`)
+  - `staff_status_updated`: Staff member activation / suspension toggles (`PATCH /staff/{id}/status`)
+  - `product_deleted`: Product catalog item removals (`DELETE /products/{id}`)
 - Firebase ID tokens and session cookies verified server-side by FastAPI via Firebase Admin SDK
 - RFC 6238 TOTP two-factor authentication mandatory for financial and administrative roles (`Owner`, `Manager`, `Accountant`)
 - TOTP secrets and backup codes encrypted at rest with Fernet symmetric cryptography

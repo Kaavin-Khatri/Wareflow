@@ -55,4 +55,4 @@ def update_role_permissions(
     service: StaffService = Depends(get_staff_service),
 ) -> RoleSummaryResponse:
     """Modify the permissions granted to a specific role."""
-    return service.update_role_permissions(role_id=role_id, data=payload)
+    return service.update_role_permissions(role_id=role_id, data=payload, actor_id=current_user.id)

@@ -20,6 +20,7 @@ from app.schemas.staff import (
     StaffRoleUpdateRequest,
     StaffStatusUpdateRequest,
 )
+from app.services.audit_service import AuditService
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +28,13 @@ logger = logging.getLogger(__name__)
 class StaffService:
     """Business logic for inviting staff, changing roles, and managing permission matrices."""
 
-    def __init__(self, profile_repo: ProfileRepository) -> None:
+    def __init__(
+        self,
+        profile_repo: ProfileRepository,
+        audit_service: AuditService | None = None,
+    ) -> None:
         self._repo = profile_repo
+        self._audit = audit_service
 
     def invite_staff(self, data: StaffInviteRequest) -> StaffInviteResponse:
         """Create Firebase Auth account, allocate database profile, and assign role."""
@@ -89,7 +95,7 @@ class StaffService:
         ]
 
     def update_staff_role(
-        self, profile_id: str, data: StaffRoleUpdateRequest
+        self, profile_id: str, data: StaffRoleUpdateRequest, actor_id: str | None = None
     ) -> StaffMemberResponse:
         """Update the assigned role of a staff member."""
         role = self._repo.get_role_by_id(data.role_id)
@@ -99,11 +105,24 @@ class StaffService:
                 detail=f"Role with ID '{data.role_id}' not found.",
             )
 
+        existing = self._repo.get_by_id(profile_id)
+        old_role_name = existing.role.name if existing and existing.role else "Unknown"
+
         updated = self._repo.update_role(profile_id=profile_id, role_id=data.role_id)
         if not updated:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Staff member not found.",
+            )
+
+        if self._audit and old_role_name != role.name:
+            self._audit.log(
+                actor_id=actor_id,
+                action="staff_role_updated",
+                entity_type="staff",
+                entity_id=updated.id,
+                before={"email": updated.email, "role_name": old_role_name},
+                after={"email": updated.email, "role_name": role.name},
             )
 
         return StaffMemberResponse(
@@ -119,14 +138,27 @@ class StaffService:
         )
 
     def update_staff_status(
-        self, profile_id: str, data: StaffStatusUpdateRequest
+        self, profile_id: str, data: StaffStatusUpdateRequest, actor_id: str | None = None
     ) -> StaffMemberResponse:
         """Toggle active/inactive status for a staff profile."""
+        existing = self._repo.get_by_id(profile_id)
+        old_status = existing.is_active if existing else None
+
         updated = self._repo.update_status(profile_id=profile_id, is_active=data.is_active)
         if not updated:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Staff member not found.",
+            )
+
+        if self._audit and old_status != data.is_active:
+            self._audit.log(
+                actor_id=actor_id,
+                action="staff_status_updated",
+                entity_type="staff",
+                entity_id=updated.id,
+                before={"email": updated.email, "is_active": old_status},
+                after={"email": updated.email, "is_active": data.is_active},
             )
 
         return StaffMemberResponse(
@@ -170,7 +202,10 @@ class StaffService:
         ]
 
     def update_role_permissions(
-        self, role_id: str, data: RolePermissionsUpdateRequest
+        self,
+        role_id: str,
+        data: RolePermissionsUpdateRequest,
+        actor_id: str | None = None,
     ) -> RoleSummaryResponse:
         """Batch-update role permission mapping."""
         role = self._repo.get_role_by_id(role_id)
@@ -180,9 +215,22 @@ class StaffService:
                 detail=f"Role with ID '{role_id}' not found.",
             )
 
+        old_perms = self._repo.get_role_permissions(role_id)
+
         updated_perms = self._repo.update_role_permissions(
             role_id=role_id, permission_codes=data.permission_codes
         )
+
+        if self._audit:
+            self._audit.log(
+                actor_id=actor_id,
+                action="role_permissions_updated",
+                entity_type="role_permissions",
+                entity_id=role.id,
+                before={"role_name": role.name, "permissions": old_perms},
+                after={"role_name": role.name, "permissions": updated_perms},
+            )
+
         return RoleSummaryResponse(
             id=role.id,
             name=role.name,

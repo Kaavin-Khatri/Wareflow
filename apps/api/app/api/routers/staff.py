@@ -60,7 +60,7 @@ def change_staff_role(
     service: StaffService = Depends(get_staff_service),
 ) -> StaffMemberResponse:
     """Reassign staff member to a different system role."""
-    return service.update_staff_role(profile_id=profile_id, data=payload)
+    return service.update_staff_role(profile_id=profile_id, data=payload, actor_id=current_user.id)
 
 
 @router.patch(
@@ -76,4 +76,6 @@ def change_staff_status(
     service: StaffService = Depends(get_staff_service),
 ) -> StaffMemberResponse:
     """Activate or deactivate a staff member account."""
-    return service.update_staff_status(profile_id=profile_id, data=payload)
+    return service.update_staff_status(
+        profile_id=profile_id, data=payload, actor_id=current_user.id
+    )

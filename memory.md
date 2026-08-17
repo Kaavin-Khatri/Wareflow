@@ -757,3 +757,79 @@
 - `apps/web/app/api/auth/session/route.ts`
 - `apps/web/middleware.ts`
 - `apps/web/lib/nav.ts`
+
+---
+
+## Step 3.5 — General Admin Action Audit Log
+
+**Timestamp:** 2026-08-17T20:15:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Implemented general administrator audit logging engine backed by `admin_audit_log` database table:
+  - Created `AuditRepository` protocol and `SqlAlchemyAuditRepository` implementation for persisting and querying audit entries with pagination, date-range, and entity filters.
+  - Implemented `AuditService` with `log()` and `list_logs()` and intelligent human-readable sentence synthesis (converting raw diffs into clear business narratives).
+  - Instrumented sensitive mutations to automatically record before/after diffs in `admin_audit_log`:
+    - **Product Price Edits**: `ProductService.update_price` (`PATCH /products/{id}/price`) records before/after wholesale and cost prices.
+    - **Retailer Credit Limit Edits**: `RetailerService.update_credit_limit` (`PATCH /retailers/{id}/credit-limit`) records before/after authorized credit limits.
+    - **Permission Matrix Edits**: `StaffService.update_role_permissions` (`PATCH /roles/{id}/permissions`) records added/removed permission codes per role.
+    - **Staff Role Updates**: `StaffService.update_staff_role` (`PATCH /staff/{id}/role`) records before/after role assignment.
+    - **Staff Status Toggles**: `StaffService.update_staff_status` (`PATCH /staff/{id}/status`) records activation/suspension.
+    - **Product Deletions**: `ProductService.delete_product` records entity deletion.
+- Created `GET /admin/audit-log` endpoint in FastAPI:
+  - Paginated (`page`, `page_size`), filterable by `entity_type`, `actor_id`, `action`, `start_date`, `end_date`.
+  - Protected with `require_permission("audit:view")` (accessible by Owner and roles with `audit:view`).
+- Built rich frontend Audit Log UI in Next.js:
+  - `apps/web/app/admin/audit/page.tsx`: Timeline interface with humanized event descriptions, entity type badges, actor attribution, filter bar, pagination, and "Inspect Diff" modal displaying before/after JSON states.
+  - `apps/web/app/admin/settings/audit-log/page.tsx`: Alias route rendering audit timeline.
+- Created test suite in `apps/api/tests/test_audit_log.py` verifying pricing mutations, credit limit changes, permission matrix updates, filtering, and 403 authorization enforcement (all 47 monorepo tests passing with 92% backend coverage).
+
+### Decisions
+
+- **Human-Readable Sentence Generation at Service Layer**: `AuditService` translates JSON state transitions into natural business language ("Owner changed Retailer 'X' credit limit from ₹50,000 to ₹75,000") while retaining raw JSON before/after snapshots for deep compliance inspection.
+- **DIP Repository Pattern**: Created `AuditRepository` and `RetailerRepository` interfaces to ensure service layers never bind directly to database engines.
+- **Reference List of Audit-Wrapped Mutations**:
+  1. `product_price_updated`: `ProductService.update_price`
+  2. `retailer_credit_limit_updated`: `RetailerService.update_credit_limit`
+  3. `role_permissions_updated`: `StaffService.update_role_permissions`
+  4. `staff_role_updated`: `StaffService.update_staff_role`
+  5. `staff_status_updated`: `StaffService.update_staff_status`
+  6. `product_deleted`: `ProductService.delete_product`
+
+### Key values for future steps
+
+- Audit log API: `GET /admin/audit-log`
+- Product price update API: `PATCH /products/{id}/price`
+- Retailer credit limit update API: `PATCH /retailers/{id}/credit-limit`
+- Web Audit timeline: `/admin/audit` and `/admin/settings/audit-log`
+- `AuditService.log(actor_id, action, entity_type, entity_id, before, after)` factory from `app.core.di`
+
+### Files Created
+
+- `apps/api/app/repositories/interfaces/audit_repository.py`
+- `apps/api/app/repositories/impl/audit_repository.py`
+- `apps/api/app/repositories/interfaces/retailer_repository.py`
+- `apps/api/app/repositories/impl/retailer_repository.py`
+- `apps/api/app/schemas/audit.py`
+- `apps/api/app/schemas/products.py`
+- `apps/api/app/schemas/retailers.py`
+- `apps/api/app/services/audit_service.py`
+- `apps/api/app/services/retailer_service.py`
+- `apps/api/app/api/routers/audit.py`
+- `apps/api/app/api/routers/products.py`
+- `apps/api/app/api/routers/retailers.py`
+- `apps/api/tests/test_audit_log.py`
+- `apps/web/app/admin/audit/page.tsx`
+- `apps/web/app/admin/settings/audit-log/page.tsx`
+
+### Files Modified
+
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/api/app/repositories/interfaces/product_repository.py`
+- `apps/api/app/repositories/impl/product_repository.py`
+- `apps/api/app/services/product_service.py`
+- `apps/api/app/services/staff_service.py`
+- `apps/api/app/api/routers/staff.py`
+- `apps/api/app/api/routers/roles.py`
