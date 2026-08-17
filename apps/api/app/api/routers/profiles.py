@@ -6,7 +6,11 @@ from fastapi import APIRouter, Depends, status
 
 from app.core.di import get_profile_service
 from app.core.security import get_current_user_claims
-from app.schemas.profile import ProfileBootstrapRequest, ProfileResponse
+from app.schemas.profile import (
+    AppearancePreferencesRequest,
+    ProfileBootstrapRequest,
+    ProfileResponse,
+)
 from app.services.profile_service import ProfileService
 
 router = APIRouter(prefix="/profiles", tags=["Profiles"])
@@ -55,3 +59,22 @@ def get_my_profile(
 ) -> ProfileResponse:
     """Retrieve profile and active role permissions for the caller."""
     return service.get_profile(claims["uid"])
+
+
+@router.patch(
+    "/preferences",
+    response_model=ProfileResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update appearance theme mode and accent color preferences",
+)
+def update_my_preferences(
+    body: AppearancePreferencesRequest,
+    claims: dict[str, Any] = Depends(get_current_user_claims),
+    service: ProfileService = Depends(get_profile_service),
+) -> ProfileResponse:
+    """Persist theme mode and accent color to caller's profile."""
+    return service.update_appearance_preferences(
+        uid=claims["uid"],
+        theme_preference=body.theme_preference,
+        accent_color=body.accent_color,
+    )

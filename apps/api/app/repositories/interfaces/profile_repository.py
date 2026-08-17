@@ -76,3 +76,9 @@ class ProfileRepository(Protocol):
     ) -> Profile | None:
         """Update remaining encrypted backup codes list for a profile."""
         ...
+
+    def update_appearance_preferences(
+        self, profile_id: str, theme_preference: str, accent_color: str
+    ) -> Profile | None:
+        """Update theme mode and accent color preferences for a profile."""
+        ...

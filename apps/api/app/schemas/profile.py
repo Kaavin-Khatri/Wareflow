@@ -13,6 +13,15 @@ class ProfileBootstrapRequest(BaseModel):
     phone: str | None = None
 
 
+class AppearancePreferencesRequest(BaseModel):
+    """User request payload to update appearance theme mode and accent color."""
+
+    theme_preference: str = "system"  # 'light' | 'dark' | 'system'
+    accent_color: str = (
+        "violet"  # 'violet' | 'indigo' | 'emerald' | 'cyan' | 'rose' | 'amber' | 'cobalt'
+    )
+
+
 class ProfileResponse(BaseModel):
     """Authenticated user profile with role and resolved permissions list."""
 
@@ -25,6 +34,8 @@ class ProfileResponse(BaseModel):
     role_name: str
     permissions: list[str]
     is_active: bool
+    theme_preference: str = "system"
+    accent_color: str = "violet"
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

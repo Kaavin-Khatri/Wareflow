@@ -949,3 +949,56 @@
 - `apps/web/package.json`
 - `apps/web/app/layout.tsx`
 - `apps/web/app/styleguide/page.tsx`
+
+---
+
+## Step 4.3 — Theme Settings: Dark/Light Toggle Persistence + Accent Customization
+
+**Timestamp:** 2026-08-17T19:25:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Created dedicated Appearance & Theme settings console in `/admin/settings/appearance` and portal alias `/portal/settings/appearance`.
+- Implemented mode selection (Light / Dark / System) with real-time UI switching and persistence in both `localStorage` and the database `profiles` table via Alembic migration `0006_profile_appearance.py`.
+- Designed and verified a curated set of 7 pre-tested accent swatches (`violet`, `indigo`, `emerald`, `cyan`, `rose`, `amber`, `cobalt`), with Electric Violet (`#7C3AED`) as the default.
+- Upgraded `ThemeProvider` to dynamically inject CSS custom properties (`--accent`, `--accent-hover`, `--accent-subtle`, `--accent-border`, `--accent-glow`) across all root elements, re-theming buttons, active states, focus rings, and badges instantly with zero page reload.
+- Upgraded `<head>` anti-flash script in `RootLayout` to load saved accent tokens before DOM paint, eliminating color flash on page load.
+- Added `PATCH /profiles/preferences` endpoint in FastAPI and updated `GET /me` response model.
+- Added unit test suites `apps/web/lib/__tests__/appearance.test.ts` and `apps/api/tests/test_appearance_preferences.py` (all 62 monorepo tests passing: 18 web + 44 API).
+
+### Decisions
+
+- **Accent Customization Scoped to Curated Pre-Tested Swatches**: Restricted accent choices to 7 verified swatches rather than an unconstrained color wheel to guarantee that every color passes WCAG AA contrast against both true black (`#09090B`) and white (`#FAFAFA`) glass backgrounds.
+- **Fixed Glass Foundation**: The black/white liquid glass base (surfaces, specular bevels, blurs, borders) remains un-customizable to preserve design system coherence across all wholesale distribution screens.
+- **Dual Preference Persistence**: Preferences are stored in `localStorage` for instant client-side rendering and synchronized with `profiles.theme_preference` and `profiles.accent_color` so preferences follow users across different machines/browsers.
+
+### Key values for future steps
+
+- Appearance Settings Route: `/admin/settings/appearance` (portal: `/portal/settings/appearance`)
+- Preferences API: `PATCH /profiles/preferences` (`theme_preference`, `accent_color`)
+- Curated Swatches: `ACCENT_SWATCHES` in `@/lib/theme-accents`
+- Theme Context: `useTheme()` providing `theme`, `resolvedTheme`, `accent`, `currentSwatch`, `availableAccents`, `setTheme`, `setAccent`
+
+### Files Created
+
+- `apps/api/alembic/versions/0006_profile_appearance.py`
+- `apps/api/tests/test_appearance_preferences.py`
+- `apps/web/lib/theme-accents.ts`
+- `apps/web/lib/__tests__/appearance.test.ts`
+- `apps/web/app/admin/settings/appearance/page.tsx`
+- `apps/web/app/portal/settings/appearance/page.tsx`
+
+### Files Modified
+
+- `apps/api/app/models/profile.py`
+- `apps/api/app/schemas/profile.py`
+- `apps/api/app/repositories/interfaces/profile_repository.py`
+- `apps/api/app/repositories/impl/profile_repository.py`
+- `apps/api/app/services/profile_service.py`
+- `apps/api/app/api/routers/profiles.py`
+- `apps/web/components/ThemeProvider.tsx`
+- `apps/web/app/layout.tsx`
+- `apps/web/lib/nav.ts`
+- `codebase_audit.md`
+

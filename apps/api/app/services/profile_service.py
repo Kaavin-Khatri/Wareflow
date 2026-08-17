@@ -73,6 +73,32 @@ class ProfileService:
             )
         return self._build_response(profile)
 
+    def update_appearance_preferences(
+        self, uid: str, theme_preference: str, accent_color: str
+    ) -> ProfileResponse:
+        """Update appearance theme mode and accent color preference."""
+        allowed_themes = {"light", "dark", "system"}
+        allowed_accents = {"violet", "indigo", "emerald", "cyan", "rose", "amber", "cobalt"}
+
+        if theme_preference not in allowed_themes:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid theme preference '{theme_preference}'. Allowed: {sorted(allowed_themes)}",
+            )
+        if accent_color not in allowed_accents:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid accent color '{accent_color}'. Allowed: {sorted(allowed_accents)}",
+            )
+
+        updated = self._repo.update_appearance_preferences(uid, theme_preference, accent_color)
+        if not updated:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User profile not found.",
+            )
+        return self._build_response(updated)
+
     def _build_response(self, profile: Profile) -> ProfileResponse:
         permissions = self._repo.get_role_permissions(profile.role_id)
         return ProfileResponse(
@@ -85,5 +111,7 @@ class ProfileService:
             role_name=profile.role.name if profile.role else "Unknown",
             permissions=permissions,
             is_active=profile.is_active,
+            theme_preference=getattr(profile, "theme_preference", "system") or "system",
+            accent_color=getattr(profile, "accent_color", "violet") or "violet",
             created_at=profile.created_at,
         )

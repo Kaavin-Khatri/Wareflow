@@ -134,3 +134,15 @@ class SqlAlchemyProfileRepository:
         self._session.commit()
         self._session.refresh(profile)
         return profile
+
+    def update_appearance_preferences(
+        self, profile_id: str, theme_preference: str, accent_color: str
+    ) -> Profile | None:
+        profile = self.get_by_id(profile_id)
+        if not profile:
+            return None
+        profile.theme_preference = theme_preference
+        profile.accent_color = accent_color
+        self._session.commit()
+        self._session.refresh(profile)
+        return profile

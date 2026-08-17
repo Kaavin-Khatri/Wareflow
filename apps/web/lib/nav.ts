@@ -87,6 +87,13 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         requiredPermission: "audit:view",
       },
       {
+        name: "Appearance & Theme",
+        href: "/admin/settings/appearance",
+        icon: "Sparkles",
+        requiredPermission: "settings:manage",
+      },
+
+      {
         name: "Business Settings",
         href: "/admin/settings/business",
         icon: "Building2",
@@ -96,7 +103,7 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         name: "Design System",
         href: "/styleguide",
         icon: "Palette",
-        badge: "v4.1",
+        badge: "v4.2",
         requiredRole: "Owner",
       },
     ],

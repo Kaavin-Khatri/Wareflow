@@ -18,28 +18,28 @@
 
 ## Stack & Versions
 
-| Layer              | Technology              | Version   |
-| ------------------ | ----------------------- | --------- |
-| Frontend framework | Next.js (App Router)    | 16.3.1    |
-| Frontend language  | TypeScript              | 5.9.3     |
-| UI library         | React                   | 19.2.8    |
-| CSS framework      | Tailwind CSS            | 4.3.3     |
-| Motion Stack (UI)  | motion (Framer Motion)  | 12.40.0   |
-| Motion (Timelines) | gsap                    | 3.14.2    |
-| Motion (Physics)   | @react-spring/web       | 10.0.3    |
-| Motion (Lists)     | @formkit/auto-animate   | 0.9.0     |
-| Icons & Utility    | lucide-react, clsx, cva | latest    |
-| Auth client        | Firebase Web SDK        | 12.17.1   |
-| Test Runner (web)  | Vitest                  | 4.1.10    |
-| Backend framework  | FastAPI                 | >=0.115.0 |
-| Backend language   | Python                  | 3.14.6    |
-| ORM                | SQLAlchemy              | >=2.0.0   |
-| Migrations         | Alembic                 | >=1.13.0  |
-| Validation         | Pydantic                | >=2.0.0   |
-| Auth (backend)     | Firebase Admin SDK      | >=6.0.0   |
-| 2FA (TOTP & QR)    | pyotp + qrcode          | >=2.9.0   |
-| Encryption         | cryptography            | >=42.0.0  |
-| Test Runner (api)  | Pytest + pytest-cov     | >=8.0.0   |
+| Layer              | Technology                 | Version   |
+| ------------------ | -------------------------- | --------- |
+| Frontend framework | Next.js (App Router)       | 16.3.1    |
+| Frontend language  | TypeScript                 | 5.9.3     |
+| UI library         | React                      | 19.2.8    |
+| CSS framework      | Tailwind CSS               | 4.3.3     |
+| Motion Stack (UI)  | motion (Framer Motion)     | 12.40.0   |
+| Motion (Timelines) | gsap                       | 3.14.2    |
+| Motion (Physics)   | @react-spring/web          | 10.0.3    |
+| Motion (Lists)     | @formkit/auto-animate      | 0.9.0     |
+| Icons & Utility    | lucide-react, clsx, cva    | latest    |
+| Auth client        | Firebase Web SDK           | 12.17.1   |
+| Test Runner (web)  | Vitest                     | 4.1.10    |
+| Backend framework  | FastAPI                    | >=0.115.0 |
+| Backend language   | Python                     | 3.14.6    |
+| ORM                | SQLAlchemy                 | >=2.0.0   |
+| Migrations         | Alembic                    | >=1.13.0  |
+| Validation         | Pydantic                   | >=2.0.0   |
+| Auth (backend)     | Firebase Admin SDK         | >=6.0.0   |
+| 2FA (TOTP & QR)    | pyotp + qrcode             | >=2.9.0   |
+| Encryption         | cryptography               | >=42.0.0  |
+| Test Runner (api)  | Pytest + pytest-cov        | >=8.0.0   |
 
 ## Services
 
@@ -124,7 +124,7 @@ wareflow/
 │   │   │   ├── Sidebar.tsx         # Liquid glass dynamic navigation sidebar
 │   │   │   ├── AppLayout.tsx       # Modern topbar & responsive container layout
 │   │   │   ├── GradientBackdrop.tsx# Multi-orb GPU-accelerated liquid gradient backdrop
-│   │   │   ├── ThemeProvider.tsx   # React 19 useSyncExternalStore theme context
+│   │   │   ├── ThemeProvider.tsx   # React 19 useSyncExternalStore theme + accent context
 │   │   │   ├── ThemeToggle.tsx     # Animated sun/moon liquid glass toggle button
 │   │   │   ├── motion/             # Motion stack infrastructure
 │   │   │   │   ├── MotionProvider.tsx # Shared spring presets (snappy, glassMorph, gentle)
@@ -140,11 +140,13 @@ wareflow/
 │   │   │       └── index.ts        # Barrel export for all glass primitives
 │   │   ├── lib/
 │   │   │   ├── utils.ts            # cn() class merge helper (clsx + tailwind-merge)
+│   │   │   ├── theme-accents.ts    # Curated 7-swatch WCAG AA calibrated palette
 │   │   │   ├── api-client.ts       # Typed fetch wrapper with ApiError
 │   │   │   ├── firebase-client.ts  # Safe Firebase Web SDK singleton (Google + Apple + Password)
 │   │   │   ├── nav.ts              # Data-driven navigation schema & permission filter
 │   │   │   └── __tests__/
 │   │   │       ├── api-client.test.ts
+│   │   │       ├── appearance.test.ts
 │   │   │       ├── firebase-client.test.ts
 │   │   │       ├── nav.test.ts
 │   │   │       ├── theme.test.ts
@@ -167,10 +169,13 @@ wareflow/
 │   │       ├── admin/
 │   │       │   ├── audit/page.tsx  # General Action Audit Log timeline & diff inspector
 │   │       │   └── settings/
+│   │       │       ├── appearance/page.tsx  # Theme mode (Light/Dark/System) + Accent picker
 │   │       │       ├── audit-log/page.tsx   # Alias route for audit timeline
 │   │       │       ├── staff/page.tsx       # Staff invite & role management UI
 │   │       │       ├── permissions/page.tsx # Live role-permission matrix editor
 │   │       │       └── security/page.tsx    # 2FA enrollment, QR code, backup codes
+│   │       ├── portal/settings/
+│   │       │   └── appearance/page.tsx      # Portal appearance settings alias
 │   │       └── debug/              # Temporary handshake probe
 │   │           └── page.tsx
 │   └── api/                        # FastAPI backend (:8000)
@@ -183,12 +188,14 @@ wareflow/
 │       │       ├── 0002_core_wholesale_schema.py
 │       │       ├── 0003_extended_wholesale_schema.py
 │       │       ├── 0004_user_profiles.py
-│       │       └── 0005_two_factor_auth.py
+│       │       ├── 0005_two_factor_auth.py
+│       │       └── 0006_profile_appearance.py
 │       ├── requirements.txt
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
 │       ├── .env.example
-│       ├── tests/                  # Pytest test suite (40 tests, 92% cov)
+│       ├── tests/                  # Pytest test suite (44 tests, 92% cov)
+│       │   ├── test_appearance_preferences.py
 │       │   ├── test_di_and_health.py
 │       │   ├── test_models.py
 │       │   ├── test_extended_models.py
@@ -204,7 +211,7 @@ wareflow/
 │           │   └── routers/        # HTTP layer (request/response only)
 │           │       ├── health.py   # Liveness & DB connectivity (/health, /health/db)
 │           │       ├── me.py       # Caller profile & permissions (/me)
-│           │       ├── profiles.py # User profile & bootstrapping (/profiles/bootstrap, /profiles/me)
+│           │       ├── profiles.py # User profile, bootstrapping & preferences (/profiles/*)
 │           │       ├── staff.py    # Staff invitation & roles (/staff/invite, /staff)
 │           │       ├── roles.py    # Role permissions matrix (/roles, /permissions)
 │           │       ├── two_factor.py# 2FA endpoints (/auth/2fa/*)
@@ -216,7 +223,7 @@ wareflow/
 │           │   └── session.py      # Engine (NullPool) + get_db_session dependency
 │           ├── models/             # Domain ORM models
 │           │   ├── __init__.py
-│           │   ├── profile.py      # Staff & Admin user profiles with 2FA fields
+│           │   ├── profile.py      # Staff & Admin user profiles with 2FA & theme prefs
 │           │   ├── uom.py          # Units of Measure & Conversions
 │           │   ├── catalog.py      # Categories & Products
 │           │   ├── warehouse.py    # Warehouses & StockBatches
@@ -269,7 +276,7 @@ wareflow/
 | Table                     | Purpose                            | Columns                                                                                                                                                                                                                                                       | Indexes / Constraints                                                                   |
 | ------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `admin_audit_log`         | Sensitive operation change audit   | `id` (PK, str), `actor_id`, `action`, `entity_type`, `entity_id`, `before_value` (JSON), `after_value` (JSON), `created_at`                                                                                                                                   | `INDEX(actor_id)`, `INDEX(entity_type)`, `INDEX(entity_id)`, `INDEX(created_at)`        |
-| `profiles`                | User profiles with 2FA & roles     | `id` (PK, str), `email`, `display_name`, `avatar_url`, `phone`, `role_id` (FK), `is_active`, `totp_secret_encrypted`, `totp_enabled`, `backup_codes_encrypted`, `totp_enrolled_at`, `created_at`, `updated_at`                                                | `UNIQUE(email)`, `INDEX(email)`, `INDEX(role_id)`, `FK(role_id -> roles.id RESTRICT)`   |
+| `profiles`                | User profiles with 2FA & theme     | `id` (PK, str), `email`, `display_name`, `avatar_url`, `phone`, `role_id` (FK), `is_active`, `totp_secret_encrypted`, `totp_enabled`, `backup_codes_encrypted`, `totp_enrolled_at`, `theme_preference`, `accent_color`, `created_at`, `updated_at`        | `UNIQUE(email)`, `INDEX(email)`, `INDEX(role_id)`, `FK(role_id -> roles.id RESTRICT)`   |
 | `units_of_measure`        | Measurement units (pcs, box, kg)   | `id` (PK, str), `name`, `abbreviation`, `created_at`                                                                                                                                                                                                          | `UNIQUE(abbreviation)`                                                                  |
 | `categories`              | Product hierarchy                  | `id` (PK, str), `name`, `parent_id` (FK), `created_at`                                                                                                                                                                                                        | `FK(parent_id -> categories.id)`                                                        |
 | `products`                | Core product catalog               | `id` (PK, str), `sku`, `name`, `description`, `content_details`, `image_url`, `hsn_code`, `category_id` (FK), `base_uom_id` (FK), `unit`, `cost_price`, `wholesale_price`, `reorder_point`, `reorder_qty`, `barcode`, `is_active`, `created_at`, `updated_at` | `UNIQUE(sku)`, `INDEX(sku)`, `INDEX(barcode)`                                           |
@@ -309,9 +316,10 @@ wareflow/
 | ------ | ----------------------------------- | -------------------------------------------------- | ------------------------------- |
 | GET    | `/health`                           | Liveness probe returning status: "ok"              | No                              |
 | GET    | `/health/db`                        | Database probe executing `SELECT 1` via connection | No                              |
-| GET    | `/me`                               | Get caller identity, role, and permission codes    | Yes (Bearer / Cookie)           |
+| GET    | `/me`                               | Get caller identity, role, permissions & theme     | Yes (Bearer / Cookie)           |
 | POST   | `/profiles/bootstrap`               | Bootstrap/retrieve authenticated Firebase profile  | Yes (Bearer / Cookie)           |
 | GET    | `/profiles/me`                      | Get current user profile and role permissions      | Yes (Bearer / Cookie)           |
+| PATCH  | `/profiles/preferences`             | Update user theme mode and accent color            | Yes (Bearer / Cookie)           |
 | POST   | `/staff/invite`                     | Invite new staff member with assigned role         | Yes (`staff:manage` / Owner)    |
 | GET    | `/staff`                            | List all staff members and active roles            | Yes (`staff:view`)              |
 | PATCH  | `/staff/{id}/role`                  | Update a staff member's assigned role              | Yes (`staff:manage`)            |
@@ -363,49 +371,52 @@ wareflow/
 
 ## Decisions
 
-| Decision                          | Rationale                                                                                                         |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Decision                          | Rationale                                                                                                        |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Theme Mode + Accent Locked Tokens | Theme mode (Light/Dark/System) + Accent are the ONLY customizable tokens; the black/white glass foundation stays |
+| Curated Pre-Tested Swatches       | Scoped to 7 verified swatches to guarantee WCAG AA contrast against both true black and white backgrounds        |
+| Dual-Storage Persistence          | Preferences stored in `localStorage` for 0-latency paint and in Postgres `profiles` to follow users on login    |
 | Liquid Glass Default Primitives   | Real specular edge refraction & tactile spring compression as DEFAULT for all buttons and interactive controls    |
 | Surface-Area Inverted Refraction  | Refraction strength scales inversely with element size: full refraction for buttons/modals, light-edge for panels |
-| Segregated Motion Stack Ownership | `motion` for UI transitions, `gsap` for marketing timelines, `@formkit/auto-animate` for lists, `@react-spring`   |
-| Liquid Glass Visual Identity      | Black/white foundation + single Electric Violet (`#7C3AED`/`#8B5CF6`) accent + frosted glass overlays & blooms    |
-| Real Persisted Theme Toggle       | Explicit user choice stored in `localStorage` (`wareflow-theme`), defaulting to OS preference on 1st visit        |
-| GPU Gradient Backdrop             | Fixed multi-orb CSS backdrop drifting smoothly over noise grain layer, eliminating OLED banding                   |
-| Supabase = DB only                | Need SQL joins, transactions, referential integrity for accounting                                                |
-| Firebase = Auth only              | Best-in-class free Google/Apple Sign-In with minimal setup                                                        |
-| In-House RFC 6238 TOTP 2FA        | Standard TOTP avoids paid Firebase SMS MFA costs while delivering universal Google Authenticator/Authy support    |
-| Symmetric Secret Encryption       | TOTP secrets and backup codes encrypted at rest with Fernet (AES-128-CBC + HMAC-SHA256)                           |
-| Single-Use Atomic Backup Codes    | 10 backup codes generated at enrollment, permanently consumed upon single use                                     |
-| Operational Staff Exemption       | Warehouse/Sales staff exempt from mandatory 2FA to prevent delays during high-speed packing and shop-floor runs   |
-| General Admin Action Audit Log    | `admin_audit_log` records immutable before/after diffs for sensitive actions (price, credit, permissions, staff)  |
-| Humanized Audit Narratives        | `AuditService` synthesizes readable business sentences from raw diffs while preserving JSON diff inspection       |
-| SOLID from day one                | Prevents spaghetti; makes testing and swapping implementations easy                                               |
-| Application factory               | Testable app creation, supports different configs per environment                                                 |
-| pydantic-settings                 | Single source of truth for env vars, validates on startup                                                         |
-| Prettier (web)                    | Consistent formatting, 100 char line width matching ruff                                                          |
-| Ruff (api)                        | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N                                          |
-| eslint-config-prettier            | Disables ESLint rules that conflict with Prettier                                                                 |
-| Local PG on 5433                  | Avoid conflicts with system Postgres; Supabase stays primary                                                      |
-| Typed API Client                  | Type-safe fetch wrapper with ApiError extracting status & server message                                          |
-| DIP Container                     | Services receive repository Protocol interfaces via FastAPI Depends()                                             |
-| CI on Day One                     | GitHub Actions pipeline runs lint + format + test + build on every push                                           |
-| Automated QA                      | QA checklist items written as automated tests, enforced by CI                                                     |
-| Connection Split (Supabase)       | Port 6543 (transaction pooler) + NullPool for runtime; port 5432 (session pooler) for Alembic migrations          |
-| Prepared Statement Disabling      | `connect_args={"prepare_threshold": None}` prevents named prepared statement errors with Supavisor pooler         |
-| Schema v1 Completeness            | Core tables (UOM conversions, batch tracking, supplier FSSAI, retailer credit) created upfront                    |
-| Append-only Stock Ledger          | `stock_movements` is single source of truth for inventory balances                                                |
-| Frozen Invoicing Snapshot         | `invoice_items` freezes prices, taxes, and names at issuance time to ensure immutable accounting records          |
-| Single-Path Sales Orders          | `buyer_type` discriminator allows single order fulfillment engine to serve both B2B retailers and customers       |
-| Supplier Magic Links              | `supplier_access_tokens` provides no-login dispatch confirmations for suppliers                                   |
-| Distributor Identity Model        | `business_settings` provides single source of truth for distributor's legal/FSSAI profile                         |
-| Natural-Key Upsert Seed           | `scripts/seed.py` matches on unique natural keys to guarantee complete idempotency across repeated runs           |
-| Deliberate Low-Stock Seed Data    | Seed includes 4 products below reorder point to prove alert and notification engines                              |
-| Server-Side Session Cookies       | Next.js route handler sets `httpOnly` cookie on auth to allow Next.js middleware protection without waterfalls    |
-| First-User Owner Assignment       | Bootstrap assigns `Owner` role to 1st signed-in user; subsequent uninvited registrations receive 403 Forbidden    |
-| Data-Driven Permission Guards     | `require_permission(code)` enforces DB permission codes from `role_permissions` rather than hardcoded roles       |
-| Dual-Inbound Auth Support         | `get_current_user` extracts and verifies either Bearer tokens or `httpOnly` session cookies transparently         |
-| Dynamic RBAC Navigation           | Navigation menus filter items strictly against user's active permissions without hardcoded role branches          |
-| Server-Side User Provisioning     | Firebase Admin SDK creates users server-side only; service keys are never exposed to client bundles               |
+| Segregated Motion Stack Ownership | `motion` for UI transitions, `gsap` for marketing timelines, `@formkit/auto-animate` for lists, `@react-spring` |
+| Liquid Glass Visual Identity      | Black/white foundation + single Electric Violet (`#7C3AED`/`#8B5CF6`) accent + frosted glass overlays & blooms   |
+| Real Persisted Theme Toggle       | Explicit user choice stored in `localStorage` (`wareflow-theme`), defaulting to OS preference on 1st visit       |
+| GPU Gradient Backdrop             | Fixed multi-orb CSS backdrop drifting smoothly over noise grain layer, eliminating OLED banding                  |
+| Supabase = DB only                | Need SQL joins, transactions, referential integrity for accounting                                               |
+| Firebase = Auth only              | Best-in-class free Google/Apple Sign-In with minimal setup                                                       |
+| In-House RFC 6238 TOTP 2FA        | Standard TOTP avoids paid Firebase SMS MFA costs while delivering universal Google Authenticator/Authy support   |
+| Symmetric Secret Encryption       | TOTP secrets and backup codes encrypted at rest with Fernet (AES-128-CBC + HMAC-SHA256)                          |
+| Single-Use Atomic Backup Codes    | 10 backup codes generated at enrollment, permanently consumed upon single use                                    |
+| Operational Staff Exemption       | Warehouse/Sales staff exempt from mandatory 2FA to prevent delays during high-speed packing and shop-floor runs  |
+| General Admin Action Audit Log    | `admin_audit_log` records immutable before/after diffs for sensitive actions (price, credit, permissions, staff) |
+| Humanized Audit Narratives        | `AuditService` synthesizes readable business sentences from raw diffs while preserving JSON diff inspection      |
+| SOLID from day one                | Prevents spaghetti; makes testing and swapping implementations easy                                              |
+| Application factory               | Testable app creation, supports different configs per environment                                                |
+| pydantic-settings                 | Single source of truth for env vars, validates on startup                                                        |
+| Prettier (web)                    | Consistent formatting, 100 char line width matching ruff                                                         |
+| Ruff (api)                        | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N                                         |
+| eslint-config-prettier            | Disables ESLint rules that conflict with Prettier                                                                |
+| Local PG on 5433                  | Avoid conflicts with system Postgres; Supabase stays primary                                                     |
+| Typed API Client                  | Type-safe fetch wrapper with ApiError extracting status & server message                                         |
+| DIP Container                     | Services receive repository Protocol interfaces via FastAPI Depends()                                            |
+| CI on Day One                     | GitHub Actions pipeline runs lint + format + test + build on every push                                          |
+| Automated QA                      | QA checklist items written as automated tests, enforced by CI                                                    |
+| Connection Split (Supabase)       | Port 6543 (transaction pooler) + NullPool for runtime; port 5432 (session pooler) for Alembic migrations         |
+| Prepared Statement Disabling      | `connect_args={"prepare_threshold": None}` prevents named prepared statement errors with Supavisor pooler        |
+| Schema v1 Completeness            | Core tables (UOM conversions, batch tracking, supplier FSSAI, retailer credit) created upfront                   |
+| Append-only Stock Ledger          | `stock_movements` is single source of truth for inventory balances                                               |
+| Frozen Invoicing Snapshot         | `invoice_items` freezes prices, taxes, and names at issuance time to ensure immutable accounting records         |
+| Single-Path Sales Orders          | `buyer_type` discriminator allows single order fulfillment engine to serve both B2B retailers and customers      |
+| Supplier Magic Links              | `supplier_access_tokens` provides no-login dispatch confirmations for suppliers                                  |
+| Distributor Identity Model        | `business_settings` provides single source of truth for distributor's legal/FSSAI profile                        |
+| Natural-Key Upsert Seed           | `scripts/seed.py` matches on unique natural keys to guarantee complete idempotency across repeated runs          |
+| Deliberate Low-Stock Seed Data    | Seed includes 4 products below reorder point to prove alert and notification engines                             |
+| Server-Side Session Cookies       | Next.js route handler sets `httpOnly` cookie on auth to allow Next.js middleware protection without waterfalls   |
+| First-User Owner Assignment       | Bootstrap assigns `Owner` role to 1st signed-in user; subsequent uninvited registrations receive 403 Forbidden   |
+| Data-Driven Permission Guards     | `require_permission(code)` enforces DB permission codes from `role_permissions` rather than hardcoded roles      |
+| Dual-Inbound Auth Support         | `get_current_user` extracts and verifies either Bearer tokens or `httpOnly` session cookies transparently        |
+| Dynamic RBAC Navigation           | Navigation menus filter items strictly against user's active permissions without hardcoded role branches         |
+| Server-Side User Provisioning     | Firebase Admin SDK creates users server-side only; service keys are never exposed to client bundles              |
 
 ## Security & Audit Log Coverage
 

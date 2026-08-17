@@ -32,6 +32,13 @@ class Profile(Base):
     totp_enrolled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    theme_preference: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="system", server_default="system"
+    )
+    accent_color: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="violet", server_default="violet"
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
