@@ -451,3 +451,47 @@
 
 - `apps/api/app/models/__init__.py`
 - `apps/api/app/models/retailer.py`
+
+---
+
+## Step 2.4 — Seed Data (products, suppliers, retailers, warehouses)
+
+**Timestamp:** 2026-08-17T18:31:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Created idempotent wholesale distribution seed script in `scripts/seed.py`:
+  - **2 Base UOMs + Pack UOMs**: Piece (`pcs`), Case (`case`, 24 pcs conversion factor), Kilogram (`kg`), Box (`box`, 10 pcs)
+  - **2 Warehouses**: Bhiwandi Central Hub (Logistics Park, Bhiwandi) and Navi Mumbai APMC Terminal (Sector 19, Vashi)
+  - **5 Major FMCG/Food Suppliers**: HUL, ITC Limited, Tata Consumer Products, Nestle India, Britannia Industries (all with valid GSTIN, FSSAI license numbers & expiry dates)
+  - **8 B2B Wholesale Retailers**: Mixed pricing tiers (`standard`, `wholesale_silver`, `wholesale_gold`, `vip`) with credit limits ranging from ₹0 to ₹500,000 and starting credit balances
+  - **5 Product Categories**: Staples & Grains, Beverages & Tea, Snacks & Biscuits, Personal Care & Hygiene, Packaged Foods & Sauces
+  - **40 Wholesale Products**: Populated with realistic Indian wholesale pricing, cost prices, GST HSN codes, GS1 barcodes, reorder points, and reorder quantities
+  - **5 Default RBAC Roles & Permissions Matrix**: Owner (Root/All), Manager (Operations), Sales Staff, Warehouse Staff, and Accountant, mapped to granular system permissions
+  - **Stock Batches**: Distributed across warehouses, with healthy inventory plus 4 products deliberately seeded below `reorder_point` (Nescafe 200g, Taj Mahal Tea 500g, Kissan Mixed Fruit Jam 1kg, Del Monte Penne Pasta) to prove low-stock alert triggers in Phase 8
+  - **Business Profile Settings**: Initial distributor legal entity profile with GSTIN and FSSAI license
+- Solved psycopg 3 + Supavisor pooler prepared statement conflict by setting `connect_args={"prepare_threshold": None}` in `app/db/session.py`.
+- Added unit test suite in `apps/api/tests/test_seed.py` verifying full seed idempotency across multiple runs, low-stock threshold queries, and RBAC matrix integrity.
+
+### Decisions
+
+- **Natural-Key Idempotency**: All seed operations perform upserts matching on unique natural business keys (`sku` for products, `abbreviation` for UOMs, `code` for permissions, and `name` for categories/roles/warehouses/suppliers/retailers). Re-running `seed.py` never duplicates records or raises unique constraint violations.
+- **Transaction Pooler Prepared Statements**: Disabled named prepared statement caching in psycopg (`prepare_threshold=None`) to ensure compatibility with multiplexed Supabase transaction poolers on port 6543.
+- **Intentional Low Stock**: 4 products are seeded with batch inventory strictly below their configured `reorder_point` to validate notification triggers, reorder suggestions, and visual alert badges.
+
+### Key values for future steps
+
+- 40 active SKUs across 5 core categories available for UI display, order creation, and search
+- 8 seeded retailers with credit limit profiles ready for order checkout validation
+- Default roles for RBAC verification: `Owner`, `Manager`, `Sales Staff`, `Warehouse Staff`, `Accountant`
+- Low-stock testing SKUs: `SKU-COF-NESC-200G`, `SKU-TEA-TAJ-500G`, `SKU-JAM-KISS-MIX-1KG`, `SKU-PAS-DELM-PEN-500G`
+
+### Files Created
+
+- `scripts/seed.py`
+- `apps/api/tests/test_seed.py`
+
+### Files Modified
+
+- `apps/api/app/db/session.py`

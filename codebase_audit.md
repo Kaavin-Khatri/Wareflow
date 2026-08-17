@@ -45,7 +45,7 @@
 
 ### Supabase Connection Modes Explained:
 
-1. **Runtime (`DATABASE_URL`, Port 6543)**: Connects to Supavisor transaction pooler with SQLAlchemy `NullPool`. Because Supabase handles pooling on the server, client-side pooling causes double-pooling and connection limits exhaustion. `NullPool` opens connections on demand and returns them immediately.
+1. **Runtime (`DATABASE_URL`, Port 6543)**: Connects to Supavisor transaction pooler with SQLAlchemy `NullPool` and `connect_args={"prepare_threshold": None}`. Because Supabase handles pooling on the server, client-side pooling causes double-pooling and connection limits exhaustion. `NullPool` opens connections on demand and returns them immediately. Disabling prepared statement caching avoids named statement collisions across pooled connections.
 2. **Migrations (`DIRECT_DATABASE_URL`, Port 5432)**: Connects to the session mode pooler (IPv4 compatible) to execute DDL operations and hold schema locks during Alembic migrations.
 
 ## Env Var Registry
@@ -94,6 +94,8 @@ wareflow/
 ├── README.md                       # Quick-start guide
 ├── memory.md                       # Append-only project history
 ├── codebase_audit.md               # Living system state (this file)
+├── scripts/
+│   └── seed.py                     # Idempotent wholesale database seeding script
 ├── apps/
 │   ├── web/                        # Next.js frontend (:3000)
 │   │   ├── package.json
@@ -129,7 +131,8 @@ wareflow/
 │       ├── tests/                  # Pytest test suite
 │       │   ├── test_di_and_health.py
 │       │   ├── test_models.py
-│       │   └── test_extended_models.py
+│       │   ├── test_extended_models.py
+│       │   └── test_seed.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
@@ -244,28 +247,31 @@ wareflow/
 
 ## Decisions
 
-| Decision                    | Rationale                                                                                                   |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Supabase = DB only          | Need SQL joins, transactions, referential integrity for accounting                                          |
-| Firebase = Auth only        | Best-in-class free Google/Apple Sign-In with minimal setup                                                  |
-| SOLID from day one          | Prevents spaghetti; makes testing and swapping implementations easy                                         |
-| Application factory         | Testable app creation, supports different configs per environment                                           |
-| pydantic-settings           | Single source of truth for env vars, validates on startup                                                   |
-| Prettier (web)              | Consistent formatting, 100 char line width matching ruff                                                    |
-| Ruff (api)                  | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N                                    |
-| eslint-config-prettier      | Disables ESLint rules that conflict with Prettier                                                           |
-| Local PG on 5433            | Avoid conflicts with system Postgres; Supabase stays primary                                                |
-| Typed API Client            | Type-safe fetch wrapper with ApiError extracting status & server message                                    |
-| DIP Container               | Services receive repository Protocol interfaces via FastAPI Depends()                                       |
-| CI on Day One               | GitHub Actions pipeline runs lint + format + test + build on every push                                     |
-| Automated QA                | QA checklist items written as automated tests, enforced by CI                                               |
-| Connection Split (Supabase) | Port 6543 (transaction pooler) + NullPool for runtime; port 5432 (session pooler) for Alembic migrations    |
-| Schema v1 Completeness      | Core tables (UOM conversions, batch tracking, supplier FSSAI, retailer credit) created upfront              |
-| Append-only Stock Ledger    | `stock_movements` is single source of truth for inventory balances                                          |
-| Frozen Invoicing Snapshot   | `invoice_items` freezes prices, taxes, and names at issuance time to ensure immutable accounting records    |
-| Single-Path Sales Orders    | `buyer_type` discriminator allows single order fulfillment engine to serve both B2B retailers and customers |
-| Supplier Magic Links        | `supplier_access_tokens` provides no-login dispatch confirmations for suppliers                             |
-| Distributor Identity Model  | `business_settings` provides single source of truth for distributor's legal/FSSAI profile                   |
+| Decision                       | Rationale                                                                                                   |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Supabase = DB only             | Need SQL joins, transactions, referential integrity for accounting                                          |
+| Firebase = Auth only           | Best-in-class free Google/Apple Sign-In with minimal setup                                                  |
+| SOLID from day one             | Prevents spaghetti; makes testing and swapping implementations easy                                         |
+| Application factory            | Testable app creation, supports different configs per environment                                           |
+| pydantic-settings              | Single source of truth for env vars, validates on startup                                                   |
+| Prettier (web)                 | Consistent formatting, 100 char line width matching ruff                                                    |
+| Ruff (api)                     | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N                                    |
+| eslint-config-prettier         | Disables ESLint rules that conflict with Prettier                                                           |
+| Local PG on 5433               | Avoid conflicts with system Postgres; Supabase stays primary                                                |
+| Typed API Client               | Type-safe fetch wrapper with ApiError extracting status & server message                                    |
+| DIP Container                  | Services receive repository Protocol interfaces via FastAPI Depends()                                       |
+| CI on Day One                  | GitHub Actions pipeline runs lint + format + test + build on every push                                     |
+| Automated QA                   | QA checklist items written as automated tests, enforced by CI                                               |
+| Connection Split (Supabase)    | Port 6543 (transaction pooler) + NullPool for runtime; port 5432 (session pooler) for Alembic migrations    |
+| Prepared Statement Disabling   | `connect_args={"prepare_threshold": None}` prevents named prepared statement errors with Supavisor pooler   |
+| Schema v1 Completeness         | Core tables (UOM conversions, batch tracking, supplier FSSAI, retailer credit) created upfront              |
+| Append-only Stock Ledger       | `stock_movements` is single source of truth for inventory balances                                          |
+| Frozen Invoicing Snapshot      | `invoice_items` freezes prices, taxes, and names at issuance time to ensure immutable accounting records    |
+| Single-Path Sales Orders       | `buyer_type` discriminator allows single order fulfillment engine to serve both B2B retailers and customers |
+| Supplier Magic Links           | `supplier_access_tokens` provides no-login dispatch confirmations for suppliers                             |
+| Distributor Identity Model     | `business_settings` provides single source of truth for distributor's legal/FSSAI profile                   |
+| Natural-Key Upsert Seed        | `scripts/seed.py` matches on unique natural keys to guarantee complete idempotency across repeated runs     |
+| Deliberate Low-Stock Seed Data | Seed includes 4 products below reorder point to prove alert and notification engines                        |
 
 ## Security
 
