@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     # App
     app_name: str = "WareFlow API"
     debug: bool = False
+    allow_first_signup: bool = True
     allowed_origins: list[str] | str = ["http://localhost:3000"]
 
     # Supabase / Postgres

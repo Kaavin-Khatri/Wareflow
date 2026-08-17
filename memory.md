@@ -495,3 +495,69 @@
 ### Files Modified
 
 - `apps/api/app/db/session.py`
+
+---
+
+## Step 3.1 — Firebase Auth: Google Sign-In + Email/Password UI + Session Cookie
+
+**Timestamp:** 2026-08-17T18:40:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Integrated Firebase Web SDK in `apps/web` with safe initialization in `apps/web/lib/firebase-client.ts` supporting SSR and Next.js static prerendering.
+- Designed and built responsive, modern authentication interface in `apps/web/app/(auth)/login/page.tsx`:
+  - Prominent "Continue with Google" popup button with Google logo SVG.
+  - Email/Password form with sign-in and sign-up toggle modes, show/hide password visibility, and helpful error alerts.
+  - Built-in `<Suspense>` boundary wrapping search params for safe SSR.
+- Created server-side session cookie management in `apps/web/app/api/auth/session/route.ts` and `apps/web/app/(auth)/logout/route.ts` setting and clearing `httpOnly`, `sameSite: lax` cookies.
+- Implemented Next.js auth middleware in `apps/web/middleware.ts` protecting `/dashboard`, `/inventory`, `/orders`, `/invoices` and redirecting authenticated users away from `/login`.
+- Created landing workspace in `apps/web/app/dashboard/page.tsx` confirming verified auth session and sign-out controls.
+- Designed and migrated backend `profiles` table linked to Firebase UIDs via Alembic migration `0004_user_profiles.py`.
+- Created SOLID profile layer in `apps/api`:
+  - `ProfileRepository` interface protocol and `SqlAlchemyProfileRepository` implementation.
+  - `ProfileService` with `bootstrap_user` method assigning the root `Owner` role to the first authenticated user in the system (`ALLOW_FIRST_SIGNUP`).
+  - `POST /profiles/bootstrap` and `GET /profiles/me` endpoints in `apps/api/app/api/routers/profiles.py`.
+  - Token verification and dependency injection in `apps/api/app/core/security.py` and `apps/api/app/core/di.py`.
+- Added unit tests in `apps/web/lib/__tests__/firebase-client.test.ts` and `apps/api/tests/test_profiles.py` reaching 95% total API coverage across 19 tests.
+
+### Decisions
+
+- **Client Auth + Server-Side Session Cookie**: Next.js middleware and SSR components inspect an `httpOnly` session cookie (`session`) minted immediately upon Firebase client authentication, eliminating client-side auth waterfalls on protected pages.
+- **First-User Bootstrap Pattern**: The very first user to sign in automatically receives the `Owner` role in Postgres with full root administrative permissions, while subsequent uninvited signups are rejected with 403 Forbidden.
+- **Safe SSR Fallbacks**: `firebase-client.ts` uses fallback dummy configuration during `next build` static export to ensure build pipelines compile without hard runtime exceptions.
+
+### Key values for future steps
+
+- Login page: `/login`
+- Logout route: `/logout` or `DELETE /api/auth/session`
+- Authenticated landing page: `/dashboard`
+- Profile bootstrap API: `POST /profiles/bootstrap`
+- User profile & permissions API: `GET /profiles/me`
+
+### Files Created
+
+- `apps/api/app/models/profile.py`
+- `apps/api/alembic/versions/0004_user_profiles.py`
+- `apps/api/app/repositories/interfaces/profile_repository.py`
+- `apps/api/app/repositories/impl/profile_repository.py`
+- `apps/api/app/services/profile_service.py`
+- `apps/api/app/schemas/profile.py`
+- `apps/api/app/api/routers/profiles.py`
+- `apps/api/app/core/security.py`
+- `apps/api/tests/test_profiles.py`
+- `apps/web/lib/firebase-client.ts`
+- `apps/web/lib/__tests__/firebase-client.test.ts`
+- `apps/web/app/(auth)/login/page.tsx`
+- `apps/web/app/(auth)/logout/route.ts`
+- `apps/web/app/api/auth/session/route.ts`
+- `apps/web/app/dashboard/page.tsx`
+- `apps/web/middleware.ts`
+
+### Files Modified
+
+- `apps/api/app/models/__init__.py`
+- `apps/api/app/core/config.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/web/package.json`

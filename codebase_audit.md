@@ -24,12 +24,14 @@
 | Frontend language  | TypeScript           | 5.9.3     |
 | UI library         | React                | 19.2.8    |
 | CSS framework      | Tailwind CSS         | 4.3.3     |
+| Auth client        | Firebase Web SDK     | 12.11.0   |
 | Test Runner (web)  | Vitest               | 4.1.10    |
 | Backend framework  | FastAPI              | >=0.115.0 |
 | Backend language   | Python               | 3.14.6    |
 | ORM                | SQLAlchemy           | >=2.0.0   |
 | Migrations         | Alembic              | >=1.13.0  |
 | Validation         | Pydantic             | >=2.0.0   |
+| Auth (backend)     | Firebase Admin SDK   | >=6.0.0   |
 | Test Runner (api)  | Pytest + pytest-cov  | >=8.0.0   |
 
 ## Services
@@ -69,6 +71,7 @@
 | Variable                            | Description                                   | Public?     |
 | ----------------------------------- | --------------------------------------------- | ----------- |
 | `DEBUG`                             | Enable debug mode                             | No          |
+| `ALLOW_FIRST_SIGNUP`                | Allow first user to become Owner              | No          |
 | `ALLOWED_ORIGINS`                   | CORS allowed origins list/csv                 | No          |
 | `DATABASE_URL`                      | Supabase transaction pooler (port 6543)       | No (secret) |
 | `DIRECT_DATABASE_URL`               | Supabase migration session pooler (port 5432) | No (secret) |
@@ -104,15 +107,25 @@ wareflow/
 │   │   ├── postcss.config.mjs
 │   │   ├── eslint.config.mjs       # ESLint + eslint-config-prettier
 │   │   ├── vitest.config.mts       # Vitest unit test configuration
+│   │   ├── middleware.ts           # Route guard and session cookie verification
 │   │   ├── .env.example
 │   │   ├── lib/
 │   │   │   ├── api-client.ts       # Typed fetch wrapper with ApiError
+│   │   │   ├── firebase-client.ts  # Safe Firebase Web SDK singleton & auth setup
 │   │   │   └── __tests__/
-│   │   │       └── api-client.test.ts
+│   │   │       ├── api-client.test.ts
+│   │   │       └── firebase-client.test.ts
 │   │   └── app/                    # App Router pages
 │   │       ├── layout.tsx
 │   │       ├── page.tsx
 │   │       ├── globals.css
+│   │       ├── (auth)/             # Authentication route group
+│   │       │   ├── login/page.tsx  # Google Sign-In & Email/Password form
+│   │       │   └── logout/route.ts # Server-side logout & cookie clear
+│   │       ├── api/auth/session/   # Session cookie route handler (POST, DELETE)
+│   │       │   └── route.ts
+│   │       ├── dashboard/          # Authenticated workspace dashboard
+│   │       │   └── page.tsx
 │   │       └── debug/              # Temporary handshake probe
 │   │           └── page.tsx
 │   └── api/                        # FastAPI backend (:8000)
@@ -123,7 +136,8 @@ wareflow/
 │       │   └── versions/
 │       │       ├── 0001_initial_schema_probe.py
 │       │       ├── 0002_core_wholesale_schema.py
-│       │       └── 0003_extended_wholesale_schema.py
+│       │       ├── 0003_extended_wholesale_schema.py
+│       │       └── 0004_user_profiles.py
 │       ├── requirements.txt
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
@@ -132,17 +146,20 @@ wareflow/
 │       │   ├── test_di_and_health.py
 │       │   ├── test_models.py
 │       │   ├── test_extended_models.py
-│       │   └── test_seed.py
+│       │   ├── test_seed.py
+│       │   └── test_profiles.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
 │           │   └── routers/        # HTTP layer (request/response only)
-│           │       └── health.py   # Liveness & DB connectivity (/health, /health/db)
+│           │       ├── health.py   # Liveness & DB connectivity (/health, /health/db)
+│           │       └── profiles.py # User profile & bootstrapping (/profiles/bootstrap, /profiles/me)
 │           ├── db/
 │           │   ├── base.py         # SQLAlchemy DeclarativeBase
 │           │   └── session.py      # Engine (NullPool) + get_db_session dependency
 │           ├── models/             # Domain ORM models
 │           │   ├── __init__.py
+│           │   ├── profile.py      # Staff & Admin user profiles bound to Firebase UID
 │           │   ├── uom.py          # Units of Measure & Conversions
 │           │   ├── catalog.py      # Categories & Products
 │           │   ├── warehouse.py    # Warehouses & StockBatches
@@ -158,22 +175,28 @@ wareflow/
 │           │   ├── notification.py # Alert Notifications
 │           │   └── audit_and_settings.py # AdminAuditLog, BusinessSettings
 │           ├── services/           # Business logic (depends on abstractions)
-│           │   └── product_service.py
+│           │   ├── product_service.py
+│           │   └── profile_service.py
 │           ├── repositories/
 │           │   ├── interfaces/     # Protocol/ABC contracts
-│           │   │   └── product_repository.py
+│           │   │   ├── product_repository.py
+│           │   │   └── profile_repository.py
 │           │   └── impl/           # Concrete implementations
-│           │       └── product_repository.py
+│           │       ├── product_repository.py
+│           │       └── profile_repository.py
 │           ├── schemas/            # Pydantic request/response models
+│           │   └── profile.py
 │           └── core/
 │               ├── config.py       # pydantic-settings configuration
+│               ├── security.py     # Firebase ID token decoding & claims verification
 │               └── di.py           # Dependency injection wiring
 ```
 
-## Database Schema (v1.1 Complete)
+## Database Schema (28 Tables Live)
 
 | Table                     | Purpose                            | Columns                                                                                                                                                                                                                                                       | Indexes / Constraints                                                                   |
 | ------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `profiles`                | User profiles tied to Firebase UID | `id` (PK, str), `email`, `display_name`, `avatar_url`, `phone`, `role_id` (FK), `is_active`, `created_at`, `updated_at`                                                                                                                                       | `UNIQUE(email)`, `INDEX(email)`, `INDEX(role_id)`, `FK(role_id -> roles.id RESTRICT)`   |
 | `units_of_measure`        | Measurement units (pcs, box, kg)   | `id` (PK, str), `name`, `abbreviation`, `created_at`                                                                                                                                                                                                          | `UNIQUE(abbreviation)`                                                                  |
 | `categories`              | Product hierarchy                  | `id` (PK, str), `name`, `parent_id` (FK), `created_at`                                                                                                                                                                                                        | `FK(parent_id -> categories.id)`                                                        |
 | `products`                | Core product catalog               | `id` (PK, str), `sku`, `name`, `description`, `content_details`, `image_url`, `hsn_code`, `category_id` (FK), `base_uom_id` (FK), `unit`, `cost_price`, `wholesale_price`, `reorder_point`, `reorder_qty`, `barcode`, `is_active`, `created_at`, `updated_at` | `UNIQUE(sku)`, `INDEX(sku)`, `INDEX(barcode)`                                           |
@@ -210,10 +233,12 @@ wareflow/
 
 ## API Endpoints
 
-| Method | Path         | Description                                        | Auth Required |
-| ------ | ------------ | -------------------------------------------------- | ------------- |
-| GET    | `/health`    | Liveness probe returning status: "ok"              | No            |
-| GET    | `/health/db` | Database probe executing `SELECT 1` via connection | No            |
+| Method | Path                  | Description                                        | Auth Required |
+| ------ | --------------------- | -------------------------------------------------- | ------------- |
+| GET    | `/health`             | Liveness probe returning status: "ok"              | No            |
+| GET    | `/health/db`          | Database probe executing `SELECT 1` via connection | No            |
+| POST   | `/profiles/bootstrap` | Bootstrap/retrieve authenticated Firebase profile  | Yes (Bearer)  |
+| GET    | `/profiles/me`        | Get current user profile and role permissions      | Yes (Bearer)  |
 
 ## Architecture Layers
 
@@ -247,31 +272,33 @@ wareflow/
 
 ## Decisions
 
-| Decision                       | Rationale                                                                                                   |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| Supabase = DB only             | Need SQL joins, transactions, referential integrity for accounting                                          |
-| Firebase = Auth only           | Best-in-class free Google/Apple Sign-In with minimal setup                                                  |
-| SOLID from day one             | Prevents spaghetti; makes testing and swapping implementations easy                                         |
-| Application factory            | Testable app creation, supports different configs per environment                                           |
-| pydantic-settings              | Single source of truth for env vars, validates on startup                                                   |
-| Prettier (web)                 | Consistent formatting, 100 char line width matching ruff                                                    |
-| Ruff (api)                     | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N                                    |
-| eslint-config-prettier         | Disables ESLint rules that conflict with Prettier                                                           |
-| Local PG on 5433               | Avoid conflicts with system Postgres; Supabase stays primary                                                |
-| Typed API Client               | Type-safe fetch wrapper with ApiError extracting status & server message                                    |
-| DIP Container                  | Services receive repository Protocol interfaces via FastAPI Depends()                                       |
-| CI on Day One                  | GitHub Actions pipeline runs lint + format + test + build on every push                                     |
-| Automated QA                   | QA checklist items written as automated tests, enforced by CI                                               |
-| Connection Split (Supabase)    | Port 6543 (transaction pooler) + NullPool for runtime; port 5432 (session pooler) for Alembic migrations    |
-| Prepared Statement Disabling   | `connect_args={"prepare_threshold": None}` prevents named prepared statement errors with Supavisor pooler   |
-| Schema v1 Completeness         | Core tables (UOM conversions, batch tracking, supplier FSSAI, retailer credit) created upfront              |
-| Append-only Stock Ledger       | `stock_movements` is single source of truth for inventory balances                                          |
-| Frozen Invoicing Snapshot      | `invoice_items` freezes prices, taxes, and names at issuance time to ensure immutable accounting records    |
-| Single-Path Sales Orders       | `buyer_type` discriminator allows single order fulfillment engine to serve both B2B retailers and customers |
-| Supplier Magic Links           | `supplier_access_tokens` provides no-login dispatch confirmations for suppliers                             |
-| Distributor Identity Model     | `business_settings` provides single source of truth for distributor's legal/FSSAI profile                   |
-| Natural-Key Upsert Seed        | `scripts/seed.py` matches on unique natural keys to guarantee complete idempotency across repeated runs     |
-| Deliberate Low-Stock Seed Data | Seed includes 4 products below reorder point to prove alert and notification engines                        |
+| Decision                       | Rationale                                                                                                      |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Supabase = DB only             | Need SQL joins, transactions, referential integrity for accounting                                             |
+| Firebase = Auth only           | Best-in-class free Google/Apple Sign-In with minimal setup                                                     |
+| SOLID from day one             | Prevents spaghetti; makes testing and swapping implementations easy                                            |
+| Application factory            | Testable app creation, supports different configs per environment                                              |
+| pydantic-settings              | Single source of truth for env vars, validates on startup                                                      |
+| Prettier (web)                 | Consistent formatting, 100 char line width matching ruff                                                       |
+| Ruff (api)                     | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N                                       |
+| eslint-config-prettier         | Disables ESLint rules that conflict with Prettier                                                              |
+| Local PG on 5433               | Avoid conflicts with system Postgres; Supabase stays primary                                                   |
+| Typed API Client               | Type-safe fetch wrapper with ApiError extracting status & server message                                       |
+| DIP Container                  | Services receive repository Protocol interfaces via FastAPI Depends()                                          |
+| CI on Day One                  | GitHub Actions pipeline runs lint + format + test + build on every push                                        |
+| Automated QA                   | QA checklist items written as automated tests, enforced by CI                                                  |
+| Connection Split (Supabase)    | Port 6543 (transaction pooler) + NullPool for runtime; port 5432 (session pooler) for Alembic migrations       |
+| Prepared Statement Disabling   | `connect_args={"prepare_threshold": None}` prevents named prepared statement errors with Supavisor pooler      |
+| Schema v1 Completeness         | Core tables (UOM conversions, batch tracking, supplier FSSAI, retailer credit) created upfront                 |
+| Append-only Stock Ledger       | `stock_movements` is single source of truth for inventory balances                                             |
+| Frozen Invoicing Snapshot      | `invoice_items` freezes prices, taxes, and names at issuance time to ensure immutable accounting records       |
+| Single-Path Sales Orders       | `buyer_type` discriminator allows single order fulfillment engine to serve both B2B retailers and customers    |
+| Supplier Magic Links           | `supplier_access_tokens` provides no-login dispatch confirmations for suppliers                                |
+| Distributor Identity Model     | `business_settings` provides single source of truth for distributor's legal/FSSAI profile                      |
+| Natural-Key Upsert Seed        | `scripts/seed.py` matches on unique natural keys to guarantee complete idempotency across repeated runs        |
+| Deliberate Low-Stock Seed Data | Seed includes 4 products below reorder point to prove alert and notification engines                           |
+| Server-Side Session Cookies    | Next.js route handler sets `httpOnly` cookie on auth to allow Next.js middleware protection without waterfalls |
+| First-User Owner Assignment    | Bootstrap assigns `Owner` role to 1st signed-in user; subsequent uninvited registrations receive 403 Forbidden |
 
 ## Security
 
@@ -281,6 +308,7 @@ wareflow/
 - .env.example updated with placeholders for every new var (Secrets Rule #2)
 - CORS restricted to allowed origins loaded dynamically from `ALLOWED_ORIGINS` settings
 - PostgreSQL connection passwords percent-encoded (`%40` for `@`) in connection strings
+- Server-side `httpOnly` session cookies protect Next.js routes with `sameSite: lax`
 
 ## Known Issues
 

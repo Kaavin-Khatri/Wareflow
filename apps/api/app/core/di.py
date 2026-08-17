@@ -10,10 +10,15 @@ Swapping an implementation here requires modifying zero service code (DIP).
 from functools import lru_cache
 
 from fastapi import Depends
+from sqlalchemy.orm import Session
 
+from app.db.session import get_db_session
 from app.repositories.impl.product_repository import InMemoryProductRepository
+from app.repositories.impl.profile_repository import SqlAlchemyProfileRepository
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
+from app.repositories.interfaces.profile_repository import ProfileRepository
 from app.services.product_service import ProductService
+from app.services.profile_service import ProfileService
 
 
 @lru_cache
@@ -37,3 +42,15 @@ def get_product_service(
     Service never knows which concrete repository is used.
     """
     return ProductService(repository=repo)
+
+
+def get_profile_repository(db: Session = Depends(get_db_session)) -> ProfileRepository:
+    """Factory for ProfileRepository interface."""
+    return SqlAlchemyProfileRepository(session=db)
+
+
+def get_profile_service(
+    repo: ProfileRepository = Depends(get_profile_repository),
+) -> ProfileService:
+    """Factory for ProfileService."""
+    return ProfileService(profile_repo=repo)

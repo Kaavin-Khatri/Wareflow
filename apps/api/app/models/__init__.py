@@ -15,6 +15,7 @@ from app.models.portal import (
     StockSubscription,
     SupplierAccessToken,
 )
+from app.models.profile import Profile
 from app.models.recalls import (
     BatchRecall,
     RecallAffectedOrder,
@@ -36,6 +37,8 @@ from app.models.uom import ProductUOMConversion, UnitOfMeasure
 from app.models.warehouse import StockBatch, Warehouse
 
 __all__ = [
+    # Auth & Profiles
+    "Profile",
     # Catalog & UOM
     "Category",
     "Product",
