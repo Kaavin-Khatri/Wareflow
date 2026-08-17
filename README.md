@@ -95,19 +95,39 @@ wareflow/
 └── docker-compose.yml # Optional local Postgres
 ```
 
-## Linting & Formatting
+## Linting, Formatting & Testing
 
 ```bash
 # Frontend
 pnpm lint:web           # ESLint
 pnpm format             # Prettier (whole repo)
 pnpm format:check       # Prettier check (CI)
+pnpm test:web           # Vitest unit tests
 
 # Backend
 cd apps/api && .\.venv\Scripts\Activate.ps1
-ruff check app/         # Lint
-ruff format app/        # Format
+ruff check app/ tests/  # Lint
+ruff format app/ tests/ # Format
+pytest --cov=app        # Pytest with coverage
 ```
+
+## Continuous Integration & Branch Protection
+
+A GitHub Actions pipeline (`.github/workflows/ci.yml`) runs on every `push` and `pull_request` to `main`:
+
+- **Web**: Prettier format check, ESLint, Vitest unit tests, Next.js production build
+- **API**: Ruff lint, Ruff format check, Pytest with coverage
+
+### Recommended Branch Protection Setup
+
+Once CI runs for the first time on GitHub:
+
+1. Go to your repo on GitHub → **Settings** → **Branches**.
+2. Click **Add branch protection rule** (or edit rule for `main`).
+3. Branch name pattern: `main`.
+4. Enable **Require status checks to pass before merging**.
+5. Select the checks: `Web (Lint, Format, Test, Build)` and `API (Lint, Format, Test with Coverage)`.
+6. Click **Save changes**.
 
 ## Architecture
 

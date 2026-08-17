@@ -256,3 +256,44 @@
 - `apps/api/app/main.py`
 - `apps/api/pyproject.toml`
 - `apps/api/.env.example`
+
+---
+
+## Step 1.4 — CI Pipeline (GitHub Actions)
+
+**Timestamp:** 2026-08-17T17:30:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Scaffolded Vitest test runner in `apps/web` with unit tests for `ApiError` and `apiClient`
+- Added `pytest-cov` to `apps/api` requirements and verified code coverage reporting
+- Built GitHub Actions CI pipeline in `.github/workflows/ci.yml` covering lint, formatting checks, unit tests, and production build checks for both apps on every push/PR
+- Documented branch protection setup guidelines in `README.md`
+- Verified local test execution, linting, formatting, and Next.js production build pass clean
+
+### Decisions
+
+- CI pipeline scope: lint (ESLint/Ruff) + format check (Prettier/Ruff) + test (Vitest/Pytest) + build (Next.js) for both apps on every push and PR
+- Automated QA rule: all future phase QA checklist items that are automatable must be written as pytest/vitest tests, not manual verification
+- Main branch protection recommended: requiring CI check to pass before merge
+
+### Key values for future steps
+
+- CI workflow file: `.github/workflows/ci.yml`
+- Local web test command: `pnpm test:web` (or `pnpm --filter web test`)
+- Local API test command: `pytest --cov=app` (inside `apps/api/.venv`)
+- Production build validation: `pnpm --filter web build`
+
+### Files Created
+
+- `.github/workflows/ci.yml`
+- `apps/web/vitest.config.mts`
+- `apps/web/lib/__tests__/api-client.test.ts`
+
+### Files Modified
+
+- `apps/api/requirements-dev.txt`
+- `apps/web/package.json`
+- `package.json`
+- `README.md`

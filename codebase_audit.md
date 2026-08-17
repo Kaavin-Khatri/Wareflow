@@ -24,11 +24,13 @@
 | Frontend language  | TypeScript           | 5.9.3     |
 | UI library         | React                | 19.2.8    |
 | CSS framework      | Tailwind CSS         | 4.3.3     |
+| Test Runner (web)  | Vitest               | 4.1.10    |
 | Backend framework  | FastAPI              | >=0.115.0 |
 | Backend language   | Python               | 3.14.6    |
 | ORM                | SQLAlchemy           | >=2.0.0   |
 | Migrations         | Alembic              | >=1.13.0  |
 | Validation         | Pydantic             | >=2.0.0   |
+| Test Runner (api)  | Pytest + pytest-cov  | >=8.0.0   |
 
 ## Services
 
@@ -75,6 +77,9 @@
 
 ```
 wareflow/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                  # GitHub Actions CI pipeline (lint, test, build)
 ├── package.json                    # Root monorepo config (pnpm workspaces)
 ├── pnpm-workspace.yaml             # Workspace definition
 ├── .prettierrc                     # Prettier config (line-length 100)
@@ -91,9 +96,12 @@ wareflow/
 │   │   ├── next.config.ts
 │   │   ├── postcss.config.mjs
 │   │   ├── eslint.config.mjs       # ESLint + eslint-config-prettier
+│   │   ├── vitest.config.mts       # Vitest unit test configuration
 │   │   ├── .env.example
 │   │   ├── lib/
-│   │   │   └── api-client.ts       # Typed fetch wrapper with ApiError
+│   │   │   ├── api-client.ts       # Typed fetch wrapper with ApiError
+│   │   │   └── __tests__/
+│   │   │       └── api-client.test.ts
 │   │   └── app/                    # App Router pages
 │   │       ├── layout.tsx
 │   │       ├── page.tsx
@@ -102,8 +110,8 @@ wareflow/
 │   │           └── page.tsx
 │   └── api/                        # FastAPI backend (:8000)
 │       ├── requirements.txt
-│       ├── requirements-dev.txt    # ruff, pytest, httpx
-│       ├── pyproject.toml          # ruff config (line-length 100, py311)
+│       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
+│       ├── pyproject.toml          # ruff & pytest config
 │       ├── .env.example
 │       ├── tests/                  # Pytest test suite
 │       │   └── test_di_and_health.py
@@ -199,6 +207,8 @@ def get_product_service(
 | Local PG on 5433       | Avoid conflicts with system Postgres; Supabase stays primary             |
 | Typed API Client       | Type-safe fetch wrapper with ApiError extracting status & server message |
 | DIP Container          | Services receive repository Protocol interfaces via FastAPI Depends()    |
+| CI on Day One          | GitHub Actions pipeline runs lint + format + test + build on every push  |
+| Automated QA           | QA checklist items written as automated tests, enforced by CI            |
 
 ## Security
 
