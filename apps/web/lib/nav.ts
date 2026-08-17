@@ -92,6 +92,13 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         icon: "Building2",
         requiredPermission: "settings:manage",
       },
+      {
+        name: "Design System",
+        href: "/styleguide",
+        icon: "Palette",
+        badge: "v4.1",
+        requiredRole: "Owner",
+      },
     ],
   },
 ];

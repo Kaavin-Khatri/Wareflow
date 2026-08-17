@@ -1,26 +1,296 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Base Foundation — Light Mode */
+  --bg: #fafafa;
+  --bg-subtle: #f4f4f5;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-hover: #f4f4f6;
+
+  /* Typography */
+  --text: #0a0a0a;
+  --text-muted: #71717a;
+  --text-subtle: #a1a1aa;
+
+  /* Borders & Dividers */
+  --border: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.16);
+
+  /* Single Accent Color: Electric Violet Purple */
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+  --accent-subtle: rgba(124, 58, 237, 0.08);
+  --accent-foreground: #ffffff;
+  --accent-border: rgba(124, 58, 237, 0.25);
+  --accent-glow: rgba(124, 58, 237, 0.25);
+
+  /* Liquid Glass Tokens */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-bg-elevated: rgba(255, 255, 255, 0.88);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-border-focus: rgba(124, 58, 237, 0.5);
+  --glass-highlight: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.06);
+
+  /* Status Colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+}
+
+.dark {
+  /* Base Foundation — Dark Mode */
+  --bg: #09090b;
+  --bg-subtle: #111114;
+  --surface: #141418;
+  --surface-elevated: #1c1c22;
+  --surface-hover: #202028;
+
+  /* Typography */
+  --text: #f5f5f7;
+  --text-muted: #a1a1aa;
+  --text-subtle: #71717a;
+
+  /* Borders & Dividers */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  /* Single Accent Color: Electric Violet Purple (Luminance Lifted) */
+  --accent: #8b5cf6;
+  --accent-hover: #9f75ff;
+  --accent-subtle: rgba(139, 92, 246, 0.14);
+  --accent-foreground: #ffffff;
+  --accent-border: rgba(139, 92, 246, 0.35);
+  --accent-glow: rgba(139, 92, 246, 0.35);
+
+  /* Liquid Glass Tokens */
+  --glass-bg: rgba(18, 18, 24, 0.65);
+  --glass-bg-elevated: rgba(24, 24, 32, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-border-focus: rgba(139, 92, 246, 0.6);
+  --glass-highlight: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+
+  /* Status Colors */
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-bg: var(--bg);
+  --color-bg-subtle: var(--bg-subtle);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-hover: var(--surface-hover);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-text-main: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-border: var(--accent-border);
+  --color-accent-glow: var(--accent-glow);
+
+  --color-glass-bg: var(--glass-bg);
+  --color-glass-bg-elevated: var(--glass-bg-elevated);
+  --color-glass-border: var(--glass-border);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  min-height: 100vh;
+  transition:
+    background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-x: hidden;
+}
+
+/* ==========================================================================
+   Liquid Glass Utility Classes
+   ========================================================================== */
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--glass-highlight);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.glass-panel-elevated {
+  background: var(--glass-bg-elevated);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-panel-elevated::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--glass-highlight);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Glass Interactive Buttons */
+.glass-button-primary {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  color: var(--accent-foreground);
+  font-weight: 500;
+  border: 1px solid var(--accent-border);
+  box-shadow: 0 0 20px -4px var(--accent-glow);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.glass-button-primary:hover {
+  box-shadow: 0 0 28px 0px var(--accent-glow);
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.glass-button-primary:active {
+  transform: translateY(0);
+}
+
+.glass-button-secondary {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--text);
+  border: 1px solid var(--glass-border);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-button-secondary:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.glass-button-secondary:active {
+  transform: translateY(0);
+}
+
+/* Glass Form Inputs */
+.glass-input {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-input::placeholder {
+  color: var(--text-subtle);
+}
+
+.glass-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 3px var(--accent-subtle),
+    0 0 16px -2px var(--accent-glow);
+}
+
+/* Accent Glow Utility */
+.glow-purple {
+  box-shadow: 0 0 30px -4px var(--accent-glow);
+}
+
+/* Keyframe Animations for Liquid Gradient Backdrop */
+@keyframes ambient-float-1 {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(40px, -60px) scale(1.1);
+  }
+  66% {
+    transform: translate(-30px, 40px) scale(0.95);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes ambient-float-2 {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(-50px, 40px) scale(1.08);
+  }
+  66% {
+    transform: translate(30px, -50px) scale(0.92);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes ambient-float-3 {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(30px, 50px) scale(1.12);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-ambient-1 {
+  animation: ambient-float-1 22s ease-in-out infinite alternate;
+}
+
+.animate-ambient-2 {
+  animation: ambient-float-2 28s ease-in-out infinite alternate;
+}
+
+.animate-ambient-3 {
+  animation: ambient-float-3 20s ease-in-out infinite alternate;
 }

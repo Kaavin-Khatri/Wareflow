@@ -833,3 +833,58 @@
 - `apps/api/app/services/staff_service.py`
 - `apps/api/app/api/routers/staff.py`
 - `apps/api/app/api/routers/roles.py`
+
+---
+
+## Step 4.1 — Liquid Glass Design Tokens (Black/White + Purple) & Gradient Backdrop
+
+**Timestamp:** 2026-08-17T20:30:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Established the core Phase 4 Liquid Glass visual identity and design token system in Tailwind CSS v4 and vanilla CSS:
+  - **Base Palette**: Built a strict true black/white foundation with zero washed-out grays. Light mode uses `#ffffff`/`#fafafa` surfaces with near-black `#0a0a0a` text; Dark mode uses true near-black `#09090b`/`#141418` surfaces with off-white `#f5f5f7` text.
+  - **Single Accent Color**: Anchored the entire platform on **Electric Violet Purple** (`#7c3aed` light / `#8b5cf6` dark luminance-lifted), with derivative tokens for hover (`--accent-hover`), subtle background tints (`--accent-subtle`), focus rings (`--accent-border`), and luminous glows (`--accent-glow`).
+  - **Liquid Glass Token Layer**: Defined frosted glass surfaces with high-precision backdrop blurs (`16px`/`24px`), 1px specular top highlight gradients (`--glass-highlight`), subtle border contours (`--glass-border`), and deep diffusion shadows (`--glass-shadow`).
+  - **Liquid Glass Utility Classes**: Added `.glass-panel`, `.glass-panel-elevated`, `.glass-button-primary`, `.glass-button-secondary`, `.glass-input`, and `.glow-purple`.
+- Created fixed full-viewport `GradientBackdrop` component (`apps/web/components/GradientBackdrop.tsx`) featuring 3 multi-layered radial ambient glow blooms that drift smoothly via GPU-accelerated CSS keyframe animations, overlaid with a subtle SVG fractal noise grain layer for anti-banding.
+- Built a robust, hydration-safe `ThemeProvider` (`apps/web/components/ThemeProvider.tsx`) and `ThemeToggle` (`apps/web/components/ThemeToggle.tsx`) utilizing React 19 `useSyncExternalStore`:
+  - Persistent user choice stored in `localStorage` (`wareflow-theme`), defaulting to system OS preference on first visit.
+  - Injected an inline anti-flash script in `layout.tsx` `<head>` ensuring 0 layout shifts or unstyled flashes on initial paint.
+  - Added modern Topbar in `AppLayout.tsx` and updated `Sidebar.tsx` with unified liquid glass tokens and electric violet active item highlights.
+- Created interactive developer `/styleguide` page (`apps/web/app/styleguide/page.tsx`) rendering side-by-side theme archetypes, token swatches, glass panel hierarchies, button states, form controls, and live modal demonstrations.
+- Created unit test suite `apps/web/lib/__tests__/theme.test.ts` (10 web tests + 40 API tests passing across monorepo).
+
+### Decisions
+
+- **Palette locked**: Black/white base + single purple accent (Electric Violet `#7C3AED` / `#8B5CF6`), both themes — not proposed, decided.
+- **Theme toggle is a real user choice (persisted)**: Explicit user preference persists in `localStorage` across sessions and reloads, falling back to OS `prefers-color-scheme` on first visit.
+- **`useSyncExternalStore` for Theme Synchronization**: Eliminates cascading render lint warnings and ensures seamless hydration between server and client without flicker.
+- **GPU-Accelerated Ambient Backdrop**: Liquid gradient blooms use CSS `will-change: transform` and gentle infinite keyframe translations for maximum 60fps rendering performance.
+
+### Key values for future steps
+
+- Primary Accent Color: Electric Violet `#7C3AED` (light) / `#8B5CF6` (dark)
+- Background Base: `#FAFAFA` (light) / `#09090B` (dark)
+- Glass Card Classes: `.glass-panel` (cards/panels) and `.glass-panel-elevated` (modals/popovers)
+- Glass Button Classes: `.glass-button-primary` (main violet CTA) and `.glass-button-secondary` (frosted ghost)
+- Backdrop Component: `<GradientBackdrop />` mounted at root layout
+- Theme Context: `useTheme()` hook returning `{ theme, resolvedTheme, setTheme, toggleTheme }`
+- Developer Styleguide: `/styleguide`
+
+### Files Created
+
+- `apps/web/components/GradientBackdrop.tsx`
+- `apps/web/components/ThemeProvider.tsx`
+- `apps/web/components/ThemeToggle.tsx`
+- `apps/web/app/styleguide/page.tsx`
+- `apps/web/lib/__tests__/theme.test.ts`
+
+### Files Modified
+
+- `apps/web/app/globals.css`
+- `apps/web/app/layout.tsx`
+- `apps/web/components/AppLayout.tsx`
+- `apps/web/components/Sidebar.tsx`
+- `apps/web/lib/nav.ts`

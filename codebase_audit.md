@@ -113,8 +113,11 @@ wareflow/
 │   │   ├── middleware.ts           # Route guard and session cookie verification
 │   │   ├── .env.example
 │   │   ├── components/
-│   │   │   ├── Sidebar.tsx         # RBAC-filtered dynamic navigation sidebar
-│   │   │   └── AppLayout.tsx       # Reusable responsive dashboard layout
+│   │   │   ├── Sidebar.tsx         # Liquid glass dynamic navigation sidebar
+│   │   │   ├── AppLayout.tsx       # Modern topbar & responsive container layout
+│   │   │   ├── GradientBackdrop.tsx# Multi-orb GPU-accelerated liquid gradient backdrop
+│   │   │   ├── ThemeProvider.tsx   # React 19 useSyncExternalStore theme context
+│   │   │   └── ThemeToggle.tsx     # Animated sun/moon liquid glass toggle button
 │   │   ├── lib/
 │   │   │   ├── api-client.ts       # Typed fetch wrapper with ApiError
 │   │   │   ├── firebase-client.ts  # Safe Firebase Web SDK singleton (Google + Apple + Password)
@@ -122,11 +125,13 @@ wareflow/
 │   │   │   └── __tests__/
 │   │   │       ├── api-client.test.ts
 │   │   │       ├── firebase-client.test.ts
-│   │   │       └── nav.test.ts
+│   │   │       ├── nav.test.ts
+│   │   │       └── theme.test.ts
 │   │   └── app/                    # App Router pages
-│   │       ├── layout.tsx
+│   │       ├── layout.tsx          # Root layout with anti-flash script & ThemeProvider
 │   │       ├── page.tsx
-│   │       ├── globals.css
+│   │       ├── globals.css         # Liquid glass design tokens & animations
+│   │       ├── styleguide/page.tsx # Interactive design system token showcase
 │   │       ├── (auth)/             # Authentication route group
 │   │       │   ├── login/
 │   │       │   │   ├── page.tsx    # Primary login (Google/Apple/Email) + 2FA redirect
@@ -338,6 +343,9 @@ wareflow/
 
 | Decision                       | Rationale                                                                                                        |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| Liquid Glass Visual Identity   | Black/white foundation + single Electric Violet (`#7C3AED`/`#8B5CF6`) accent + frosted glass overlays & blooms   |
+| Real Persisted Theme Toggle    | Explicit user choice stored in `localStorage` (`wareflow-theme`), defaulting to OS preference on 1st visit       |
+| GPU Gradient Backdrop          | Fixed multi-orb CSS backdrop drifting smoothly over noise grain layer, eliminating OLED banding                  |
 | Supabase = DB only             | Need SQL joins, transactions, referential integrity for accounting                                               |
 | Firebase = Auth only           | Best-in-class free Google/Apple Sign-In with minimal setup                                                       |
 | In-House RFC 6238 TOTP 2FA     | Standard TOTP avoids paid Firebase SMS MFA costs while delivering universal Google Authenticator/Authy support   |
