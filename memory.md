@@ -395,3 +395,59 @@
 ### Files Modified
 
 - `apps/api/alembic/env.py`
+
+---
+
+## Step 2.3 — Extended Schema: Invoicing, Returns & Deliveries
+
+**Timestamp:** 2026-08-17T18:25:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Designed and implemented the complete extended wholesale domain model suite in `app/models/`:
+  - `billing.py`: `invoices` (id, sales_order_id, invoice_no, invoice_date, gst_rate, subtotal, tax_amount, total_amount, status [unpaid/partially_paid/paid/overdue], e_invoice_irn, e_invoice_ack_no, e_invoice_qr_code, e_way_bill_no), `invoice_items` (frozen accounting snapshot: id, invoice_id, product_id, product_name, hsn_code, qty, unit_price, tax_rate, tax_amount, total, uom_id), and `payments` (id, invoice_id, retailer_id, customer_id, amount, method [cash/bank_transfer/cheque/upi], paid_at, note)
+  - `returns.py`: `sales_returns` (id, sales_order_id, retailer_id, status [requested/approved/rejected/completed], reason, requested_at), `sales_return_items` (id, return_id, product_id, qty, batch_id, condition [resellable/damaged]), `purchase_returns` (id, purchase_order_id, supplier_id, status [requested/shipped/credited], reason, requested_at), and `purchase_return_items` (id, return_id, product_id, qty, batch_id, reason)
+  - `delivery.py`: `deliveries` (id, sales_order_id, driver_name, vehicle_no, status [assigned/out_for_delivery/delivered/failed], dispatched_at, delivered_at, notes)
+  - `auth_rbac.py`: `roles` (id, name, description), `permissions` (id, code, description), and `role_permissions` (role_id, permission_id)
+  - `portal.py`: `customers` (id, name, phone, email, address, notes), `stock_subscriptions` (id, retailer_id, product_id, channel_preference [whatsapp/email/both], is_active, notified_at), `supplier_access_tokens` (magic links: id, supplier_id, purchase_order_id, token, expires_at), and `product_inquiries` (id, product_id, retailer_id, customer_id, message, status [open/responded/closed], response, responded_at)
+  - `recalls.py`: `batch_recalls` (id, batch_id, product_id, reason, severity [low/medium/critical], status [initiated/notifying/resolved], initiated_at, resolved_at) and `recall_affected_orders` (id, recall_id, sales_order_id, retailer_id, customer_id, notified_at)
+  - `audit_and_settings.py`: `admin_audit_log` (id, actor_id, action, entity_type, entity_id, before_value, after_value, created_at) and `business_settings` (id, business_name, gstin, fssai_license_no, fssai_expiry_date, address, phone, email)
+  - `retailer.py`: Updated `sales_orders` with `buyer_type` discriminator (`retailer` vs `customer`), `customer_id` FK, and nullable `retailer_id`
+- Created and executed Alembic migration `0003_extended_wholesale_schema.py` creating all extended tables, foreign keys, and indexes.
+- Verified bidirectional migration round-trips (`downgrade base` / `upgrade head`) across the complete combined database schema on Supabase.
+- Added comprehensive unit tests in `tests/test_extended_models.py` verifying frozen invoice snapshots, payment netting against credit balance, RBAC mappings, and magic tokens (12 total tests, 98% coverage).
+
+### Decisions
+
+- **Frozen Invoice Snapshot**: `invoice_items` store snapshot product names, pricing, and HSN codes at invoice generation time — editing a sales order or catalog item never alters an issued tax invoice.
+- **Single-Path Sales Order Architecture**: The `buyer_type` discriminator on `sales_orders` enables a single fulfillment and inventory deduction engine to serve wholesale B2B accounts and walk-in buyers alike without code or schema duplication.
+- **Supplier Magic Links**: `supplier_access_tokens` provide temporary, tokenized URLs allowing suppliers to update dispatch status directly without requiring login accounts.
+- **GST & E-Invoicing Ready**: IRN, Ack No, QR code, and e-way bill fields are built into `invoices` at schema time.
+- **Generic Admin Audit Logging**: `admin_audit_log` captures before/after JSON payloads for any sensitive administrative operations.
+- **Distributor Compliance Identity**: `business_settings` provides a single source of truth for the distributor's own business legal data and FSSAI tracking.
+
+### Key values for future steps
+
+- 27 total domain tables live on Supabase covering all distribution, accounting, and compliance operations
+- Payment methods: `cash`, `bank_transfer`, `cheque`, `upi`
+- Delivery statuses: `assigned`, `out_for_delivery`, `delivered`, `failed`
+- Return item conditions: `resellable`, `damaged`
+- Stock subscription channels: `whatsapp`, `email`, `both`
+
+### Files Created
+
+- `apps/api/app/models/billing.py`
+- `apps/api/app/models/returns.py`
+- `apps/api/app/models/delivery.py`
+- `apps/api/app/models/auth_rbac.py`
+- `apps/api/app/models/portal.py`
+- `apps/api/app/models/recalls.py`
+- `apps/api/app/models/audit_and_settings.py`
+- `apps/api/alembic/versions/0003_extended_wholesale_schema.py`
+- `apps/api/tests/test_extended_models.py`
+
+### Files Modified
+
+- `apps/api/app/models/__init__.py`
+- `apps/api/app/models/retailer.py`

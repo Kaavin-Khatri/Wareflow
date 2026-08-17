@@ -1,4 +1,4 @@
-"""Retailer and Sales Order models."""
+"""Retailer, Customer, and Sales Order models."""
 
 import enum
 import uuid
@@ -21,8 +21,15 @@ class SOStatusEnum(enum.StrEnum):
     CANCELLED = "cancelled"
 
 
+class BuyerTypeEnum(enum.StrEnum):
+    """Buyer type discriminator for Sales Orders."""
+
+    RETAILER = "retailer"
+    CUSTOMER = "customer"
+
+
 class Retailer(Base):
-    """B2B Retailer / Customer purchasing wholesale products."""
+    """B2B Wholesale Retailer account with credit limit and pricing tier."""
 
     __tablename__ = "retailers"
 
@@ -43,14 +50,26 @@ class Retailer(Base):
 
 
 class SalesOrder(Base):
-    """Wholesale Sales Order placed by or for a retailer."""
+    """
+    Sales Order serving both wholesale retailers and direct customers.
+
+    Uses buyer_type discriminator so fulfillment and invoicing follow one clean path.
+    """
 
     __tablename__ = "sales_orders"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     so_number: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
-    retailer_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("retailers.id", ondelete="RESTRICT"), nullable=False
+    buyer_type: Mapped[BuyerTypeEnum] = mapped_column(
+        Enum(BuyerTypeEnum, name="buyer_type_enum", native_enum=False),
+        nullable=False,
+        default=BuyerTypeEnum.RETAILER,
+    )
+    retailer_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("retailers.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    customer_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("customers.id", ondelete="RESTRICT"), nullable=True, index=True
     )
     status: Mapped[SOStatusEnum] = mapped_column(
         Enum(SOStatusEnum, name="so_status_enum", native_enum=False),
@@ -66,7 +85,8 @@ class SalesOrder(Base):
     )
 
     # Relationships
-    retailer: Mapped["Retailer"] = relationship("Retailer")
+    retailer: Mapped["Retailer | None"] = relationship("Retailer")
+    customer: Mapped["app.models.portal.Customer | None"] = relationship("Customer")  # noqa: F821
     items: Mapped[list["SalesOrderItem"]] = relationship(
         "SalesOrderItem", back_populates="sales_order", cascade="all, delete-orphan"
     )
@@ -79,10 +99,10 @@ class SalesOrderItem(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     so_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("sales_orders.id", ondelete="CASCADE"), nullable=False
+        String(36), ForeignKey("sales_orders.id", ondelete="CASCADE"), nullable=False, index=True
     )
     product_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("products.id", ondelete="RESTRICT"), nullable=False
+        String(36), ForeignKey("products.id", ondelete="RESTRICT"), nullable=False, index=True
     )
     qty: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     unit_price: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)

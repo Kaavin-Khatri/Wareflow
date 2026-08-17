@@ -120,14 +120,16 @@ wareflow/
 │       │   ├── script.py.mako
 │       │   └── versions/
 │       │       ├── 0001_initial_schema_probe.py
-│       │       └── 0002_core_wholesale_schema.py
+│       │       ├── 0002_core_wholesale_schema.py
+│       │       └── 0003_extended_wholesale_schema.py
 │       ├── requirements.txt
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
 │       ├── .env.example
 │       ├── tests/                  # Pytest test suite
 │       │   ├── test_di_and_health.py
-│       │   └── test_models.py
+│       │   ├── test_models.py
+│       │   └── test_extended_models.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
@@ -142,9 +144,16 @@ wareflow/
 │           │   ├── catalog.py      # Categories & Products
 │           │   ├── warehouse.py    # Warehouses & StockBatches
 │           │   ├── supplier.py     # Suppliers & PurchaseOrders
-│           │   ├── retailer.py     # Retailers & SalesOrders
+│           │   ├── retailer.py     # Retailers, SalesOrders (with buyer_type)
+│           │   ├── billing.py      # Invoices, InvoiceItems, Payments
+│           │   ├── returns.py      # SalesReturns, PurchaseReturns
+│           │   ├── delivery.py     # Deliveries
+│           │   ├── auth_rbac.py    # Roles, Permissions, RolePermissions
+│           │   ├── portal.py       # Customers, Subscriptions, Magic Tokens, Inquiries
+│           │   ├── recalls.py      # BatchRecalls, RecallAffectedOrders
 │           │   ├── inventory.py    # StockMovements (Append-only Ledger)
-│           │   └── notification.py # Alert Notifications
+│           │   ├── notification.py # Alert Notifications
+│           │   └── audit_and_settings.py # AdminAuditLog, BusinessSettings
 │           ├── services/           # Business logic (depends on abstractions)
 │           │   └── product_service.py
 │           ├── repositories/
@@ -158,30 +167,43 @@ wareflow/
 │               └── di.py           # Dependency injection wiring
 ```
 
-## Database Schema
+## Database Schema (v1.1 Complete)
 
-| Table                     | Purpose                          | Columns                                                                                                                                                                                                                                                       | Indexes / Constraints                                           |
-| ------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `units_of_measure`        | Measurement units (pcs, box, kg) | `id` (PK, str), `name`, `abbreviation`, `created_at`                                                                                                                                                                                                          | `UNIQUE(abbreviation)`                                          |
-| `categories`              | Product hierarchy                | `id` (PK, str), `name`, `parent_id` (FK), `created_at`                                                                                                                                                                                                        | `FK(parent_id -> categories.id)`                                |
-| `products`                | Core product catalog             | `id` (PK, str), `sku`, `name`, `description`, `content_details`, `image_url`, `hsn_code`, `category_id` (FK), `base_uom_id` (FK), `unit`, `cost_price`, `wholesale_price`, `reorder_point`, `reorder_qty`, `barcode`, `is_active`, `created_at`, `updated_at` | `UNIQUE(sku)`, `INDEX(sku)`, `INDEX(barcode)`                   |
-| `product_uom_conversions` | Conversion factors per product   | `id` (PK, str), `product_id` (FK), `from_uom_id` (FK), `to_uom_id` (FK), `factor`, `created_at`                                                                                                                                                               | `UNIQUE(product_id, from_uom_id, to_uom_id)`                    |
-| `warehouses`              | Storage facilities               | `id` (PK, str), `name`, `location`, `is_active`, `created_at`                                                                                                                                                                                                 | —                                                               |
-| `stock_batches`           | FIFO batch tracking & expiry     | `id` (PK, str), `product_id` (FK), `warehouse_id` (FK), `batch_no`, `quantity`, `expiry_date`, `received_at`                                                                                                                                                  | `INDEX(product_id, warehouse_id)`                               |
-| `suppliers`               | Manufacturers / vendors          | `id` (PK, str), `name`, `contact_person`, `phone`, `email`, `address`, `gstin`, `fssai_license_no`, `fssai_expiry_date`, `is_active`, `created_at`                                                                                                            | —                                                               |
-| `purchase_orders`         | Procurement orders               | `id` (PK, str), `po_number`, `supplier_id` (FK), `status` (enum), `order_date`, `expected_date`, `total_amount`, `created_at`                                                                                                                                 | `UNIQUE(po_number)`, `INDEX(po_number)`                         |
-| `purchase_order_items`    | PO line items                    | `id` (PK, str), `po_id` (FK), `product_id` (FK), `qty_ordered`, `qty_received`, `unit_cost`, `uom_id` (FK)                                                                                                                                                    | `FK(po_id -> purchase_orders.id CASCADE)`                       |
-| `retailers`               | B2B wholesale buyers             | `id` (PK, str), `name`, `contact_person`, `phone`, `email`, `address`, `gstin`, `pricing_tier`, `credit_limit`, `credit_balance`, `is_active`, `created_at`                                                                                                   | —                                                               |
-| `sales_orders`            | B2B sales orders                 | `id` (PK, str), `so_number`, `retailer_id` (FK), `status` (enum), `order_date`, `total_amount`, `created_at`                                                                                                                                                  | `UNIQUE(so_number)`, `INDEX(so_number)`                         |
-| `sales_order_items`       | SO line items                    | `id` (PK, str), `so_id` (FK), `product_id` (FK), `qty`, `unit_price`, `uom_id` (FK)                                                                                                                                                                           | `FK(so_id -> sales_orders.id CASCADE)`                          |
-| `stock_movements`         | Append-only inventory ledger     | `id` (PK, str), `product_id` (FK), `warehouse_id` (FK), `batch_id` (FK), `type` (enum), `quantity`, `reference_type`, `reference_id`, `created_by`, `created_at`                                                                                              | `INDEX(product_id)`, `INDEX(warehouse_id)`, `INDEX(created_at)` |
-| `notifications`           | System alerts & notices          | `id` (PK, str), `user_id`, `type`, `title`, `body`, `is_read`, `created_at`                                                                                                                                                                                   | `INDEX(user_id)`                                                |
-
-### Enums:
-
-- `POStatusEnum`: `draft`, `ordered`, `ready_for_dispatch`, `partially_received`, `received`, `cancelled`
-- `SOStatusEnum`: `draft`, `confirmed`, `packed`, `shipped`, `delivered`, `cancelled`
-- `StockMovementTypeEnum`: `in`, `out`, `adjustment`, `transfer`, `return_in`, `return_out`
+| Table                     | Purpose                            | Columns                                                                                                                                                                                                                                                       | Indexes / Constraints                                                                   |
+| ------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `units_of_measure`        | Measurement units (pcs, box, kg)   | `id` (PK, str), `name`, `abbreviation`, `created_at`                                                                                                                                                                                                          | `UNIQUE(abbreviation)`                                                                  |
+| `categories`              | Product hierarchy                  | `id` (PK, str), `name`, `parent_id` (FK), `created_at`                                                                                                                                                                                                        | `FK(parent_id -> categories.id)`                                                        |
+| `products`                | Core product catalog               | `id` (PK, str), `sku`, `name`, `description`, `content_details`, `image_url`, `hsn_code`, `category_id` (FK), `base_uom_id` (FK), `unit`, `cost_price`, `wholesale_price`, `reorder_point`, `reorder_qty`, `barcode`, `is_active`, `created_at`, `updated_at` | `UNIQUE(sku)`, `INDEX(sku)`, `INDEX(barcode)`                                           |
+| `product_uom_conversions` | Conversion factors per product     | `id` (PK, str), `product_id` (FK), `from_uom_id` (FK), `to_uom_id` (FK), `factor`, `created_at`                                                                                                                                                               | `UNIQUE(product_id, from_uom_id, to_uom_id)`                                            |
+| `warehouses`              | Storage facilities                 | `id` (PK, str), `name`, `location`, `is_active`, `created_at`                                                                                                                                                                                                 | —                                                                                       |
+| `stock_batches`           | FIFO batch tracking & expiry       | `id` (PK, str), `product_id` (FK), `warehouse_id` (FK), `batch_no`, `quantity`, `expiry_date`, `received_at`                                                                                                                                                  | `INDEX(product_id, warehouse_id)`                                                       |
+| `suppliers`               | Manufacturers / vendors            | `id` (PK, str), `name`, `contact_person`, `phone`, `email`, `address`, `gstin`, `fssai_license_no`, `fssai_expiry_date`, `is_active`, `created_at`                                                                                                            | —                                                                                       |
+| `purchase_orders`         | Procurement orders                 | `id` (PK, str), `po_number`, `supplier_id` (FK), `status` (enum), `order_date`, `expected_date`, `total_amount`, `created_at`                                                                                                                                 | `UNIQUE(po_number)`, `INDEX(po_number)`                                                 |
+| `purchase_order_items`    | PO line items                      | `id` (PK, str), `po_id` (FK), `product_id` (FK), `qty_ordered`, `qty_received`, `unit_cost`, `uom_id` (FK)                                                                                                                                                    | `FK(po_id -> purchase_orders.id CASCADE)`                                               |
+| `retailers`               | B2B wholesale buyers               | `id` (PK, str), `name`, `contact_person`, `phone`, `email`, `address`, `gstin`, `pricing_tier`, `credit_limit`, `credit_balance`, `is_active`, `created_at`                                                                                                   | —                                                                                       |
+| `customers`               | Direct walk-in buyers              | `id` (PK, str), `name`, `phone`, `email`, `address`, `notes`, `created_at`                                                                                                                                                                                    | —                                                                                       |
+| `sales_orders`            | Sales orders (retailer + customer) | `id` (PK, str), `so_number`, `buyer_type` (enum), `retailer_id` (FK), `customer_id` (FK), `status` (enum), `order_date`, `total_amount`, `created_at`                                                                                                         | `UNIQUE(so_number)`, `INDEX(so_number)`, `INDEX(retailer_id)`, `INDEX(customer_id)`     |
+| `sales_order_items`       | SO line items                      | `id` (PK, str), `so_id` (FK), `product_id` (FK), `qty`, `unit_price`, `uom_id` (FK)                                                                                                                                                                           | `FK(so_id -> sales_orders.id CASCADE)`                                                  |
+| `invoices`                | GST tax invoices                   | `id` (PK, str), `sales_order_id` (FK), `invoice_no`, `invoice_date`, `gst_rate`, `subtotal`, `tax_amount`, `total_amount`, `status` (enum), `e_invoice_irn`, `e_invoice_ack_no`, `e_invoice_qr_code`, `e_way_bill_no`, `created_at`                           | `UNIQUE(invoice_no)`, `INDEX(invoice_no)`, `INDEX(sales_order_id)`                      |
+| `invoice_items`           | Frozen line items at invoice time  | `id` (PK, str), `invoice_id` (FK), `product_id` (FK), `product_name`, `hsn_code`, `qty`, `unit_price`, `tax_rate`, `tax_amount`, `total`, `uom_id` (FK)                                                                                                       | `INDEX(invoice_id)`, `INDEX(product_id)`                                                |
+| `payments`                | Customer/Retailer payments         | `id` (PK, str), `invoice_id` (FK), `retailer_id` (FK), `customer_id` (FK), `amount`, `method` (enum), `paid_at`, `note`, `created_at`                                                                                                                         | `INDEX(invoice_id)`, `INDEX(retailer_id)`, `INDEX(customer_id)`                         |
+| `sales_returns`           | Retailer goods returns             | `id` (PK, str), `sales_order_id` (FK), `retailer_id` (FK), `status` (enum), `reason`, `requested_at`                                                                                                                                                          | `INDEX(sales_order_id)`, `INDEX(retailer_id)`                                           |
+| `sales_return_items`      | Sales return line items            | `id` (PK, str), `return_id` (FK), `product_id` (FK), `qty`, `batch_id` (FK), `condition` (enum)                                                                                                                                                               | `INDEX(return_id)`, `INDEX(product_id)`                                                 |
+| `purchase_returns`        | Supplier goods returns             | `id` (PK, str), `purchase_order_id` (FK), `supplier_id` (FK), `status` (enum), `reason`, `requested_at`                                                                                                                                                       | `INDEX(purchase_order_id)`, `INDEX(supplier_id)`                                        |
+| `purchase_return_items`   | Purchase return line items         | `id` (PK, str), `return_id` (FK), `product_id` (FK), `qty`, `batch_id` (FK), `reason`                                                                                                                                                                         | `INDEX(return_id)`, `INDEX(product_id)`                                                 |
+| `deliveries`              | Dispatch and vehicle tracking      | `id` (PK, str), `sales_order_id` (FK), `driver_name`, `vehicle_no`, `status` (enum), `dispatched_at`, `delivered_at`, `notes`, `created_at`                                                                                                                   | `INDEX(sales_order_id)`                                                                 |
+| `roles`                   | System roles                       | `id` (PK, str), `name`, `description`, `created_at`                                                                                                                                                                                                           | `UNIQUE(name)`, `INDEX(name)`                                                           |
+| `permissions`             | Granular permission definitions    | `id` (PK, str), `code`, `description`, `created_at`                                                                                                                                                                                                           | `UNIQUE(code)`, `INDEX(code)`                                                           |
+| `role_permissions`        | Role-to-permission mapping         | `role_id` (PK, FK), `permission_id` (PK, FK)                                                                                                                                                                                                                  | `PK(role_id, permission_id)`                                                            |
+| `stock_subscriptions`     | Back-in-stock alert requests       | `id` (PK, str), `retailer_id` (FK), `product_id` (FK), `channel_preference` (enum), `is_active`, `notified_at`, `created_at`                                                                                                                                  | `INDEX(retailer_id)`, `INDEX(product_id)`                                               |
+| `supplier_access_tokens`  | Single-purpose magic link tokens   | `id` (PK, str), `supplier_id` (FK), `purchase_order_id` (FK), `token`, `expires_at`, `created_at`                                                                                                                                                             | `UNIQUE(token)`, `INDEX(token)`, `INDEX(supplier_id)`, `INDEX(purchase_order_id)`       |
+| `product_inquiries`       | Portal inquiries & quotes          | `id` (PK, str), `product_id` (FK), `retailer_id` (FK), `customer_id` (FK), `message`, `status` (enum), `response`, `created_at`, `responded_at`                                                                                                               | `INDEX(product_id)`, `INDEX(retailer_id)`, `INDEX(customer_id)`                         |
+| `batch_recalls`           | Batch defect & recall records      | `id` (PK, str), `batch_id` (FK), `product_id` (FK), `reason`, `severity` (enum), `status` (enum), `initiated_at`, `resolved_at`                                                                                                                               | `INDEX(batch_id)`, `INDEX(product_id)`                                                  |
+| `recall_affected_orders`  | Traceability for recalled orders   | `id` (PK, str), `recall_id` (FK), `sales_order_id` (FK), `retailer_id` (FK), `customer_id` (FK), `notified_at`                                                                                                                                                | `INDEX(recall_id)`, `INDEX(sales_order_id)`, `INDEX(retailer_id)`, `INDEX(customer_id)` |
+| `stock_movements`         | Append-only inventory ledger       | `id` (PK, str), `product_id` (FK), `warehouse_id` (FK), `batch_id` (FK), `type` (enum), `quantity`, `reference_type`, `reference_id`, `created_by`, `created_at`                                                                                              | `INDEX(product_id)`, `INDEX(warehouse_id)`, `INDEX(created_at)`                         |
+| `notifications`           | System alerts & notices            | `id` (PK, str), `user_id`, `type`, `title`, `body`, `is_read`, `created_at`                                                                                                                                                                                   | `INDEX(user_id)`                                                                        |
+| `admin_audit_log`         | Sensitive operation change audit   | `id` (PK, str), `actor_id`, `action`, `entity_type`, `entity_id`, `before_value` (JSON), `after_value` (JSON), `created_at`                                                                                                                                   | `INDEX(actor_id)`, `INDEX(entity_type)`, `INDEX(entity_id)`, `INDEX(created_at)`        |
+| `business_settings`       | Single-row business profile & GST  | `id` (PK, str), `business_name`, `gstin`, `fssai_license_no`, `fssai_expiry_date`, `address`, `phone`, `email`, `updated_at`                                                                                                                                  | —                                                                                       |
 
 ## API Endpoints
 
@@ -222,24 +244,28 @@ wareflow/
 
 ## Decisions
 
-| Decision                    | Rationale                                                                                                |
-| --------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Supabase = DB only          | Need SQL joins, transactions, referential integrity for accounting                                       |
-| Firebase = Auth only        | Best-in-class free Google/Apple Sign-In with minimal setup                                               |
-| SOLID from day one          | Prevents spaghetti; makes testing and swapping implementations easy                                      |
-| Application factory         | Testable app creation, supports different configs per environment                                        |
-| pydantic-settings           | Single source of truth for env vars, validates on startup                                                |
-| Prettier (web)              | Consistent formatting, 100 char line width matching ruff                                                 |
-| Ruff (api)                  | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N                                 |
-| eslint-config-prettier      | Disables ESLint rules that conflict with Prettier                                                        |
-| Local PG on 5433            | Avoid conflicts with system Postgres; Supabase stays primary                                             |
-| Typed API Client            | Type-safe fetch wrapper with ApiError extracting status & server message                                 |
-| DIP Container               | Services receive repository Protocol interfaces via FastAPI Depends()                                    |
-| CI on Day One               | GitHub Actions pipeline runs lint + format + test + build on every push                                  |
-| Automated QA                | QA checklist items written as automated tests, enforced by CI                                            |
-| Connection Split (Supabase) | Port 6543 (transaction pooler) + NullPool for runtime; port 5432 (session pooler) for Alembic migrations |
-| Schema v1 Completeness      | Core tables (UOM conversions, batch tracking, supplier FSSAI, retailer credit) created upfront           |
-| Append-only Stock Ledger    | `stock_movements` is single source of truth for inventory balances                                       |
+| Decision                    | Rationale                                                                                                   |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Supabase = DB only          | Need SQL joins, transactions, referential integrity for accounting                                          |
+| Firebase = Auth only        | Best-in-class free Google/Apple Sign-In with minimal setup                                                  |
+| SOLID from day one          | Prevents spaghetti; makes testing and swapping implementations easy                                         |
+| Application factory         | Testable app creation, supports different configs per environment                                           |
+| pydantic-settings           | Single source of truth for env vars, validates on startup                                                   |
+| Prettier (web)              | Consistent formatting, 100 char line width matching ruff                                                    |
+| Ruff (api)                  | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N                                    |
+| eslint-config-prettier      | Disables ESLint rules that conflict with Prettier                                                           |
+| Local PG on 5433            | Avoid conflicts with system Postgres; Supabase stays primary                                                |
+| Typed API Client            | Type-safe fetch wrapper with ApiError extracting status & server message                                    |
+| DIP Container               | Services receive repository Protocol interfaces via FastAPI Depends()                                       |
+| CI on Day One               | GitHub Actions pipeline runs lint + format + test + build on every push                                     |
+| Automated QA                | QA checklist items written as automated tests, enforced by CI                                               |
+| Connection Split (Supabase) | Port 6543 (transaction pooler) + NullPool for runtime; port 5432 (session pooler) for Alembic migrations    |
+| Schema v1 Completeness      | Core tables (UOM conversions, batch tracking, supplier FSSAI, retailer credit) created upfront              |
+| Append-only Stock Ledger    | `stock_movements` is single source of truth for inventory balances                                          |
+| Frozen Invoicing Snapshot   | `invoice_items` freezes prices, taxes, and names at issuance time to ensure immutable accounting records    |
+| Single-Path Sales Orders    | `buyer_type` discriminator allows single order fulfillment engine to serve both B2B retailers and customers |
+| Supplier Magic Links        | `supplier_access_tokens` provides no-login dispatch confirmations for suppliers                             |
+| Distributor Identity Model  | `business_settings` provides single source of truth for distributor's legal/FSSAI profile                   |
 
 ## Security
 
