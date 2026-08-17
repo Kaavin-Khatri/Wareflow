@@ -19,6 +19,7 @@ from app.repositories.interfaces.product_repository import ProductRepositoryInte
 from app.repositories.interfaces.profile_repository import ProfileRepository
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
+from app.services.staff_service import StaffService
 
 
 @lru_cache
@@ -54,3 +55,10 @@ def get_profile_service(
 ) -> ProfileService:
     """Factory for ProfileService."""
     return ProfileService(profile_repo=repo)
+
+
+def get_staff_service(
+    repo: ProfileRepository = Depends(get_profile_repository),
+) -> StaffService:
+    """Factory for StaffService."""
+    return StaffService(profile_repo=repo)

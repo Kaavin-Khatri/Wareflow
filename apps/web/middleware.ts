@@ -10,16 +10,20 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // 2. Protect dashboard and operational routes
+  // 2. Protect dashboard, operational, and administrative routes
   const isProtectedRoute =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/inventory") ||
     pathname.startsWith("/orders") ||
-    pathname.startsWith("/invoices");
+    pathname.startsWith("/invoices") ||
+    pathname.startsWith("/returns") ||
+    pathname.startsWith("/deliveries") ||
+    pathname.startsWith("/reports") ||
+    pathname.startsWith("/admin");
 
   if (isProtectedRoute && !sessionCookie) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("from", pathname);
+    loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -33,5 +37,9 @@ export const config = {
     "/inventory/:path*",
     "/orders/:path*",
     "/invoices/:path*",
+    "/returns/:path*",
+    "/deliveries/:path*",
+    "/reports/:path*",
+    "/admin/:path*",
   ],
 };

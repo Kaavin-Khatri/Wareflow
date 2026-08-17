@@ -1044,6 +1044,8 @@ def seed_database():
             ("invoices:view", "View invoices and payment history"),
             ("payments:record", "Record incoming and outgoing payments against balances"),
             ("reports:view", "Access wholesale analytics and compliance reports"),
+            ("staff:view", "View staff members and role assignments"),
+            ("staff:manage", "Invite staff, modify roles, and configure permissions"),
             ("settings:manage", "Manage system, business profile, and user settings"),
             ("audit:view", "Inspect administrative audit logs and changes"),
         ]

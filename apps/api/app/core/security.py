@@ -4,14 +4,13 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-import firebase_admin
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from firebase_admin import auth as firebase_auth
-from firebase_admin import credentials
 
 from app.core.config import get_settings
 from app.core.di import get_profile_repository
+from app.core.firebase import get_firebase_app
 from app.repositories.interfaces.profile_repository import ProfileRepository
 
 logger = logging.getLogger(__name__)
@@ -31,26 +30,6 @@ class CurrentUser:
     avatar_url: str | None = None
     phone: str | None = None
     is_active: bool = True
-
-
-def get_firebase_app():
-    """Initialize or retrieve the Firebase Admin singleton."""
-    if firebase_admin._apps:
-        return firebase_admin.get_app()
-
-    settings = get_settings()
-    if settings.firebase_service_account_key_path:
-        try:
-            cred = credentials.Certificate(settings.firebase_service_account_key_path)
-            return firebase_admin.initialize_app(cred)
-        except Exception as exc:
-            logger.warning("Failed to load Firebase service account certificate: %s", exc)
-
-    try:
-        return firebase_admin.initialize_app()
-    except Exception as exc:
-        logger.warning("Firebase Admin default init: %s", exc)
-        return None
 
 
 def _handle_test_token(token: str) -> dict[str, Any] | None:

@@ -109,12 +109,17 @@ wareflow/
 │   │   ├── vitest.config.mts       # Vitest unit test configuration
 │   │   ├── middleware.ts           # Route guard and session cookie verification
 │   │   ├── .env.example
+│   │   ├── components/
+│   │   │   ├── Sidebar.tsx         # RBAC-filtered dynamic navigation sidebar
+│   │   │   └── AppLayout.tsx       # Reusable responsive dashboard layout
 │   │   ├── lib/
 │   │   │   ├── api-client.ts       # Typed fetch wrapper with ApiError
-│   │   │   ├── firebase-client.ts  # Safe Firebase Web SDK singleton & auth setup (Google + Apple + Email)
+│   │   │   ├── firebase-client.ts  # Safe Firebase Web SDK singleton (Google + Apple + Password)
+│   │   │   ├── nav.ts              # Data-driven navigation schema & permission filter
 │   │   │   └── __tests__/
 │   │   │       ├── api-client.test.ts
-│   │   │       └── firebase-client.test.ts
+│   │   │       ├── firebase-client.test.ts
+│   │   │       └── nav.test.ts
 │   │   └── app/                    # App Router pages
 │   │       ├── layout.tsx
 │   │       ├── page.tsx
@@ -126,6 +131,10 @@ wareflow/
 │   │       │   └── route.ts
 │   │       ├── dashboard/          # Authenticated workspace dashboard
 │   │       │   └── page.tsx
+│   │       ├── admin/
+│   │       │   └── settings/
+│   │       │       ├── staff/page.tsx       # Staff invite & role management UI
+│   │       │       └── permissions/page.tsx # Live role-permission matrix editor
 │   │       └── debug/              # Temporary handshake probe
 │   │           └── page.tsx
 │   └── api/                        # FastAPI backend (:8000)
@@ -142,20 +151,23 @@ wareflow/
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
 │       ├── .env.example
-│       ├── tests/                  # Pytest test suite (25 tests, 95% cov)
+│       ├── tests/                  # Pytest test suite (31 tests, 95% cov)
 │       │   ├── test_di_and_health.py
 │       │   ├── test_models.py
 │       │   ├── test_extended_models.py
 │       │   ├── test_seed.py
 │       │   ├── test_profiles.py
-│       │   └── test_auth_and_guards.py
+│       │   ├── test_auth_and_guards.py
+│       │   └── test_staff_and_roles.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
 │           │   └── routers/        # HTTP layer (request/response only)
 │           │       ├── health.py   # Liveness & DB connectivity (/health, /health/db)
 │           │       ├── me.py       # Caller profile & permissions (/me)
-│           │       └── profiles.py # User profile & bootstrapping (/profiles/bootstrap, /profiles/me)
+│           │       ├── profiles.py # User profile & bootstrapping (/profiles/bootstrap, /profiles/me)
+│           │       ├── staff.py    # Staff invitation & roles (/staff/invite, /staff)
+│           │       └── roles.py    # Role permissions matrix (/roles, /permissions)
 │           ├── db/
 │           │   ├── base.py         # SQLAlchemy DeclarativeBase
 │           │   └── session.py      # Engine (NullPool) + get_db_session dependency
@@ -178,7 +190,8 @@ wareflow/
 │           │   └── audit_and_settings.py # AdminAuditLog, BusinessSettings
 │           ├── services/           # Business logic (depends on abstractions)
 │           │   ├── product_service.py
-│           │   └── profile_service.py
+│           │   ├── profile_service.py
+│           │   └── staff_service.py
 │           ├── repositories/
 │           │   ├── interfaces/     # Protocol/ABC contracts
 │           │   │   ├── product_repository.py
@@ -187,10 +200,12 @@ wareflow/
 │           │       ├── product_repository.py
 │           │       └── profile_repository.py
 │           ├── schemas/            # Pydantic request/response models
-│           │   └── profile.py
+│           │   ├── profile.py
+│           │   └── staff.py
 │           └── core/
 │               ├── config.py       # pydantic-settings configuration
-│               ├── security.py     # Firebase Admin SDK verification, CurrentUser, require_permission guards
+│               ├── firebase.py     # Firebase Admin SDK singleton management
+│               ├── security.py     # Firebase ID verification & require_permission guards
 │               └── di.py           # Dependency injection wiring
 ```
 
@@ -235,13 +250,20 @@ wareflow/
 
 ## API Endpoints
 
-| Method | Path                  | Description                                        | Auth Required         |
-| ------ | --------------------- | -------------------------------------------------- | --------------------- |
-| GET    | `/health`             | Liveness probe returning status: "ok"              | No                    |
-| GET    | `/health/db`          | Database probe executing `SELECT 1` via connection | No                    |
-| GET    | `/me`                 | Get caller identity, role, and permission codes    | Yes (Bearer / Cookie) |
-| POST   | `/profiles/bootstrap` | Bootstrap/retrieve authenticated Firebase profile  | Yes (Bearer / Cookie) |
-| GET    | `/profiles/me`        | Get current user profile and role permissions      | Yes (Bearer / Cookie) |
+| Method | Path                      | Description                                        | Auth Required                   |
+| ------ | ------------------------- | -------------------------------------------------- | ------------------------------- |
+| GET    | `/health`                 | Liveness probe returning status: "ok"              | No                              |
+| GET    | `/health/db`              | Database probe executing `SELECT 1` via connection | No                              |
+| GET    | `/me`                     | Get caller identity, role, and permission codes    | Yes (Bearer / Cookie)           |
+| POST   | `/profiles/bootstrap`     | Bootstrap/retrieve authenticated Firebase profile  | Yes (Bearer / Cookie)           |
+| GET    | `/profiles/me`            | Get current user profile and role permissions      | Yes (Bearer / Cookie)           |
+| POST   | `/staff/invite`           | Invite new staff member with assigned role         | Yes (`staff:manage` / Owner)    |
+| GET    | `/staff`                  | List all staff members and active roles            | Yes (`staff:view`)              |
+| PATCH  | `/staff/{id}/role`        | Update a staff member's assigned role              | Yes (`staff:manage`)            |
+| PATCH  | `/staff/{id}/status`      | Toggle staff account active/suspended state        | Yes (`staff:manage`)            |
+| GET    | `/roles`                  | List all defined roles with permission codes       | Yes (Authenticated)             |
+| GET    | `/permissions`            | List all defined system permissions                | Yes (Authenticated)             |
+| PATCH  | `/roles/{id}/permissions` | Update permission matrix mapping for a role        | Yes (`settings:manage` / Owner) |
 
 ## Architecture Layers
 
@@ -304,6 +326,8 @@ wareflow/
 | First-User Owner Assignment    | Bootstrap assigns `Owner` role to 1st signed-in user; subsequent uninvited registrations receive 403 Forbidden |
 | Data-Driven Permission Guards  | `require_permission(code)` enforces DB permission codes from `role_permissions` rather than hardcoded roles    |
 | Dual-Inbound Auth Support      | `get_current_user` extracts and verifies either Bearer tokens or `httpOnly` session cookies transparently      |
+| Dynamic RBAC Navigation        | Navigation menus filter items strictly against user's active permissions without hardcoded role branches       |
+| Server-Side User Provisioning  | Firebase Admin SDK creates users server-side only; service keys are never exposed to client bundles            |
 
 ## Security
 

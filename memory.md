@@ -613,3 +613,75 @@
 - `apps/web/lib/firebase-client.ts`
 - `apps/web/lib/__tests__/firebase-client.test.ts`
 - `apps/web/app/(auth)/login/page.tsx`
+
+---
+
+## Step 3.3 — Staff Management, Role Assignment & Route Protection
+
+**Timestamp:** 2026-08-17T19:00:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Designed and implemented Staff and Role-Permission APIs in FastAPI:
+  - `POST /staff/invite`: Creates Firebase Auth user via Admin SDK with temporary password reset / sign-in link, creates `profiles` record with assigned role.
+  - `GET /staff`: Lists staff user profiles with role names, active statuses, and joined dates.
+  - `PATCH /staff/{id}/role`: Updates a staff member's assigned role in the database.
+  - `PATCH /staff/{id}/status`: Toggles active/inactive account status for staff profiles.
+  - `GET /roles`: Retrieves all defined roles along with their granted permission codes.
+  - `GET /permissions`: Retrieves all granular system permission definitions.
+  - `PATCH /roles/{id}/permissions`: Updates role-to-permission mappings in `role_permissions` in real-time.
+- Built dynamic navigation and permission filtering architecture in `apps/web`:
+  - `apps/web/lib/nav.ts`: Navigation configuration where items carry `requiredPermission` / `requiredRole` declarations, filtered dynamically via `filterNavSections`.
+  - `apps/web/components/Sidebar.tsx`: Dynamic RBAC-driven sidebar loading user permissions from `/me` and rendering only permitted sections and actions.
+  - `apps/web/components/AppLayout.tsx`: Reusable app shell layout.
+  - `apps/web/middleware.ts`: Enhanced route protection checking session cookies across all `/admin/*`, `/inventory/*`, `/orders/*`, `/invoices/*`, `/returns/*`, `/deliveries/*`, `/reports/*` routes with `?next=<path>` redirect parameters.
+- Built rich frontend administration pages:
+  - `apps/web/app/admin/settings/staff/page.tsx`: Staff invitation card + active team table with inline role changer dropdown and activation toggles.
+  - `apps/web/app/admin/settings/permissions/page.tsx`: Interactive Permission Matrix Editor with live domain groupings and real-time checkbox toggles with immediate database synchronization.
+- Created automated test suites in `apps/web/lib/__tests__/nav.test.ts` and `apps/api/tests/test_staff_and_roles.py` validating staff onboarding, unauthorized invite rejection (403), permission matrix live editing, and nav filtering (all 38 monorepo tests passing with 95% API coverage).
+
+### Decisions
+
+- **Permission-Matrix-Driven Navigation**: Nav items are filtered strictly by the user's actual permission codes rather than hardcoded role string lists. Adding a new role in the future requires zero frontend code changes.
+- **Server-Side Firebase Admin User Creation**: Firebase Admin SDK user creation is executed strictly server-side inside `StaffService`, never exposing service account keys to client applications.
+- **Single Responsibility Separation**: Decoupled Firebase Admin app lifecycle into `app.core.firebase` to eliminate circular dependencies with dependency injection containers.
+
+### Key values for future steps
+
+- Staff invite API: `POST /staff/invite`
+- Staff listing API: `GET /staff`
+- Staff role patch API: `PATCH /staff/{id}/role`
+- Roles list API: `GET /roles`
+- Permission list API: `GET /permissions`
+- Permission matrix patch API: `PATCH /roles/{id}/permissions`
+- Web Staff management: `/admin/settings/staff`
+- Web Permissions matrix editor: `/admin/settings/permissions`
+- Nav filtering utility: `filterNavSections()` from `@/lib/nav`
+
+### Files Created
+
+- `apps/api/app/core/firebase.py`
+- `apps/api/app/schemas/staff.py`
+- `apps/api/app/services/staff_service.py`
+- `apps/api/app/api/routers/staff.py`
+- `apps/api/app/api/routers/roles.py`
+- `apps/api/tests/test_staff_and_roles.py`
+- `apps/web/lib/nav.ts`
+- `apps/web/lib/__tests__/nav.test.ts`
+- `apps/web/components/Sidebar.tsx`
+- `apps/web/components/AppLayout.tsx`
+- `apps/web/app/admin/settings/staff/page.tsx`
+- `apps/web/app/admin/settings/permissions/page.tsx`
+
+### Files Modified
+
+- `apps/api/requirements.txt`
+- `apps/api/app/repositories/interfaces/profile_repository.py`
+- `apps/api/app/repositories/impl/profile_repository.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/core/security.py`
+- `apps/api/app/main.py`
+- `scripts/seed.py`
+- `apps/web/middleware.ts`
+- `apps/web/app/dashboard/page.tsx`
