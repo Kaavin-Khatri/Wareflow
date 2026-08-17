@@ -5,12 +5,14 @@
 > Current system state lives in `codebase_audit.md`.
 
 ## Project Overview
+
 - **Name:** WareFlow
 - **Purpose:** AI-assisted wholesale inventory management system
 - **Stack:** Next.js (frontend) + FastAPI (backend) + Supabase Postgres (DB) + Firebase (Auth) + Groq (AI)
 - **Entry Points:** `apps/web/` (Next.js on :3000), `apps/api/app/main.py` (FastAPI on :8000)
 
 ## Architecture
+
 - **Monorepo** with pnpm workspaces
 - **Frontend:** Next.js App Router, TypeScript, Tailwind CSS
 - **Backend:** FastAPI with SOLID layering — routers → services → repositories(interfaces) → repositories(impl)
@@ -20,6 +22,7 @@
 - **AI:** Groq (demand forecasting, smart reorder, NL queries, anomaly detection)
 
 ## Key Decisions
+
 - Supabase is DATABASE ONLY — its Auth product is deliberately skipped in favor of Firebase
 - Firebase Auth trust model: ID tokens verified server-side, never trusted from client alone
 - Apple Sign-In enabled alongside Google + Email/Password (user's choice for iOS family)
@@ -28,10 +31,12 @@
 - Secrets Rule #2: Every new env var gets a placeholder in .env.example in the same commit
 
 ## Dependencies
+
 - See `apps/web/package.json` for frontend dependencies
 - See `apps/api/requirements.txt` for backend dependencies
 
 ## Environment
+
 - OS: Windows 11 (NT 10.0.26200.0)
 - Shell: PowerShell 5.1
 - Node: v24.16.0 / pnpm: 11.8.0
@@ -44,29 +49,35 @@
 ## Change Log
 
 ### Step 0.1 — Local Toolchain Setup
+
 **Timestamp:** 2026-08-17T16:34:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Verified all local toolchain dependencies
 - Confirmed Git identity is configured (Kaavin / noreply GitHub email)
 - Recorded OS + shell environment
 
 ### Decisions
+
 - Node v24 LTS (exceeds minimum v20) — no downgrade needed
 - pnpm v11 (exceeds minimum v9) — latest stable
 - Python 3.14 (exceeds minimum 3.11) — used for scripting/tooling only
 
 ### Key values for future steps
+
 - All future commands use PowerShell syntax
 
 ---
 
 ### Step 0.2 — GitHub Repo + Supabase (Database) + Firebase (Auth) Projects
+
 **Timestamp:** 2026-08-17T16:55:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - GitHub repo confirmed: Kaavin-Khatri/Wareflow (private, main branch)
 - Supabase project provisioned (DATABASE ONLY — Auth deliberately skipped)
 - Firebase project provisioned with Authentication enabled
@@ -74,12 +85,14 @@
 - Firebase Admin SDK service account key generated and saved outside repo
 
 ### Decisions
+
 - Supabase = Postgres system of record (orders, invoices, stock ledger)
 - Firebase = Auth + future realtime notifications
 - Apple Sign-In enabled (user's choice for iOS family members)
 - Google Analytics skipped on Firebase (not needed for MVP)
 
 ### Key values for future steps
+
 - Supabase project ref: yappumzftkltlybmztgg
 - Supabase region: Northeast Asia (Seoul) / ap-northeast-2
 - Firebase project ID: wareflow-d17a4
@@ -88,10 +101,12 @@
 ---
 
 ### Step 0.3 — Email Alerts, Deploy Accounts & Env Convention
+
 **Timestamp:** 2026-08-17T17:02:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Resend account created — API key generated and saved
 - Vercel account created — no project imported yet
 - Render account created — no service created yet
@@ -99,22 +114,26 @@
 - Two project-wide secrets rules established
 
 ### Decisions
+
 - Resend free tier (3,000 emails/month, 100/day) sufficient for alerts
 - Vercel = Next.js hosting (deploy deferred to Phase 3)
 - Render = FastAPI hosting (deploy deferred to Phase 3)
 - Groq = LLM API for AI features
 
 ### Key values for future steps
+
 - Resend tier: free (3k/mo, 100/day)
 - Vercel + Render: accounts ready, deployment deferred
 
 ---
 
 ### Step 1.1 — Scaffold apps/web + apps/api + Protocol Files
+
 **Timestamp:** 2026-08-17T17:04:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Root monorepo with pnpm workspaces created
 - apps/web scaffolded via create-next-app (App Router, TypeScript, Tailwind, ESLint)
 - apps/api scaffolded with SOLID-first folder layout
@@ -124,26 +143,70 @@
 - Phase 0 outcomes backfilled and _phase0_outcomes.md consumed
 
 ### Decisions
+
 - SOLID layering locked: routers → services → repositories(interfaces) → repositories(impl)
 - Application factory pattern for FastAPI (testable, config-flexible)
 - pydantic-settings for centralized config from env vars
 
 ### Key values for future steps
+
 - Web: http://localhost:3000 (Next.js dev server)
 - API: http://localhost:8000 (uvicorn dev server)
 - SOLID rule: routers never import repositories directly, only services
 
 ### SOLID Principles Applied
+
 - SRP: Each layer has one responsibility (HTTP, logic, data-access, validation)
 - OCP: New domains added by creating new modules, not editing existing ones
 - DIP: Services depend on repository interfaces, not implementations
 - ISP: Separate interface per domain repository
 
 ### Files Created
+
 - package.json, pnpm-workspace.yaml (root)
 - apps/api/requirements.txt, apps/api/app/main.py
 - apps/api/app/api/routers/health.py
 - apps/api/app/core/config.py, apps/api/app/core/di.py
-- All __init__.py files for SOLID layer packages
+- All **init**.py files for SOLID layer packages
 - .gitignore, apps/web/.env.example, apps/api/.env.example
 - memory.md, codebase_audit.md
+
+---
+
+## Step 1.2 — Lint, Format & Local Dev Ergonomics
+
+**Timestamp:** 2026-08-17T17:15:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- ESLint + Prettier + eslint-config-prettier integrated for apps/web
+- Ruff configured (line-length 100, target py311) for apps/api
+- Prettier config at root (.prettierrc) with 100 char line width
+- README.md written with full quick-start guide for strangers
+- docker-compose.yml with optional local Postgres fallback (port 5433)
+- Format scripts added to root package.json
+
+### Decisions
+
+- Prettier line-length 100 matches ruff line-length 100 for monorepo consistency
+- Ruff lint rules: E, W, F, I, B, UP, SIM, N — comprehensive without being noisy
+- Local Postgres on port 5433 to avoid conflicts; Supabase stays primary
+- requirements-dev.txt separates dev tools (ruff, pytest) from production deps
+
+### Key values for future steps
+
+- Format: `pnpm format` (web), `ruff format app/` (api)
+- Lint: `pnpm lint:web` (web), `ruff check app/` (api)
+- Local PG: `postgresql://wareflow:wareflow_dev@localhost:5433/wareflow`
+
+### Files Created
+
+- .prettierrc, .prettierignore
+- apps/api/pyproject.toml, apps/api/requirements-dev.txt
+- docker-compose.yml, README.md
+
+### Files Modified
+
+- package.json (format scripts)
+- apps/web/eslint.config.mjs (prettier integration)

@@ -7,6 +7,7 @@ SOLID architecture:
 Routers handle HTTP concerns only. Business logic lives in services.
 Repositories implement data-access contracts defined by interfaces.
 """
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 

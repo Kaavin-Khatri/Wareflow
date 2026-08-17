@@ -1,4 +1,5 @@
 """Health-check router — no business logic, just a liveness probe."""
+
 from fastapi import APIRouter
 
 router = APIRouter(tags=["health"])

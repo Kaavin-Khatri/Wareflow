@@ -1,0 +1,40 @@
+# ===========================================================================
+# WareFlow — Optional Local Development Services
+# ===========================================================================
+#
+# PRIMARY DATABASE: Supabase cloud (always use for production + staging).
+# This Compose file provides a LOCAL Postgres fallback for offline dev
+# or if you need to reset/test schema changes without touching Supabase.
+#
+# Usage:
+#   docker compose up -d        # start local Postgres
+#   docker compose down -v      # stop and delete data
+#
+# To use this instead of Supabase, set in apps/api/.env:
+#   DATABASE_URL=postgresql://wareflow:wareflow_dev@localhost:5433/wareflow
+#   DIRECT_DATABASE_URL=postgresql://wareflow:wareflow_dev@localhost:5433/wareflow
+#
+# Port 5433 is used to avoid conflicts with any system Postgres on 5432.
+# ===========================================================================
+
+services:
+  postgres-local:
+    image: postgres:16-alpine
+    container_name: wareflow-postgres-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wareflow
+      POSTGRES_USER: wareflow
+      POSTGRES_PASSWORD: wareflow_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - wareflow_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wareflow -d wareflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  wareflow_pgdata:
