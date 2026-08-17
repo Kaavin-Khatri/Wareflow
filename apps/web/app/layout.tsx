@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import GradientBackdrop from "@/components/GradientBackdrop";
+import { MotionProvider } from "@/components/motion/MotionProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -51,8 +52,10 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col font-sans bg-[var(--bg)] text-[var(--text)] transition-colors duration-300">
         <ThemeProvider>
-          <GradientBackdrop />
-          {children}
+          <MotionProvider>
+            <GradientBackdrop />
+            {children}
+          </MotionProvider>
         </ThemeProvider>
       </body>
     </html>

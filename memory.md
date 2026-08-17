@@ -888,3 +888,64 @@
 - `apps/web/components/AppLayout.tsx`
 - `apps/web/components/Sidebar.tsx`
 - `apps/web/lib/nav.ts`
+
+---
+
+## Step 4.2 — Glass Component Primitives (Real Specular Refraction) + Motion Stack Wiring
+
+**Timestamp:** 2026-08-17T18:55:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Realistic specular-refraction glass is now the DEFAULT for every button and interactive control — not an opt-in stretch effect on one hero element.
+- Created `GlassButton` flagship primitive with 1.5px shifting specular highlight, active spring compression for tactile feedback, and accessible HTML/polymorphic forwarding.
+- Created `GlassCard` and `GlassPanel` with lighter edge-only refraction contours tuned for cost at larger surface areas (preserving GPU fill rates).
+- Created elevated `GlassModal`, `GlassDropdown`, `GlassInput`, and `GlassBadge` primitives.
+- Built layered Motion Stack infrastructure:
+  - `motion` (Framer Motion) as default for React-driven UI transitions with shared spring physics presets (`MotionProvider`, `GlassMotion`).
+  - `gsap` (+ ScrollTrigger) reserved for marketing/landing page timelines.
+  - `@formkit/auto-animate` for dynamic list/grid mutations.
+  - `@react-spring/web` for physics micro-interactions.
+- Created architectural specifications in `docs/GLASS_GUIDE.md` and `docs/ANIMATION_GUIDE.md`.
+- Updated `/styleguide` with interactive glass primitives showcase, modal demonstrations, and 24-button dense table benchmark.
+- Added comprehensive unit tests in `apps/web/lib/__tests__/glass-primitives.test.tsx` (all 55 monorepo tests passing).
+
+### Decisions
+
+- **Realistic Specular Refraction as Default**: Every button and control receives specular top highlights and tactile spring responses — not an isolated hero gimmick.
+- **Surface Area vs Cost Performance Hierarchy**: Refraction strength scales inversely with element count/size: small buttons get full specular shifts and active compression, while large panels get light-edge highlights.
+- **Motion Domain Ownership**: Each library has one designated domain (`motion` for UI/route transitions, `gsap` for marketing sequences, `@formkit/auto-animate` for list reflows, `@react-spring/web` for physics gestures).
+
+### Key values for future steps
+
+- Flagship Button: `<GlassButton variant="primary|secondary|outline|ghost|destructive" size="sm|md|lg|icon">`
+- Container Cards: `<GlassCard hoverable glow>`, `<GlassPanel elevated>`
+- Overlays: `<GlassModal>`, `<GlassDropdown>`
+- Form & Status: `<GlassInput>`, `<GlassBadge variant="accent|neutral|success|warning|error">`
+- Motion Hook: `useMotionPresets()` (`snappy`, `glassMorph`, `gentle`, `bouncy`, `smoothFade`)
+- Motion Wrappers: `<PageTransition>`, `<FadeIn>`, `<StaggerContainer>`, `<StaggerItem>`
+- Specs: `docs/GLASS_GUIDE.md`, `docs/ANIMATION_GUIDE.md`
+
+### Files Created
+
+- `apps/web/lib/utils.ts`
+- `apps/web/components/glass/GlassButton.tsx`
+- `apps/web/components/glass/GlassCard.tsx`
+- `apps/web/components/glass/GlassPanel.tsx`
+- `apps/web/components/glass/GlassModal.tsx`
+- `apps/web/components/glass/GlassDropdown.tsx`
+- `apps/web/components/glass/GlassInput.tsx`
+- `apps/web/components/glass/GlassBadge.tsx`
+- `apps/web/components/glass/index.ts`
+- `apps/web/components/motion/MotionProvider.tsx`
+- `apps/web/components/motion/GlassMotion.tsx`
+- `apps/web/lib/__tests__/glass-primitives.test.tsx`
+- `docs/GLASS_GUIDE.md`
+- `docs/ANIMATION_GUIDE.md`
+
+### Files Modified
+
+- `apps/web/package.json`
+- `apps/web/app/layout.tsx`
+- `apps/web/app/styleguide/page.tsx`
