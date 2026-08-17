@@ -340,3 +340,58 @@
 - `apps/api/app/api/routers/health.py`
 - `apps/api/app/core/config.py`
 - `apps/api/tests/test_di_and_health.py`
+
+---
+
+## Step 2.2 — Core Wholesale Schema (products, stock, orders)
+
+**Timestamp:** 2026-08-17T18:10:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Designed and implemented full SQLAlchemy 2.0 ORM models in modular domain packages under `app/models/`:
+  - `uom.py`: `units_of_measure` (id, name, abbreviation) and `product_uom_conversions` (product_id, from_uom_id, to_uom_id, factor)
+  - `catalog.py`: `categories` (id, name, parent_id) and `products` (id, sku, name, description, content_details, image_url, hsn_code, category_id, base_uom_id, unit, cost_price, wholesale_price, reorder_point, reorder_qty, barcode, is_active)
+  - `warehouse.py`: `warehouses` (id, name, location, is_active) and `stock_batches` (id, product_id, warehouse_id, batch_no, quantity, expiry_date, received_at)
+  - `supplier.py`: `suppliers` (id, name, contact_person, phone, email, address, gstin, fssai_license_no, fssai_expiry_date), `purchase_orders` (id, po_number, supplier_id, status, order_date, expected_date, total_amount), and `purchase_order_items` (id, po_id, product_id, qty_ordered, qty_received, unit_cost, uom_id)
+  - `retailer.py`: `retailers` (id, name, contact_person, phone, email, address, gstin, pricing_tier, credit_limit, credit_balance), `sales_orders` (id, so_number, retailer_id, status, order_date, total_amount), and `sales_order_items` (id, so_id, product_id, qty, unit_price, uom_id)
+  - `inventory.py`: `stock_movements` (id, product_id, warehouse_id, batch_id, type [in/out/adjustment/transfer/return_in/return_out], quantity, reference_type, reference_id, created_by, created_at)
+  - `notification.py`: `notifications` (id, user_id, type, title, body, is_read, created_at)
+- Created Alembic migration `0002_core_wholesale_schema.py` creating all 14 tables, enums, FK constraints, and indexes.
+- Executed migration and verified `downgrade base` and `upgrade head` round-trips cleanly against live Supabase PostgreSQL.
+- Added comprehensive model test suite in `tests/test_models.py` reaching 96% test coverage.
+
+### Decisions
+
+- **Schema v1 Full Domain Foundation**: All core tables (including UOM conversion, batch tracking, supplier FSSAI, retailer credit, and notifications) created now so later phases only add application behavior and APIs, not breaking DDL changes.
+- **Stock Movements Ledger**: `stock_movements` is the single source of truth for on-hand quantity across warehouses and batches — never trust a cached counter alone.
+- **Retailer Credit Tracking**: `credit_limit` and `credit_balance` live directly on `retailers` now so Phase 9 (Billing & Invoicing) adds logic without schema alterations.
+- **PO Dispatch Status**: `ready_for_dispatch` status added to `po_status_enum` so a supplier/manufacturer can signal 'goods packed, ready to collect' before receiving, triggering notifications in Phase 11.
+- **Rich Catalog Fields**: `description`, `content_details`, and `image_url` included on `products` at schema-v1 time for retailer catalog and portal needs.
+- **GST Compliance**: `hsn_code` added to `products` at schema-v1 time for GST-compliant invoice generation.
+- **Food Safety Compliance**: `fssai_license_no` and `fssai_expiry_date` added to `suppliers` for Indian regulatory food safety requirements.
+
+### Key values for future steps
+
+- 14 core tables live on Supabase: `units_of_measure`, `product_uom_conversions`, `categories`, `products`, `warehouses`, `stock_batches`, `suppliers`, `purchase_orders`, `purchase_order_items`, `retailers`, `sales_orders`, `sales_order_items`, `stock_movements`, `notifications`
+- PO status enum values: `draft`, `ordered`, `ready_for_dispatch`, `partially_received`, `received`, `cancelled`
+- SO status enum values: `draft`, `confirmed`, `packed`, `shipped`, `delivered`, `cancelled`
+- Stock movement types: `in`, `out`, `adjustment`, `transfer`, `return_in`, `return_out`
+
+### Files Created
+
+- `apps/api/app/models/__init__.py`
+- `apps/api/app/models/uom.py`
+- `apps/api/app/models/catalog.py`
+- `apps/api/app/models/warehouse.py`
+- `apps/api/app/models/supplier.py`
+- `apps/api/app/models/retailer.py`
+- `apps/api/app/models/inventory.py`
+- `apps/api/app/models/notification.py`
+- `apps/api/alembic/versions/0002_core_wholesale_schema.py`
+- `apps/api/tests/test_models.py`
+
+### Files Modified
+
+- `apps/api/alembic/env.py`
