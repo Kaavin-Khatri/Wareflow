@@ -93,4 +93,12 @@ export const apiClient = {
   delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
     return request<T>(endpoint, { ...options, method: "DELETE" });
   },
+
+  upload<T>(endpoint: string, formData: FormData, options?: RequestInit): Promise<T> {
+    return request<T>(endpoint, {
+      ...options,
+      method: "POST",
+      body: formData,
+    });
+  },
 };

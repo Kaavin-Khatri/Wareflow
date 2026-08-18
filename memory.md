@@ -1340,3 +1340,68 @@
 - `apps/web/lib/nav.ts`
 - `codebase_audit.md`
 
+## Step 5.2 — Unit-of-Measure (UoM) Conversion
+
+**Timestamp:** 2026-08-18T14:40:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- **UoM Repository Interface & Implementations**:
+  - Created `apps/api/app/repositories/interfaces/uom_repository.py` defining `UomRepositoryInterface` Protocol (`list_uoms`, `get_uom_by_id`, `get_uom_by_abbreviation`, `create_uom`, `update_uom`, `delete_uom`, `list_product_conversions`, `get_conversion_by_id`, `get_conversion_between`, `create_or_update_conversion`, `delete_conversion`, `get_product_base_uom_id`).
+  - Created `apps/api/app/repositories/impl/uom_repository.py` implementing `SqlAlchemyUomRepository` and `InMemoryUomRepository` for fast zero-IO testing.
+- **UoM Domain Service & Graph Traversal**:
+  - Implemented `apps/api/app/services/uom_service.py` with `UomService` and `UomConversionError`.
+  - Implemented multi-hop conversion factor resolution using breadth-first search (BFS) over product conversion ratios (supports multi-level packaging hierarchies e.g., Pallet -> Master Carton -> Case -> Pack -> Piece, direct and inverse conversions).
+  - Implemented single-point-of-truth stock-movement boundary rule: `convert_to_base_uom(product_id, qty, uom_id)` guarantees all stock movements and batch quantities are strictly written in base UoM.
+  - Added full audit trail logging on UoM and Conversion mutation events.
+- **Pydantic Schemas & REST Router**:
+  - Created `apps/api/app/schemas/uom.py` for request and response validation.
+  - Implemented `apps/api/app/api/routers/uom.py` registering endpoints: `GET /uom`, `POST /uom`, `PATCH /uom/{id}`, `DELETE /uom/{id}`, `GET /products/{id}/conversions`, `POST /products/{id}/conversions`, `DELETE /products/{id}/conversions/{id}`, `POST /products/{id}/convert`.
+  - Registered router in `apps/api/app/main.py` and wired DI in `apps/api/app/core/di.py`.
+- **Frontend Management & Interactive Calculator**:
+  - Updated `apps/web/app/admin/products/page.tsx` with Base Unit selector linked to `/uom` catalog.
+  - Added dedicated Packaging Ratios Manager modal with live conversions table, ratio deletion, and ratio definition wizard.
+  - Integrated interactive Live Conversion Calculator widget enabling real-time conversion preview testing.
+  - Updated `GlassModal` to support `2xl` max-width and `apiClient` to support multipart `upload`.
+- **Automated Tests & Quality Verification**:
+  - Created `apps/api/tests/test_uom.py` validating DIP swappability, receiving 5 cases -> 120 base units, selling pieces deducting base units, 1:1 default fallback without conversion rule, error handling on unresolvable ratios, and full REST lifecycle.
+  - Created `apps/web/lib/__tests__/uom.test.tsx` verifying product catalog table rendering with base units and conversion explanations.
+  - Monorepo 100% green: 54 pytest tests passing, 53 vitest tests passing, 0 ruff errors, 0 ESLint warnings, and Next.js build succeeding.
+
+### Decisions
+
+- **Graph Traversal (BFS) for Packaging Ratios**: Resolving conversions via adjacency list BFS ensures support for arbitrary packaging chains (e.g. Pallet -> Case -> Inner Pack -> Piece) and inverse conversions without hardcoding fixed levels.
+- **Strict Boundary Conversion Rule**: Inventory ledger entries and warehouse stock batches store quantities exclusively in the product's `base_uom_id`. Purchase order items and sales order items carry their own operational `uom_id` and are converted to base UoM at the exact moment they touch stock movements.
+- **Graceful Default Fallback**: If a product has no custom packaging conversion defined, transactions default to 1:1 in its base unit without runtime error.
+
+### Key values for future steps
+
+- UoM Repository Interface: `apps/api/app/repositories/interfaces/uom_repository.py`
+- UoM Repository Impl: `apps/api/app/repositories/impl/uom_repository.py`
+- UoM Domain Service: `apps/api/app/services/uom_service.py`
+- Stock Ledger Conversion Rule: `uom_service.convert_to_base_uom(product_id, qty, uom_id)`
+- Multi-hop Conversion Function: `uom_service.convert(product_id, qty, from_uom_id, to_uom_id)`
+- UoM Router: `apps/api/app/api/routers/uom.py` (`/uom`, `/products/{id}/conversions`, `/products/{id}/convert`)
+
+### Files Created
+
+- `apps/api/app/repositories/interfaces/uom_repository.py`
+- `apps/api/app/repositories/impl/uom_repository.py`
+- `apps/api/app/schemas/uom.py`
+- `apps/api/app/services/uom_service.py`
+- `apps/api/app/api/routers/uom.py`
+- `apps/api/tests/test_uom.py`
+- `apps/web/lib/__tests__/uom.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/api/app/schemas/products.py`
+- `apps/api/app/repositories/impl/product_repository.py`
+- `apps/web/app/admin/products/page.tsx`
+- `apps/web/components/glass/GlassModal.tsx`
+- `apps/web/lib/api-client.ts`
+- `memory.md`
+- `codebase_audit.md`

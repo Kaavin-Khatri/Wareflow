@@ -21,10 +21,14 @@ from app.repositories.impl.product_repository import (
 )
 from app.repositories.impl.profile_repository import SqlAlchemyProfileRepository
 from app.repositories.impl.retailer_repository import SqlAlchemyRetailerRepository
+from app.repositories.impl.uom_repository import (
+    SqlAlchemyUomRepository,
+)
 from app.repositories.interfaces.audit_repository import AuditRepository
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
 from app.repositories.interfaces.profile_repository import ProfileRepository
 from app.repositories.interfaces.retailer_repository import RetailerRepository
+from app.repositories.interfaces.uom_repository import UomRepositoryInterface
 from app.services.audit_service import AuditService
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
@@ -32,6 +36,7 @@ from app.services.retailer_service import RetailerService
 from app.services.staff_service import StaffService
 from app.services.storage_service import StorageServiceInterface, SupabaseStorageService
 from app.services.two_factor_service import TwoFactorService
+from app.services.uom_service import UomService
 
 
 @lru_cache
@@ -43,6 +48,11 @@ def get_product_repository() -> ProductRepositoryInterface:
 def get_db_product_repository(db: Session = Depends(get_db_session)) -> ProductRepositoryInterface:
     """Factory for database-backed ProductRepositoryInterface."""
     return SqlAlchemyProductRepository(session=db)
+
+
+def get_uom_repository(db: Session = Depends(get_db_session)) -> UomRepositoryInterface:
+    """Factory for database-backed UomRepositoryInterface."""
+    return SqlAlchemyUomRepository(session=db)
 
 
 def get_profile_repository(db: Session = Depends(get_db_session)) -> ProfileRepository:
@@ -76,6 +86,14 @@ def get_audit_service(
 ) -> AuditService:
     """Factory for AuditService."""
     return AuditService(audit_repo=audit_repo, profile_repo=profile_repo)
+
+
+def get_uom_service(
+    uom_repo: UomRepositoryInterface = Depends(get_uom_repository),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> UomService:
+    """Factory for UomService."""
+    return UomService(uom_repo=uom_repo, audit_service=audit_service)
 
 
 def get_product_service(

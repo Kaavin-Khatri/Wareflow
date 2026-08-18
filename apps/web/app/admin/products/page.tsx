@@ -18,12 +18,32 @@ import {
   Upload,
   CheckCircle2,
   AlertCircle,
+  Scale,
+  Calculator,
+  Trash2,
+  ArrowRight,
 } from "lucide-react";
 import Image from "next/image";
 
 export interface CategorySummary {
   id: string;
   name: string;
+}
+
+export interface UOMItem {
+  id: string;
+  name: string;
+  abbreviation: string;
+}
+
+export interface ProductConversionItem {
+  id: string;
+  product_id: string;
+  from_uom_id: string;
+  to_uom_id: string;
+  factor: number;
+  from_uom?: UOMItem | null;
+  to_uom?: UOMItem | null;
 }
 
 export interface ProductItem {
@@ -35,6 +55,7 @@ export interface ProductItem {
   image_url?: string | null;
   hsn_code?: string | null;
   category_id?: string | null;
+  base_uom_id?: string | null;
   unit?: string | null;
   cost_price: number;
   wholesale_price: number;
@@ -43,11 +64,13 @@ export interface ProductItem {
   barcode?: string | null;
   is_active: boolean;
   category?: CategorySummary | null;
+  base_uom?: UOMItem | null;
 }
 
 export default function ProductsAdminPage() {
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [categories, setCategories] = useState<CategorySummary[]>([]);
+  const [uoms, setUoms] = useState<UOMItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -65,6 +88,7 @@ export default function ProductsAdminPage() {
   const [description, setDescription] = useState("");
   const [contentDetails, setContentDetails] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [baseUomId, setBaseUomId] = useState("");
   const [unit, setUnit] = useState("Bag");
   const [costPrice, setCostPrice] = useState<number | string>("");
   const [wholesalePrice, setWholesalePrice] = useState<number | string>("");
@@ -82,14 +106,34 @@ export default function ProductsAdminPage() {
   const [imageError, setImageError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // UoM Conversions Modal State
+  const [uomModalOpen, setUomModalOpen] = useState(false);
+  const [selectedProductForUom, setSelectedProductForUom] = useState<ProductItem | null>(null);
+  const [conversions, setConversions] = useState<ProductConversionItem[]>([]);
+  const [loadingConversions, setLoadingConversions] = useState(false);
+  const [convFromUomId, setConvFromUomId] = useState("");
+  const [convToUomId, setConvToUomId] = useState("");
+  const [convFactor, setConvFactor] = useState<number | string>("");
+  const [convSubmitting, setConvSubmitting] = useState(false);
+  const [convError, setConvError] = useState<string | null>(null);
+
+  // Live Conversion Calculator State
+  const [calcQty, setCalcQty] = useState<number | string>(1);
+  const [calcFromUom, setCalcFromUom] = useState("");
+  const [calcToUom, setCalcToUom] = useState("");
+  const [calcResult, setCalcResult] = useState<number | null>(null);
+  const [calcLoading, setCalcLoading] = useState(false);
+
   const fetchCatalogData = async () => {
     try {
-      const [productsData, categoriesData] = await Promise.all([
+      const [productsData, categoriesData, uomsData] = await Promise.all([
         apiClient.get<ProductItem[]>("/products"),
         apiClient.get<CategorySummary[]>("/categories"),
+        apiClient.get<UOMItem[]>("/uom").catch(() => []),
       ]);
       setProducts(productsData);
       setCategories(categoriesData);
+      setUoms(uomsData);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load product catalog.");
     } finally {
@@ -101,13 +145,15 @@ export default function ProductsAdminPage() {
     let ignore = false;
     async function loadData() {
       try {
-        const [productsData, categoriesData] = await Promise.all([
+        const [productsData, categoriesData, uomsData] = await Promise.all([
           apiClient.get<ProductItem[]>("/products"),
           apiClient.get<CategorySummary[]>("/categories"),
+          apiClient.get<UOMItem[]>("/uom").catch(() => []),
         ]);
         if (!ignore) {
           setProducts(productsData);
           setCategories(categoriesData);
+          setUoms(uomsData);
         }
       } catch (err: unknown) {
         if (!ignore) {
@@ -132,6 +178,7 @@ export default function ProductsAdminPage() {
     setDescription("");
     setContentDetails("");
     setCategoryId(categories.length > 0 ? categories[0].id : "");
+    setBaseUomId(uoms.length > 0 ? uoms[0].id : "");
     setUnit("Bag");
     setCostPrice("");
     setWholesalePrice("");
@@ -149,6 +196,7 @@ export default function ProductsAdminPage() {
     setDescription(prod.description || "");
     setContentDetails(prod.content_details || "");
     setCategoryId(prod.category_id || "");
+    setBaseUomId(prod.base_uom_id || (uoms.length > 0 ? uoms[0].id : ""));
     setUnit(prod.unit || "Bag");
     setCostPrice(prod.cost_price);
     setWholesalePrice(prod.wholesale_price);
@@ -171,6 +219,7 @@ export default function ProductsAdminPage() {
       description: description.trim() || null,
       content_details: contentDetails.trim() || null,
       category_id: categoryId || null,
+      base_uom_id: baseUomId || null,
       unit: unit.trim() || null,
       cost_price: Number(costPrice) || 0,
       wholesale_price: Number(wholesalePrice) || 0,
@@ -205,29 +254,26 @@ export default function ProductsAdminPage() {
     setImageModalOpen(true);
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setImageError(null);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate type
-    const validTypes = ["image/jpeg", "image/png", "image/webp"];
-    if (!validTypes.includes(file.type.toLowerCase())) {
-      setImageError("Invalid file type. Only JPEG, PNG, and WebP images are supported.");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setImageError("Invalid file type. Allowed formats: JPEG, PNG, WebP.");
       return;
     }
 
-    // Validate size (<= 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setImageError("File size exceeds 5MB limit.");
       return;
     }
 
+    setImageError(null);
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
   };
 
-  const handleUploadImageSubmit = async (e: React.FormEvent) => {
+  const handleUploadImage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProductForImage || !imageFile) return;
 
@@ -238,20 +284,11 @@ export default function ProductsAdminPage() {
     formData.append("file", imageFile);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/products/${selectedProductForImage.id}/image`,
-        {
-          method: "POST",
-          body: formData,
-        },
+      await apiClient.upload<{ product_id: string; image_url: string }>(
+        `/products/${selectedProductForImage.id}/image`,
+        formData,
       );
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.detail || "Image upload failed.");
-      }
-
-      setSuccess(`Image updated for product ${selectedProductForImage.sku}.`);
+      setSuccess(`Image updated for "${selectedProductForImage.name}".`);
       setImageModalOpen(false);
       await fetchCatalogData();
     } catch (err: unknown) {
@@ -262,20 +299,103 @@ export default function ProductsAdminPage() {
   };
 
   const handleDeactivate = async (prod: ProductItem) => {
-    if (!confirm(`Are you sure you want to deactivate SKU "${prod.sku}" (${prod.name})?`)) return;
+    if (!confirm(`Are you sure you want to deactivate "${prod.name}"?`)) return;
 
-    setError(null);
-    setSuccess(null);
     try {
       await apiClient.post(`/products/${prod.id}/deactivate`);
-      setSuccess(`Product "${prod.sku}" has been deactivated.`);
+      setSuccess(`Product "${prod.name}" deactivated.`);
       await fetchCatalogData();
     } catch (err: unknown) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to deactivate product. Check if open orders exist.",
+      setError(err instanceof Error ? err.message : "Failed to deactivate product.");
+    }
+  };
+
+  // UoM Conversion Operations
+  const fetchConversions = async (productId: string) => {
+    setLoadingConversions(true);
+    setConvError(null);
+    try {
+      const data = await apiClient.get<ProductConversionItem[]>(
+        `/products/${productId}/conversions`,
       );
+      setConversions(data);
+    } catch (err: unknown) {
+      setConvError(err instanceof Error ? err.message : "Failed to load conversion rules.");
+    } finally {
+      setLoadingConversions(false);
+    }
+  };
+
+  const handleOpenUomModal = async (prod: ProductItem) => {
+    setSelectedProductForUom(prod);
+    setConvError(null);
+    setCalcResult(null);
+    setUomModalOpen(true);
+
+    if (uoms.length >= 2) {
+      setConvFromUomId(uoms[1].id);
+      setConvToUomId(prod.base_uom_id || uoms[0].id);
+      setCalcFromUom(uoms[1].id);
+      setCalcToUom(prod.base_uom_id || uoms[0].id);
+    }
+    setConvFactor(24);
+    await fetchConversions(prod.id);
+  };
+
+  const handleAddConversion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProductForUom) return;
+
+    setConvSubmitting(true);
+    setConvError(null);
+
+    try {
+      await apiClient.post(`/products/${selectedProductForUom.id}/conversions`, {
+        from_uom_id: convFromUomId,
+        to_uom_id: convToUomId,
+        factor: Number(convFactor),
+      });
+      await fetchConversions(selectedProductForUom.id);
+      setSuccess("UoM conversion ratio saved.");
+    } catch (err: unknown) {
+      setConvError(err instanceof Error ? err.message : "Failed to save conversion.");
+    } finally {
+      setConvSubmitting(false);
+    }
+  };
+
+  const handleDeleteConversion = async (conversionId: string) => {
+    if (!selectedProductForUom) return;
+    try {
+      await apiClient.delete(`/products/${selectedProductForUom.id}/conversions/${conversionId}`);
+      await fetchConversions(selectedProductForUom.id);
+    } catch (err: unknown) {
+      setConvError(err instanceof Error ? err.message : "Failed to delete conversion.");
+    }
+  };
+
+  const handleCalculateConversion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProductForUom || !calcFromUom || !calcToUom) return;
+
+    setCalcLoading(true);
+    setConvError(null);
+
+    try {
+      const res = await apiClient.post<{ converted_qty: number }>(
+        `/products/${selectedProductForUom.id}/convert`,
+        {
+          qty: Number(calcQty) || 0,
+          from_uom_id: calcFromUom,
+          to_uom_id: calcToUom,
+        },
+      );
+      setCalcResult(res.converted_qty);
+    } catch (err: unknown) {
+      setConvError(err instanceof Error ? err.message : "Conversion calculation failed.");
+      setCalcResult(null);
+    } finally {
+      setCalcLoading(false);
     }
   };
 
@@ -286,36 +406,33 @@ export default function ProductsAdminPage() {
       p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (p.barcode && p.barcode.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const matchesCategory = selectedCategory === "" || p.category_id === selectedCategory;
-
-    return matchesSearch && matchesCategory;
+    const matchesCat = selectedCategory === "" || p.category_id === selectedCategory;
+    return matchesSearch && matchesCat;
   });
 
   const columns: DataTableColumn<ProductItem>[] = [
     {
-      key: "product",
+      key: "name",
       header: "Product / SKU",
-      mobilePrimary: true,
-      sortable: true,
-      render: (item) => (
+      render: (p) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
-            {item.image_url ? (
+          <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+            {p.image_url ? (
               <Image
-                src={item.image_url}
-                alt={item.name}
+                src={p.image_url}
+                alt={p.name}
                 width={40}
                 height={40}
                 className="w-full h-full object-cover"
                 unoptimized
               />
             ) : (
-              <Package className="w-5 h-5 text-purple-400/60" />
+              <Package className="w-5 h-5 text-white/40" />
             )}
           </div>
           <div>
-            <div className="font-semibold text-white text-sm">{item.name}</div>
-            <div className="text-xs font-mono text-purple-300">{item.sku}</div>
+            <div className="font-semibold text-white text-sm">{p.name}</div>
+            <div className="text-xs text-purple-400 font-mono tracking-wider">{p.sku}</div>
           </div>
         </div>
       ),
@@ -323,84 +440,84 @@ export default function ProductsAdminPage() {
     {
       key: "category",
       header: "Category",
+      render: (p) => (
+        <span className="text-xs px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/80">
+          {p.category?.name || "Uncategorized"}
+        </span>
+      ),
+    },
+    {
+      key: "wholesale_price",
+      header: "Wholesale Price",
       sortable: true,
-      render: (item) => {
-        const cat = categories.find((c) => c.id === item.category_id);
-        return (
-          <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/10 border border-purple-500/20 text-purple-300">
-            {cat?.name || "Uncategorized"}
+      render: (p) => (
+        <div>
+          <span className="font-mono font-medium text-white">
+            ₹{Number(p.wholesale_price).toFixed(2)}
           </span>
-        );
-      },
-    },
-    {
-      key: "pricing",
-      header: "Wholesale / Cost",
-      sortable: true,
-      render: (item) => (
-        <div className="text-sm">
-          <div className="font-semibold text-emerald-400">
-            ₹{item.wholesale_price.toLocaleString("en-IN")}
-          </div>
-          <div className="text-xs text-white/50">
-            Cost: ₹{item.cost_price.toLocaleString("en-IN")}
-          </div>
+          <span className="text-[11px] text-white/50 block">
+            Cost: ₹{Number(p.cost_price).toFixed(2)}
+          </span>
         </div>
       ),
     },
     {
-      key: "reorder",
-      header: "Reorder Metrics",
-      render: (item) => (
-        <div className="text-xs text-white/70">
-          <div>
-            Min: <span className="font-mono text-white">{item.reorder_point}</span>{" "}
-            {item.unit || "units"}
-          </div>
-          <div>
-            Qty: <span className="font-mono text-white">{item.reorder_qty}</span>{" "}
-            {item.unit || "units"}
-          </div>
-        </div>
+      key: "base_uom",
+      header: "Base Unit",
+      render: (p) => (
+        <span className="text-xs font-mono text-purple-300">
+          {p.base_uom?.name || p.unit || "Piece"}
+        </span>
       ),
     },
     {
-      key: "status",
+      key: "is_active",
       header: "Status",
-      sortable: true,
-      render: (item) => <StatusBadge status={item.is_active ? "active" : "inactive"} />,
+      render: (p) => <StatusBadge status={p.is_active ? "active" : "suspended"} size="sm" />,
     },
     {
       key: "actions",
       header: "Actions",
       align: "right",
-      render: (item) => (
-        <div className="flex items-center justify-end gap-2">
-          <button
-            onClick={() => handleOpenImageUpload(item)}
-            className="p-1.5 rounded-lg text-white/60 hover:text-purple-300 hover:bg-purple-500/10 transition-colors"
+      render: (p) => (
+        <div className="flex items-center justify-end gap-1.5">
+          <GlassButton
+            onClick={() => handleOpenUomModal(p)}
+            variant="secondary"
+            size="sm"
+            className="px-2 py-1 text-xs"
+            title="Packaging & UoM Conversions"
+          >
+            <Scale className="w-3.5 h-3.5 mr-1" /> UoM
+          </GlassButton>
+          <GlassButton
+            onClick={() => handleOpenImageUpload(p)}
+            variant="secondary"
+            size="sm"
+            className="px-2 py-1 text-xs"
             title="Upload Product Image"
-            aria-label={`Upload image for ${item.name}`}
           >
             <ImageIcon className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={() => handleOpenEdit(item)}
-            className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-            title="Edit Product Details"
-            aria-label={`Edit ${item.name}`}
+          </GlassButton>
+          <GlassButton
+            onClick={() => handleOpenEdit(p)}
+            variant="secondary"
+            size="sm"
+            className="px-2 py-1 text-xs"
+            title="Edit Details"
           >
             <Edit2 className="w-3.5 h-3.5" />
-          </button>
-          {item.is_active && (
-            <button
-              onClick={() => handleDeactivate(item)}
-              className="p-1.5 rounded-lg text-amber-400/70 hover:text-amber-300 hover:bg-amber-500/10 transition-colors"
+          </GlassButton>
+          {p.is_active && (
+            <GlassButton
+              onClick={() => handleDeactivate(p)}
+              variant="destructive"
+              size="sm"
+              className="px-2 py-1 text-xs"
               title="Deactivate Product"
-              aria-label={`Deactivate ${item.name}`}
             >
               <PowerOff className="w-3.5 h-3.5" />
-            </button>
+            </GlassButton>
           )}
         </div>
       ),
@@ -411,40 +528,38 @@ export default function ProductsAdminPage() {
     <AppLayout>
       <ListViewTemplate
         title="Product Catalog"
-        description="Manage wholesale items, SKU codes, pricing, specs, and storage assets."
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        searchPlaceholder="Search by name, SKU, or barcode..."
-        filters={
-          <div className="flex items-center gap-3">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500/50"
-            >
-              <option value="">All Categories ({categories.length})</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        }
+        description="Manage master SKU specifications, packaging ratios, and wholesale pricing."
         primaryAction={
           <GlassButton onClick={handleOpenCreate} variant="primary">
-            <Plus className="w-4 h-4 mr-1.5 inline" /> Add Product
+            <Plus className="w-4 h-4 mr-1.5" /> Add Product
           </GlassButton>
+        }
+        searchPlaceholder="Search by name, SKU, or barcode..."
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        filters={
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500/50"
+          >
+            <option value="">All Categories</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         }
       >
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm flex items-center gap-2">
+          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
         {success && (
-          <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm flex items-center gap-2">
+          <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span>{success}</span>
           </div>
@@ -500,7 +615,7 @@ export default function ProductsAdminPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-white/70 mb-1.5 uppercase tracking-wider">
                 Category
@@ -520,10 +635,27 @@ export default function ProductsAdminPage() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-white/70 mb-1.5 uppercase tracking-wider">
-                Unit / Packaging
+                Base Unit of Measure
+              </label>
+              <select
+                value={baseUomId}
+                onChange={(e) => setBaseUomId(e.target.value)}
+                className="w-full px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-purple-500/50"
+              >
+                <option value="">Select Base UoM</option>
+                {uoms.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name} ({u.abbreviation})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-white/70 mb-1.5 uppercase tracking-wider">
+                Unit Label
               </label>
               <GlassInput
-                placeholder="e.g. Bag, Box, Carton, Kg"
+                placeholder="e.g. Bag, Box, Kg"
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
               />
@@ -614,94 +746,297 @@ export default function ProductsAdminPage() {
               Description
             </label>
             <textarea
+              rows={2}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              placeholder="Detailed wholesale product description..."
+              placeholder="Wholesale packaging specs, brand details, storage conditions..."
               className="w-full px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-purple-500/50"
             />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-white/70 mb-1.5 uppercase tracking-wider">
-              Content & Ingredients Details
+              Content & Nutritional Details
             </label>
             <textarea
+              rows={2}
               value={contentDetails}
               onChange={(e) => setContentDetails(e.target.value)}
-              rows={2}
-              placeholder="100% Traditional aged long-grain basmati rice..."
+              placeholder="Ingredients, allergen notices, grain length, nutritional facts..."
               className="w-full px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-purple-500/50"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
-            <GlassButton type="button" variant="ghost" onClick={() => setModalOpen(false)}>
+          <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+            <GlassButton type="button" variant="secondary" onClick={() => setModalOpen(false)}>
               Cancel
             </GlassButton>
             <GlassButton type="submit" variant="primary" disabled={submitting}>
-              {submitting ? "Saving..." : editingProduct ? "Update Product" : "Save Product"}
+              {submitting ? "Saving..." : editingProduct ? "Update Product" : "Create Product"}
             </GlassButton>
           </div>
         </form>
+      </GlassModal>
+
+      {/* Packaging & UoM Conversions Modal */}
+      <GlassModal
+        isOpen={uomModalOpen}
+        onClose={() => setUomModalOpen(false)}
+        title={`UoM Conversions — ${selectedProductForUom?.name || "Product"}`}
+        description="Configure packaging conversions (e.g. 1 Case = 24 Pieces). Stock ledger balances are strictly tracked in Base UoM."
+        maxWidth="2xl"
+      >
+        <div className="space-y-6">
+          {convError && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{convError}</span>
+            </div>
+          )}
+
+          {/* Current Base UoM Indicator */}
+          <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-between text-xs">
+            <div>
+              <span className="text-purple-300 font-semibold uppercase tracking-wider block">
+                Single Point of Truth (Base Unit)
+              </span>
+              <span className="text-white/80">
+                All warehouse batches and stock ledger movements are stored in this base unit.
+              </span>
+            </div>
+            <span className="px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-200 font-mono font-bold text-sm">
+              {selectedProductForUom?.base_uom?.name || selectedProductForUom?.unit || "Piece"}
+            </span>
+          </div>
+
+          {/* Existing Conversions List */}
+          <div>
+            <h4 className="text-xs font-semibold text-white/70 mb-2 uppercase tracking-wider">
+              Active Packaging Ratios
+            </h4>
+            {loadingConversions ? (
+              <div className="py-4 text-center text-xs text-white/40">Loading conversions...</div>
+            ) : conversions.length === 0 ? (
+              <div className="py-4 text-center text-xs text-white/40 bg-white/5 rounded-xl border border-white/5">
+                No custom packaging conversions defined. Product trades 1:1 in base unit.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {conversions.map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 text-xs"
+                  >
+                    <div className="flex items-center gap-2 font-mono">
+                      <span className="text-white font-bold">1 {c.from_uom?.name || "Unit"}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-purple-400" />
+                      <span className="text-purple-300 font-bold">
+                        {c.factor} {c.to_uom?.name || "Base Units"}
+                      </span>
+                    </div>
+                    <GlassButton
+                      onClick={() => handleDeleteConversion(c.id)}
+                      variant="destructive"
+                      size="sm"
+                      className="px-2 py-1 text-xs"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </GlassButton>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Add New Conversion Form */}
+          <form
+            onSubmit={handleAddConversion}
+            className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3"
+          >
+            <h4 className="text-xs font-semibold text-white/80 uppercase tracking-wider">
+              Add Packaging Conversion
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] text-white/60 mb-1">
+                  Source Unit (1 unit of)
+                </label>
+                <select
+                  value={convFromUomId}
+                  onChange={(e) => setConvFromUomId(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500/50"
+                  required
+                >
+                  <option value="">Select From UoM</option>
+                  {uoms.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.abbreviation})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] text-white/60 mb-1">Target Unit</label>
+                <select
+                  value={convToUomId}
+                  onChange={(e) => setConvToUomId(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500/50"
+                  required
+                >
+                  <option value="">Select To UoM</option>
+                  {uoms.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.abbreviation})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] text-white/60 mb-1">Conversion Factor</label>
+                <GlassInput
+                  type="number"
+                  min="0.0001"
+                  step="any"
+                  placeholder="e.g. 24"
+                  value={convFactor}
+                  onChange={(e) => setConvFactor(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <div className="flex justify-end pt-2">
+              <GlassButton type="submit" variant="primary" size="sm" disabled={convSubmitting}>
+                {convSubmitting ? "Saving..." : "Save Ratio"}
+              </GlassButton>
+            </div>
+          </form>
+
+          {/* Interactive Live Conversion Calculator */}
+          <form
+            onSubmit={handleCalculateConversion}
+            className="p-4 rounded-xl bg-purple-950/20 border border-purple-500/20 space-y-3"
+          >
+            <div className="flex items-center gap-2">
+              <Calculator className="w-4 h-4 text-purple-400" />
+              <h4 className="text-xs font-semibold text-purple-200 uppercase tracking-wider">
+                Live Conversion Calculator Preview
+              </h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] text-white/60 mb-1">Quantity</label>
+                <GlassInput
+                  type="number"
+                  step="any"
+                  value={calcQty}
+                  onChange={(e) => setCalcQty(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-white/60 mb-1">From</label>
+                <select
+                  value={calcFromUom}
+                  onChange={(e) => setCalcFromUom(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500/50"
+                  required
+                >
+                  <option value="">Select From UoM</option>
+                  {uoms.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.abbreviation})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] text-white/60 mb-1">To</label>
+                <select
+                  value={calcToUom}
+                  onChange={(e) => setCalcToUom(e.target.value)}
+                  className="w-full px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500/50"
+                  required
+                >
+                  <option value="">Select To UoM</option>
+                  {uoms.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.abbreviation})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center justify-between pt-2">
+              <div className="text-xs font-mono">
+                {calcResult !== null && (
+                  <span className="text-emerald-400 font-bold">
+                    Result: {calcQty} {uoms.find((u) => u.id === calcFromUom)?.name} = {calcResult}{" "}
+                    {uoms.find((u) => u.id === calcToUom)?.name}
+                  </span>
+                )}
+              </div>
+              <GlassButton type="submit" variant="secondary" size="sm" disabled={calcLoading}>
+                {calcLoading ? "Calculating..." : "Calculate"}
+              </GlassButton>
+            </div>
+          </form>
+        </div>
       </GlassModal>
 
       {/* Image Upload Modal */}
       <GlassModal
         isOpen={imageModalOpen}
         onClose={() => setImageModalOpen(false)}
-        title="Upload Product Image"
-        description={`Upload photo for ${selectedProductForImage?.sku} (${selectedProductForImage?.name})`}
-        maxWidth="md"
+        title={`Upload Image — ${selectedProductForImage?.name || "Product"}`}
+        description="Upload a high-resolution product catalog photo (JPEG, PNG, WebP up to 5MB)."
       >
-        <form onSubmit={handleUploadImageSubmit} className="space-y-4">
+        <form onSubmit={handleUploadImage} className="space-y-4">
           {imageError && (
-            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs">
-              {imageError}
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{imageError}</span>
             </div>
           )}
 
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-white/20 hover:border-purple-500/50 rounded-2xl p-6 text-center cursor-pointer transition-colors flex flex-col items-center justify-center gap-3 bg-white/[0.02]"
+            className="border-2 border-dashed border-white/20 hover:border-purple-500/50 transition-colors rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer bg-white/5 group"
           >
             {imagePreview ? (
-              <div className="w-32 h-32 rounded-xl overflow-hidden border border-white/20 relative">
+              <div className="relative w-48 h-48 rounded-xl overflow-hidden mb-3 border border-white/10">
                 <Image
                   src={imagePreview}
                   alt="Preview"
-                  width={128}
-                  height={128}
+                  width={192}
+                  height={192}
                   className="w-full h-full object-cover"
                   unoptimized
                 />
               </div>
             ) : (
-              <div className="w-16 h-16 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400">
-                <Upload className="w-8 h-8" />
+              <div className="w-16 h-16 rounded-full bg-purple-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <Upload className="w-8 h-8 text-purple-400" />
               </div>
             )}
-            <div>
-              <p className="text-sm font-semibold text-white">
-                {imageFile ? imageFile.name : "Click to select or drag image"}
-              </p>
-              <p className="text-xs text-white/40 mt-1">JPEG, PNG, or WebP (max 5MB)</p>
-            </div>
+            <p className="text-xs text-white font-medium mb-1">
+              {imageFile ? imageFile.name : "Click to browse or drop an image here"}
+            </p>
+            <p className="text-[11px] text-white/40">JPEG, PNG, or WebP (max. 5MB)</p>
             <input
-              type="file"
               ref={fileInputRef}
-              onChange={handleFileSelect}
+              type="file"
               accept="image/jpeg,image/png,image/webp"
+              onChange={handleFileChange}
               className="hidden"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">
-            <GlassButton type="button" variant="ghost" onClick={() => setImageModalOpen(false)}>
+          <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+            <GlassButton type="button" variant="secondary" onClick={() => setImageModalOpen(false)}>
               Cancel
             </GlassButton>
-            <GlassButton type="submit" variant="primary" disabled={uploadingImage || !imageFile}>
-              {uploadingImage ? "Uploading..." : "Upload Image"}
+            <GlassButton type="submit" variant="primary" disabled={!imageFile || uploadingImage}>
+              {uploadingImage ? "Uploading..." : "Save Image"}
             </GlassButton>
           </div>
         </form>

@@ -169,12 +169,16 @@ class SqlAlchemyProductRepository(ProductRepositoryInterface):
 
     def get_by_id(self, product_id: str) -> Product | None:
         return self.session.scalar(
-            select(Product).options(joinedload(Product.category)).where(Product.id == product_id)
+            select(Product)
+            .options(joinedload(Product.category), joinedload(Product.base_uom))
+            .where(Product.id == product_id)
         )
 
     def get_by_sku(self, sku: str) -> Product | None:
         return self.session.scalar(
-            select(Product).where(func.lower(Product.sku) == sku.strip().lower())
+            select(Product)
+            .options(joinedload(Product.category), joinedload(Product.base_uom))
+            .where(func.lower(Product.sku) == sku.strip().lower())
         )
 
     def list_products(
@@ -185,7 +189,7 @@ class SqlAlchemyProductRepository(ProductRepositoryInterface):
         search: str | None = None,
         is_active: bool | None = None,
     ) -> list[Product]:
-        query = select(Product).options(joinedload(Product.category))
+        query = select(Product).options(joinedload(Product.category), joinedload(Product.base_uom))
 
         if category_id:
             query = query.where(Product.category_id == category_id)

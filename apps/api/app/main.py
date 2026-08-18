@@ -22,6 +22,7 @@ from app.api.routers import (
     roles,
     staff,
     two_factor,
+    uom,
 )
 from app.core.config import get_settings
 
@@ -53,6 +54,7 @@ def create_app() -> FastAPI:
     application.include_router(audit.router)
     application.include_router(products.router)
     application.include_router(categories.router)
+    application.include_router(uom.router)
     application.include_router(retailers.router)
 
     return application

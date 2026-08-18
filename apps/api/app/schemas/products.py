@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.categories import CategoryResponse
+from app.schemas.uom import UOMResponse
 
 
 class ProductPriceUpdateRequest(BaseModel):
@@ -77,6 +78,7 @@ class ProductResponse(BaseModel):
     created_at: datetime | None = None
     updated_at: datetime | None = None
     category: CategoryResponse | None = None
+    base_uom: UOMResponse | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -12,7 +12,7 @@ export interface GlassModalProps {
   description?: string;
   children: React.ReactNode;
   className?: string;
-  maxWidth?: "sm" | "md" | "lg" | "xl";
+  maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl";
 }
 
 const maxWidthMap = {
@@ -20,6 +20,7 @@ const maxWidthMap = {
   md: "max-w-md",
   lg: "max-w-lg",
   xl: "max-w-xl",
+  "2xl": "max-w-2xl",
 };
 
 export function GlassModal({
