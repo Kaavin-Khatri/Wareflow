@@ -21,6 +21,9 @@ from app.repositories.impl.product_repository import (
 )
 from app.repositories.impl.profile_repository import SqlAlchemyProfileRepository
 from app.repositories.impl.retailer_repository import SqlAlchemyRetailerRepository
+from app.repositories.impl.stock_analytics_repository import (
+    SqlAlchemyStockAnalyticsRepository,
+)
 from app.repositories.impl.stock_repository import (
     SqlAlchemyStockRepository,
 )
@@ -31,6 +34,9 @@ from app.repositories.interfaces.audit_repository import AuditRepository
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
 from app.repositories.interfaces.profile_repository import ProfileRepository
 from app.repositories.interfaces.retailer_repository import RetailerRepository
+from app.repositories.interfaces.stock_analytics_repository import (
+    StockAnalyticsRepositoryInterface,
+)
 from app.repositories.interfaces.stock_repository import StockRepositoryInterface
 from app.repositories.interfaces.uom_repository import UomRepositoryInterface
 from app.services.audit_service import AuditService
@@ -38,6 +44,7 @@ from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
 from app.services.retailer_service import RetailerService
 from app.services.staff_service import StaffService
+from app.services.stock_analytics_service import StockAnalyticsService
 from app.services.stock_service import StockService
 from app.services.storage_service import StorageServiceInterface, SupabaseStorageService
 from app.services.two_factor_service import TwoFactorService
@@ -155,3 +162,18 @@ def get_stock_service(
 ) -> StockService:
     """Factory for StockService with UoM converter."""
     return StockService(stock_repo=stock_repo, uom_repo=uom_repo)
+
+
+def get_stock_analytics_repository(
+    db: Session = Depends(get_db_session),
+) -> StockAnalyticsRepositoryInterface:
+    """Factory for database-backed StockAnalyticsRepositoryInterface."""
+    return SqlAlchemyStockAnalyticsRepository(session=db)
+
+
+def get_stock_analytics_service(
+    repo: StockAnalyticsRepositoryInterface = Depends(get_stock_analytics_repository),
+) -> StockAnalyticsService:
+    """Factory for StockAnalyticsService."""
+    return StockAnalyticsService(analytics_repo=repo)
+

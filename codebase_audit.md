@@ -185,6 +185,10 @@ wareflow/
 │   │   │       ├── glass-primitives.test.tsx
 │   │   │       ├── templates.test.tsx
 │   │   │       ├── marketing.test.tsx
+│   │   │       ├── products.test.tsx
+│   │   │       ├── uom.test.tsx
+│   │   │       ├── stock.test.tsx
+│   │   │       ├── stock-analytics.test.tsx
 │   │   │       └── dashboard-shell.test.tsx
 │   │   └── app/                    # App Router pages
 │   │       ├── layout.tsx          # Root layout with anti-flash script & ThemeProvider
@@ -202,6 +206,11 @@ wareflow/
 │   │       ├── dashboard/          # Authenticated workspace dashboard with live telemetry
 │   │       │   └── page.tsx
 │   │       ├── admin/
+│   │       │   ├── analytics/
+│   │       │   │   └── stock/page.tsx # Stock Valuation & Composition Analytics dashboard
+│   │       │   ├── inventory/page.tsx # Multi-warehouse inventory overview & batch inspector
+│   │       │   ├── products/page.tsx  # Product catalog management
+│   │       │   ├── categories/page.tsx# Category hierarchy editor
 │   │       │   ├── audit/page.tsx  # General Action Audit Log timeline & diff inspector
 │   │       │   └── settings/
 │   │       │       ├── appearance/page.tsx  # Theme mode (Light/Dark/System) + Accent picker
@@ -229,7 +238,7 @@ wareflow/
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
 │       ├── .env.example
-│       ├── tests/                  # Pytest test suite (60 tests, 93% cov)
+│       ├── tests/                  # Pytest test suite (66 tests, 93% cov)
 │       │   ├── test_appearance_preferences.py
 │       │   ├── test_di_and_health.py
 │       │   ├── test_models.py
@@ -242,7 +251,8 @@ wareflow/
 │       │   ├── test_audit_log.py
 │       │   ├── test_products.py
 │       │   ├── test_uom.py
-│       │   └── test_stock.py
+│       │   ├── test_stock.py
+│       │   └── test_analytics_stock.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
@@ -258,6 +268,7 @@ wareflow/
 │           │       ├── products.py # Wholesale Products & Pricing (/products)
 │           │       ├── uom.py      # Unit of Measure & Conversions (/uom, /products/{id}/conversions)
 │           │       ├── stock.py    # Multi-Warehouse Stock Overview & Batches (/stock/*, /products/{id}/stock)
+│           │       ├── stock_analytics.py # Stock Valuation & Composition Analytics (/analytics/stock/*)
 │           │       └── retailers.py# Retailer accounts & credit limits (/retailers)
 │           ├── db/
 │           │   ├── base.py         # SQLAlchemy DeclarativeBase
@@ -286,6 +297,7 @@ wareflow/
 │           │   ├── retailer_service.py
 │           │   ├── staff_service.py
 │           │   ├── stock_service.py
+│           │   ├── stock_analytics_service.py
 │           │   ├── storage_service.py
 │           │   ├── two_factor_service.py
 │           │   └── uom_service.py
@@ -296,6 +308,7 @@ wareflow/
 │           │   │   ├── profile_repository.py
 │           │   │   ├── retailer_repository.py
 │           │   │   ├── stock_repository.py
+│           │   │   ├── stock_analytics_repository.py
 │           │   │   └── uom_repository.py
 │           │   └── impl/           # Concrete implementations
 │           │       ├── audit_repository.py
@@ -303,6 +316,7 @@ wareflow/
 │           │       ├── profile_repository.py
 │           │       ├── retailer_repository.py
 │           │       ├── stock_repository.py
+│           │       ├── stock_analytics_repository.py
 │           │       └── uom_repository.py
 │           ├── schemas/            # Pydantic request/response models
 │           │   ├── audit.py
@@ -312,6 +326,7 @@ wareflow/
 │           │   ├── retailers.py
 │           │   ├── staff.py
 │           │   ├── stock.py
+│           │   ├── stock_analytics.py
 │           │   ├── two_factor.py
 │           │   └── uom.py
 │           └── core/
@@ -408,6 +423,10 @@ wareflow/
 | GET    | `/stock/warehouses`                 | List active storage facilities & warehouses         | Yes (Authenticated)             |
 | GET    | `/stock/expiring`                   | List batches expiring within specified horizon      | Yes (Authenticated)             |
 | GET    | `/products/{id}/stock`              | Product stock breakdown across warehouses & batches | Yes (Authenticated)             |
+| GET    | `/analytics/stock/value-summary`    | Total stock valuation, category & warehouse share   | Yes (Authenticated)             |
+| GET    | `/analytics/stock/health-distribution`| Count of products in each stock health band       | Yes (Authenticated)             |
+| GET    | `/analytics/stock/top-value-products` | Top products by capital tied-up and quantity      | Yes (Authenticated)             |
+| GET    | `/analytics/stock/expiry-timeline`  | Forward-looking 6-window batch expiry breakdown     | Yes (Authenticated)             |
 | GET    | `/retailers`                        | List all wholesale retailers                        | Yes (Authenticated)             |
 | PATCH  | `/retailers/{id}/credit-limit`      | Update retailer credit limit (audited)              | Yes (`settings:manage`)         |
 
@@ -448,6 +467,7 @@ wareflow/
 | Graph BFS Packaging Traversal     | `UomService` resolves multi-level packaging hierarchies (Pallet->Case->Pack->Piece) & inverses using graph traversal  |
 | Strict Base UoM Stock Ledger      | `stock_movements` and `stock_batches` strictly store quantities in product's `base_uom_id` via `convert_to_base_uom`  |
 | Graceful 1:1 Base Fallback        | Products with no custom packaging conversion defined trade 1:1 in base unit gracefully without runtime error          |
+| Stock Analytics Calculation Engine| `StockAnalyticsService` computes live balance valuations, category allocations, warehouse holdings, and 6-window expiry horizons with full parity between SQLAlchemy and InMemory implementations |
 | UomRepository Protocol (DIP)      | `UomService` depends exclusively on `UomRepositoryInterface` Protocol, allowing seamless in-memory testing            |
 | ProductRepository Protocol (DIP)  | `ProductService` depends exclusively on `ProductRepositoryInterface` (Protocol), never importing DB sessions          |
 | Natural Key SKU Uniqueness        | Enforced at both database layer and domain service layer with friendly 409 Conflict error details                     |

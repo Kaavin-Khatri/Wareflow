@@ -1482,3 +1482,87 @@
 - `apps/web/lib/nav.ts`
 - `memory.md`
 - `codebase_audit.md`
+
+---
+
+## Step 6.1 — Stock Value & Composition Charts
+
+**Timestamp:** 2026-08-18T10:00:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- **Installed recharts in web frontend**: Added `recharts@^2.15.1` to `apps/web`.
+- **Domain Layer & Schemas (`apps/api/app/schemas/stock_analytics.py`)**:
+  - `StockValueSummary`: total stock valuation ($\sum \text{qty} \times \text{cost\_price}$), total units, total products, category breakdowns with percentage shares, warehouse allocations.
+  - `StockHealthDistribution`: counts and percentage distributions across 4 health bands (`healthy`, `low`, `critical`, `out_of_stock`).
+  - `TopProductsResponse`: top 10 products ranked by tied-up capital and top 10 by on-hand quantity.
+  - `ExpiryTimelineResponse`: forward-looking 6-window expiry buckets (`expired`, `this_week`, `this_month`, `next_3_months`, `later`, `no_expiry`).
+- **Repository Layer (`StockAnalyticsRepositoryInterface`)**:
+  - Defined protocol in `apps/api/app/repositories/interfaces/stock_analytics_repository.py`.
+  - Implemented `SqlAlchemyStockAnalyticsRepository` and `InMemoryStockAnalyticsRepository` in `apps/api/app/repositories/impl/stock_analytics_repository.py`.
+  - Cast numeric computations to `float` for SQLite and PostgreSQL engine portability.
+- **Service Layer (`StockAnalyticsService`)**:
+  - Implemented business logic in `apps/api/app/services/stock_analytics_service.py` adhering strictly to SRP and DIP.
+  - Dynamically calculates category valuation percentages, health band thresholds, and 6-window batch expiration horizons.
+- **API Router (`/analytics/stock`)**:
+  - Created router `apps/api/app/api/routers/stock_analytics.py`:
+    - `GET /analytics/stock/value-summary`
+    - `GET /analytics/stock/health-distribution`
+    - `GET /analytics/stock/top-value-products`
+    - `GET /analytics/stock/expiry-timeline`
+  - Registered in `apps/api/app/core/di.py` and `apps/api/app/main.py`.
+- **Frontend Analytics View (`apps/web/app/admin/analytics/stock/page.tsx`)**:
+  - Built full dashboard page using `DashboardTemplate` and `AppLayout`.
+  - 4 Top KPI Cards wrapped in `GlassCard`: Total Valuation (₹ formatted with `AnimatedNumber`), Total Stocked Units, Healthy Stock Count, Attention Required Count.
+  - Donut Chart: Capital Concentration by Category using `recharts` (`PieChart`, `Pie`, `Cell`, `Tooltip`, custom glassmorphic tooltip).
+  - Bar Chart: Valuation by Storage Warehouse using `recharts` (`BarChart`, `Bar`, `XAxis`, `YAxis`, `CartesianGrid`).
+  - Ranked Ranking List: Top 10 Products by Capital Tied-Up with cost price and unit metrics.
+  - Stock Health Meter: Multi-segmented progress bar with status cards.
+  - Batch Expiry Horizon: 6-window timeline breakdown with `GlassBadge` danger/warning levels.
+  - Updated `apps/web/lib/nav.ts` with "Stock Analytics" under Wholesale Operations.
+- **Testing & Verification**:
+  - 6 Pytest unit tests in `apps/api/tests/test_analytics_stock.py` (DIP verification with InMemory repo, exact SQL parity, critical threshold reclassification, top products, expiry horizons, API lifecycle).
+  - 66 Pytest tests passing total (100% green).
+  - Vitest unit test in `apps/web/lib/__tests__/stock-analytics.test.tsx` (55 tests passing across 14 test suites).
+  - Next.js production build (`next build`) succeeded with 22 routes.
+  - 0 Ruff lint errors, 0 ESLint errors, 100% Prettier formatting compliant.
+
+### Decisions
+
+- **Stock Value vs Spend Charts**: Stock VALUE charts compute live balances immediately with Phase 5 inventory structures. SPEND-over-time charts will be fed in later phases once real purchase orders are completed.
+- **Floating Point Compatibility**: SQLAlchemy aggregation expressions use `.cast(Float)` or Python `float()` coercions to ensure seamless test execution across SQLite in-memory test databases and PostgreSQL production instances.
+- **Stock Health Bands Parity**: Stock health classification on the dashboard strictly mirrors Step 5.3 rules (`healthy` > reorder_point, `low` between 25% and 100%, `critical` <= 25%, `out_of_stock` <= 0).
+
+### Key values for future steps
+
+- Stock Analytics Repository Interface: `apps/api/app/repositories/interfaces/stock_analytics_repository.py`
+- Stock Analytics Repository Implementation: `apps/api/app/repositories/impl/stock_analytics_repository.py`
+- Stock Analytics Domain Service: `apps/api/app/services/stock_analytics_service.py`
+- Stock Analytics Endpoints:
+  - `GET /analytics/stock/value-summary`
+  - `GET /analytics/stock/health-distribution`
+  - `GET /analytics/stock/top-value-products`
+  - `GET /analytics/stock/expiry-timeline`
+- Stock Analytics Web Dashboard: `apps/web/app/admin/analytics/stock/page.tsx`
+
+### Files Created
+
+- `apps/api/app/schemas/stock_analytics.py`
+- `apps/api/app/repositories/interfaces/stock_analytics_repository.py`
+- `apps/api/app/repositories/impl/stock_analytics_repository.py`
+- `apps/api/app/services/stock_analytics_service.py`
+- `apps/api/app/api/routers/stock_analytics.py`
+- `apps/api/tests/test_analytics_stock.py`
+- `apps/web/app/admin/analytics/stock/page.tsx`
+- `apps/web/lib/__tests__/stock-analytics.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/web/package.json`
+- `apps/web/lib/nav.ts`
+- `memory.md`
+- `codebase_audit.md`
+

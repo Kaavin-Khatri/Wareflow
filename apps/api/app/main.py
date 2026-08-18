@@ -22,6 +22,7 @@ from app.api.routers import (
     roles,
     staff,
     stock,
+    stock_analytics,
     two_factor,
     uom,
 )
@@ -57,6 +58,7 @@ def create_app() -> FastAPI:
     application.include_router(categories.router)
     application.include_router(uom.router)
     application.include_router(stock.router)
+    application.include_router(stock_analytics.router)
     application.include_router(retailers.router)
 
     return application

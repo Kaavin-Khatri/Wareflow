@@ -52,6 +52,12 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         requiredPermission: "inventory:view",
       },
       {
+        name: "Stock Analytics",
+        href: "/admin/analytics/stock",
+        icon: "BarChart3",
+        requiredPermission: "inventory:view",
+      },
+      {
         name: "Orders & Dispatch",
         href: "/orders",
         icon: "ShoppingBag",
