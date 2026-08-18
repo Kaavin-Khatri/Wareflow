@@ -129,4 +129,3 @@ def get_avg_cost_trend(
 ) -> AvgCostTrendResponse:
     """Product cost price evolution and percentage creep over time."""
     return service.get_avg_cost_trend(product_ids=product_ids)
-

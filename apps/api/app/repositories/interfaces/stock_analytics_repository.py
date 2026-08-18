@@ -41,4 +41,3 @@ class StockAnalyticsRepositoryInterface(Protocol):
     ) -> list[dict[str, Any]]:
         """Fetch historical purchase order unit costs and baseline costs per product."""
         ...
-

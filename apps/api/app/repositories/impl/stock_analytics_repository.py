@@ -152,9 +152,7 @@ class SqlAlchemyStockAnalyticsRepository(StockAnalyticsRepositoryInterface):
             )
             .join(PurchaseOrder, PurchaseOrderItem.po_id == PurchaseOrder.id)
             .filter(
-                PurchaseOrder.status.in_(
-                    [POStatusEnum.RECEIVED, POStatusEnum.PARTIALLY_RECEIVED]
-                )
+                PurchaseOrder.status.in_([POStatusEnum.RECEIVED, POStatusEnum.PARTIALLY_RECEIVED])
                 | (PurchaseOrderItem.qty_received > 0)
             )
             .all()
@@ -162,7 +160,9 @@ class SqlAlchemyStockAnalyticsRepository(StockAnalyticsRepositoryInterface):
         rows: list[dict[str, Any]] = []
         for r in results:
             d = r._asdict()
-            qty = float(d["qty_received"] if float(d["qty_received"] or 0.0) > 0 else d["qty_ordered"])
+            qty = float(
+                d["qty_received"] if float(d["qty_received"] or 0.0) > 0 else d["qty_ordered"]
+            )
             d["qty_received"] = qty
             d["unit_cost"] = float(d["unit_cost"] or 0.0)
             rows.append(d)
@@ -182,9 +182,7 @@ class SqlAlchemyStockAnalyticsRepository(StockAnalyticsRepositoryInterface):
             .join(PurchaseOrder, PurchaseOrderItem.po_id == PurchaseOrder.id)
             .join(Supplier, PurchaseOrder.supplier_id == Supplier.id)
             .filter(
-                PurchaseOrder.status.in_(
-                    [POStatusEnum.RECEIVED, POStatusEnum.PARTIALLY_RECEIVED]
-                )
+                PurchaseOrder.status.in_([POStatusEnum.RECEIVED, POStatusEnum.PARTIALLY_RECEIVED])
                 | (PurchaseOrderItem.qty_received > 0)
             )
             .all()
@@ -192,7 +190,9 @@ class SqlAlchemyStockAnalyticsRepository(StockAnalyticsRepositoryInterface):
         rows: list[dict[str, Any]] = []
         for r in results:
             d = r._asdict()
-            qty = float(d["qty_received"] if float(d["qty_received"] or 0.0) > 0 else d["qty_ordered"])
+            qty = float(
+                d["qty_received"] if float(d["qty_received"] or 0.0) > 0 else d["qty_ordered"]
+            )
             d["qty_received"] = qty
             d["unit_cost"] = float(d["unit_cost"] or 0.0)
             rows.append(d)
@@ -212,9 +212,7 @@ class SqlAlchemyStockAnalyticsRepository(StockAnalyticsRepositoryInterface):
             .join(PurchaseOrder, PurchaseOrderItem.po_id == PurchaseOrder.id)
             .outerjoin(Category, Product.category_id == Category.id)
             .filter(
-                PurchaseOrder.status.in_(
-                    [POStatusEnum.RECEIVED, POStatusEnum.PARTIALLY_RECEIVED]
-                )
+                PurchaseOrder.status.in_([POStatusEnum.RECEIVED, POStatusEnum.PARTIALLY_RECEIVED])
                 | (PurchaseOrderItem.qty_received > 0)
             )
             .all()
@@ -222,7 +220,9 @@ class SqlAlchemyStockAnalyticsRepository(StockAnalyticsRepositoryInterface):
         rows: list[dict[str, Any]] = []
         for r in results:
             d = r._asdict()
-            qty = float(d["qty_received"] if float(d["qty_received"] or 0.0) > 0 else d["qty_ordered"])
+            qty = float(
+                d["qty_received"] if float(d["qty_received"] or 0.0) > 0 else d["qty_ordered"]
+            )
             d["category_name"] = d["category_name"] or "Uncategorized"
             d["qty_received"] = qty
             d["unit_cost"] = float(d["unit_cost"] or 0.0)
@@ -253,7 +253,9 @@ class SqlAlchemyStockAnalyticsRepository(StockAnalyticsRepositoryInterface):
         for item in po_items:
             history_by_prod.setdefault(item.product_id, []).append(
                 {
-                    "recorded_at": item.order_date.isoformat() if hasattr(item.order_date, "isoformat") else str(item.order_date),
+                    "recorded_at": item.order_date.isoformat()
+                    if hasattr(item.order_date, "isoformat")
+                    else str(item.order_date),
                     "cost_price": float(item.unit_cost or 0.0),
                     "source": "PO",
                 }
@@ -266,7 +268,9 @@ class SqlAlchemyStockAnalyticsRepository(StockAnalyticsRepositoryInterface):
             if not pts:
                 pts = [
                     {
-                        "recorded_at": p.created_at.isoformat() if hasattr(p.created_at, "isoformat") else str(p.created_at),
+                        "recorded_at": p.created_at.isoformat()
+                        if hasattr(p.created_at, "isoformat")
+                        else str(p.created_at),
                         "cost_price": base_cost,
                         "source": "Base",
                     }
@@ -502,4 +506,3 @@ class InMemoryStockAnalyticsRepository(StockAnalyticsRepositoryInterface):
                 }
             )
         return rows
-

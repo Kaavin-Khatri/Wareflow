@@ -27,6 +27,10 @@ from app.repositories.impl.stock_analytics_repository import (
 from app.repositories.impl.stock_repository import (
     SqlAlchemyStockRepository,
 )
+from app.repositories.impl.supplier_repository import (
+    InMemorySupplierRepository,
+    SqlAlchemySupplierRepository,
+)
 from app.repositories.impl.uom_repository import (
     SqlAlchemyUomRepository,
 )
@@ -38,6 +42,7 @@ from app.repositories.interfaces.stock_analytics_repository import (
     StockAnalyticsRepositoryInterface,
 )
 from app.repositories.interfaces.stock_repository import StockRepositoryInterface
+from app.repositories.interfaces.supplier_repository import SupplierRepositoryInterface
 from app.repositories.interfaces.uom_repository import UomRepositoryInterface
 from app.services.audit_service import AuditService
 from app.services.product_service import ProductService
@@ -47,6 +52,7 @@ from app.services.staff_service import StaffService
 from app.services.stock_analytics_service import StockAnalyticsService
 from app.services.stock_service import StockService
 from app.services.storage_service import StorageServiceInterface, SupabaseStorageService
+from app.services.supplier_service import SupplierService
 from app.services.two_factor_service import TwoFactorService
 from app.services.uom_service import UomService
 
@@ -177,3 +183,23 @@ def get_stock_analytics_service(
     """Factory for StockAnalyticsService."""
     return StockAnalyticsService(analytics_repo=repo)
 
+
+@lru_cache
+def get_supplier_repository() -> SupplierRepositoryInterface:
+    """Factory for in-memory SupplierRepositoryInterface."""
+    return InMemorySupplierRepository()
+
+
+def get_db_supplier_repository(
+    db: Session = Depends(get_db_session),
+) -> SupplierRepositoryInterface:
+    """Factory for database-backed SupplierRepositoryInterface."""
+    return SqlAlchemySupplierRepository(session=db)
+
+
+def get_supplier_service(
+    repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> SupplierService:
+    """Factory for SupplierService with audit logging."""
+    return SupplierService(repository=repo, audit_service=audit_service)

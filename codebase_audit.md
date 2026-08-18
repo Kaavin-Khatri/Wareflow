@@ -433,8 +433,13 @@ wareflow/
 | GET    | `/analytics/stock/avg-cost-trend`      | Product cost price movement and price creep tracker | Yes (Authenticated)             |
 | GET    | `/retailers`                           | List all wholesale retailers                        | Yes (Authenticated)             |
 | PATCH  | `/retailers/{id}/credit-limit`         | Update retailer credit limit (audited)              | Yes (`settings:manage`)         |
+| GET    | `/suppliers`                           | List goods suppliers with search & active filters   | Yes (Authenticated)             |
+| POST   | `/suppliers`                           | Register new supplier with GSTIN validation         | Yes (`inventory:manage`)        |
+| GET    | `/suppliers/{id}`                      | Retrieve details for a single supplier              | Yes (Authenticated)             |
+| PATCH  | `/suppliers/{id}`                      | Update supplier details, contacts, or active status | Yes (`inventory:manage`)        |
 
 ## Architecture Layers
+
 
 ```
 ┌──────────────────────────────────────────────────┐
@@ -474,7 +479,9 @@ wareflow/
 | Stock Analytics Calculation Engine | `StockAnalyticsService` computes live balance valuations, category allocations, warehouse holdings, and 6-window expiry horizons with full parity between SQLAlchemy and InMemory implementations |
 | UomRepository Protocol (DIP)       | `UomService` depends exclusively on `UomRepositoryInterface` Protocol, allowing seamless in-memory testing                                                                                        |
 | ProductRepository Protocol (DIP)   | `ProductService` depends exclusively on `ProductRepositoryInterface` (Protocol), never importing DB sessions                                                                                      |
+| SupplierRepository Protocol (DIP)  | `SupplierService` depends exclusively on `SupplierRepositoryInterface` Protocol, enforcing unique company names & 15-char Indian GSTIN verification                                               |
 | Natural Key SKU Uniqueness         | Enforced at both database layer and domain service layer with friendly 409 Conflict error details                                                                                                 |
+
 | Open Orders Deactivation Guard     | Products linked to open Purchase Orders or Sales Orders cannot be deactivated to prevent broken fulfillment pipelines                                                                             |
 | Cloud Storage Validation & Upload  | Supabase Storage `product-images` bucket handles catalog media with strict <=5MB and JPEG/PNG/WebP validation                                                                                     |
 | Universal DataTable Rule           | All future list and ledger screens must use `DataTable`; responsive mobile card-view is automatic below 768px                                                                                     |

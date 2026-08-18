@@ -26,9 +26,9 @@ import {
   LineChart as LineChartIcon,
   Sparkles,
   Info,
-  Filter,
   RefreshCw,
 } from "lucide-react";
+
 import {
   ResponsiveContainer,
   PieChart,

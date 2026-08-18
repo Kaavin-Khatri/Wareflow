@@ -142,9 +142,7 @@ class StockAnalyticsService:
             return "low"
         return "healthy"
 
-    def _build_health_band_items(
-        self, counts: dict[str, int], total: int
-    ) -> list[HealthBandItem]:
+    def _build_health_band_items(self, counts: dict[str, int], total: int) -> list[HealthBandItem]:
         configs = [
             ("healthy", "Healthy Stock", "Above reorder threshold"),
             ("low", "Low Stock", "At or below reorder threshold"),
@@ -212,8 +210,14 @@ class StockAnalyticsService:
             for k, v in groups.items()
         ]
 
-        soon_count = groups["expired"]["count"] + groups["this_week"]["count"] + groups["this_month"]["count"]
-        soon_val = groups["expired"]["val"] + groups["this_week"]["val"] + groups["this_month"]["val"]
+        soon_count = (
+            groups["expired"]["count"]
+            + groups["this_week"]["count"]
+            + groups["this_month"]["count"]
+        )
+        soon_val = (
+            groups["expired"]["val"] + groups["this_week"]["val"] + groups["this_month"]["val"]
+        )
 
         return ExpiryTimelineResponse(
             windows=windows,
@@ -222,9 +226,7 @@ class StockAnalyticsService:
         )
 
     @staticmethod
-    def _resolve_expiry_key(
-        exp: date | None, today: date, d7: date, d30: date, d90: date
-    ) -> str:
+    def _resolve_expiry_key(exp: date | None, today: date, d7: date, d30: date, d90: date) -> str:
         if exp is None:
             return "no_expiry"
         if exp < today:
@@ -385,9 +387,7 @@ class StockAnalyticsService:
             total_spend=round(total_spend, 2),
         )
 
-    def get_avg_cost_trend(
-        self, product_ids: list[str] | None = None
-    ) -> AvgCostTrendResponse:
+    def get_avg_cost_trend(self, product_ids: list[str] | None = None) -> AvgCostTrendResponse:
         """Calculate cost price movement and percentage price creep."""
         raw_rows = self.repo.get_product_cost_history_data(product_ids)
         items: list[ProductCostTrendItem] = []
@@ -402,9 +402,7 @@ class StockAnalyticsService:
                 first_cost = cost_pts[0].cost_price
                 last_cost = cost_pts[-1].cost_price
                 pct_change = (
-                    ((last_cost - first_cost) / first_cost * 100.0)
-                    if first_cost > 0
-                    else 0.0
+                    ((last_cost - first_cost) / first_cost * 100.0) if first_cost > 0 else 0.0
                 )
 
             items.append(

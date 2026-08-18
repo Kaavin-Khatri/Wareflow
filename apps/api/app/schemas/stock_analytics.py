@@ -172,4 +172,3 @@ class AvgCostTrendResponse(BaseModel):
     """Average cost trends across products."""
 
     products: list[ProductCostTrendItem]
-

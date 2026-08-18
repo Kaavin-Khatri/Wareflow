@@ -55,8 +55,24 @@ def mock_user() -> CurrentUser:
 def test_analytics_dip_in_memory_repository():
     """DIP Verification: Test StockAnalyticsService with InMemoryStockAnalyticsRepository."""
     products = [
-        {"id": "p1", "sku": "P1", "name": "Item 1", "cost_price": 50.0, "category_id": "c1", "is_active": True, "reorder_point": 100},
-        {"id": "p2", "sku": "P2", "name": "Item 2", "cost_price": 20.0, "category_id": "c2", "is_active": True, "reorder_point": 50},
+        {
+            "id": "p1",
+            "sku": "P1",
+            "name": "Item 1",
+            "cost_price": 50.0,
+            "category_id": "c1",
+            "is_active": True,
+            "reorder_point": 100,
+        },
+        {
+            "id": "p2",
+            "sku": "P2",
+            "name": "Item 2",
+            "cost_price": 20.0,
+            "category_id": "c2",
+            "is_active": True,
+            "reorder_point": 50,
+        },
     ]
     categories = [
         {"id": "c1", "name": "Grains"},
@@ -66,8 +82,20 @@ def test_analytics_dip_in_memory_repository():
         {"id": "w1", "name": "Central Hub"},
     ]
     batches = [
-        {"id": "b1", "product_id": "p1", "warehouse_id": "w1", "quantity": 10.0, "batch_no": "B1"},  # 10 * 50 = 500
-        {"id": "b2", "product_id": "p2", "warehouse_id": "w1", "quantity": 5.0, "batch_no": "B2"},   # 5 * 20 = 100
+        {
+            "id": "b1",
+            "product_id": "p1",
+            "warehouse_id": "w1",
+            "quantity": 10.0,
+            "batch_no": "B1",
+        },  # 10 * 50 = 500
+        {
+            "id": "b2",
+            "product_id": "p2",
+            "warehouse_id": "w1",
+            "quantity": 5.0,
+            "batch_no": "B2",
+        },  # 5 * 20 = 100
     ]
 
     repo = InMemoryStockAnalyticsRepository(
@@ -105,8 +133,22 @@ def test_hand_calculated_stock_value_summary_sql_parity(analytics_db):
     analytics_db.add_all([wh1, wh2])
     analytics_db.commit()
 
-    p1 = Product(sku="BASMATI", name="Basmati Rice", category_id=cat_grain.id, cost_price=100.0, wholesale_price=140.0, reorder_point=40)
-    p2 = Product(sku="BUTTER", name="Cultured Butter", category_id=cat_dairy.id, cost_price=50.0, wholesale_price=70.0, reorder_point=20)
+    p1 = Product(
+        sku="BASMATI",
+        name="Basmati Rice",
+        category_id=cat_grain.id,
+        cost_price=100.0,
+        wholesale_price=140.0,
+        reorder_point=40,
+    )
+    p2 = Product(
+        sku="BUTTER",
+        name="Cultured Butter",
+        category_id=cat_dairy.id,
+        cost_price=50.0,
+        wholesale_price=70.0,
+        reorder_point=20,
+    )
     analytics_db.add_all([p1, p2])
     analytics_db.commit()
 
@@ -196,8 +238,12 @@ def test_top_value_products_sorting(analytics_db):
     analytics_db.add(uom)
     analytics_db.commit()
 
-    p_expensive = Product(sku="EXP-1", name="Saffron 1kg", base_uom_id=uom.id, cost_price=1000.0, reorder_point=5)
-    p_bulk = Product(sku="BULK-1", name="Coarse Salt 50kg", base_uom_id=uom.id, cost_price=5.0, reorder_point=100)
+    p_expensive = Product(
+        sku="EXP-1", name="Saffron 1kg", base_uom_id=uom.id, cost_price=1000.0, reorder_point=5
+    )
+    p_bulk = Product(
+        sku="BULK-1", name="Coarse Salt 50kg", base_uom_id=uom.id, cost_price=5.0, reorder_point=100
+    )
     analytics_db.add_all([p_expensive, p_bulk])
     analytics_db.commit()
 
@@ -205,8 +251,12 @@ def test_top_value_products_sorting(analytics_db):
     analytics_db.add(wh)
     analytics_db.commit()
 
-    b1 = StockBatch(product_id=p_expensive.id, warehouse_id=wh.id, batch_no="SF1", quantity=10.0)  # 10,000 value, 10 qty
-    b2 = StockBatch(product_id=p_bulk.id, warehouse_id=wh.id, batch_no="SL1", quantity=500.0)       # 2,500 value, 500 qty
+    b1 = StockBatch(
+        product_id=p_expensive.id, warehouse_id=wh.id, batch_no="SF1", quantity=10.0
+    )  # 10,000 value, 10 qty
+    b2 = StockBatch(
+        product_id=p_bulk.id, warehouse_id=wh.id, batch_no="SL1", quantity=500.0
+    )  # 2,500 value, 500 qty
     analytics_db.add_all([b1, b2])
     analytics_db.commit()
 
@@ -234,17 +284,49 @@ def test_expiry_timeline_windows(analytics_db):
 
     today = date.today()
     # 1. Expired (5 days ago)
-    b_exp = StockBatch(product_id=prod.id, warehouse_id=wh.id, batch_no="B-EXP", quantity=10.0, expiry_date=today - timedelta(days=5))
+    b_exp = StockBatch(
+        product_id=prod.id,
+        warehouse_id=wh.id,
+        batch_no="B-EXP",
+        quantity=10.0,
+        expiry_date=today - timedelta(days=5),
+    )
     # 2. This week (+4 days)
-    b_wk = StockBatch(product_id=prod.id, warehouse_id=wh.id, batch_no="B-WK", quantity=20.0, expiry_date=today + timedelta(days=4))
+    b_wk = StockBatch(
+        product_id=prod.id,
+        warehouse_id=wh.id,
+        batch_no="B-WK",
+        quantity=20.0,
+        expiry_date=today + timedelta(days=4),
+    )
     # 3. This month (+20 days)
-    b_mo = StockBatch(product_id=prod.id, warehouse_id=wh.id, batch_no="B-MO", quantity=30.0, expiry_date=today + timedelta(days=20))
+    b_mo = StockBatch(
+        product_id=prod.id,
+        warehouse_id=wh.id,
+        batch_no="B-MO",
+        quantity=30.0,
+        expiry_date=today + timedelta(days=20),
+    )
     # 4. Next 3 months (+60 days)
-    b_3mo = StockBatch(product_id=prod.id, warehouse_id=wh.id, batch_no="B-3MO", quantity=40.0, expiry_date=today + timedelta(days=60))
+    b_3mo = StockBatch(
+        product_id=prod.id,
+        warehouse_id=wh.id,
+        batch_no="B-3MO",
+        quantity=40.0,
+        expiry_date=today + timedelta(days=60),
+    )
     # 5. Later (+120 days)
-    b_late = StockBatch(product_id=prod.id, warehouse_id=wh.id, batch_no="B-LATE", quantity=50.0, expiry_date=today + timedelta(days=120))
+    b_late = StockBatch(
+        product_id=prod.id,
+        warehouse_id=wh.id,
+        batch_no="B-LATE",
+        quantity=50.0,
+        expiry_date=today + timedelta(days=120),
+    )
     # 6. No expiry
-    b_none = StockBatch(product_id=prod.id, warehouse_id=wh.id, batch_no="B-NONE", quantity=60.0, expiry_date=None)
+    b_none = StockBatch(
+        product_id=prod.id, warehouse_id=wh.id, batch_no="B-NONE", quantity=60.0, expiry_date=None
+    )
 
     analytics_db.add_all([b_exp, b_wk, b_mo, b_3mo, b_late, b_none])
     analytics_db.commit()
@@ -287,7 +369,9 @@ def test_stock_analytics_rest_endpoints(analytics_db, mock_user):
         return StockAnalyticsService(analytics_repo=repo)
 
     test_app.dependency_overrides[get_current_user] = override_get_current_user
-    test_app.dependency_overrides[stock_analytics_router.get_stock_analytics_service] = override_get_service
+    test_app.dependency_overrides[stock_analytics_router.get_stock_analytics_service] = (
+        override_get_service
+    )
 
     client = TestClient(test_app)
 
@@ -296,11 +380,19 @@ def test_stock_analytics_rest_endpoints(analytics_db, mock_user):
     analytics_db.add_all([wh, cat])
     analytics_db.commit()
 
-    prod = Product(sku="BEV-TEA", name="Assam Black Tea", category_id=cat.id, cost_price=80.0, reorder_point=50)
+    prod = Product(
+        sku="BEV-TEA", name="Assam Black Tea", category_id=cat.id, cost_price=80.0, reorder_point=50
+    )
     analytics_db.add(prod)
     analytics_db.commit()
 
-    batch = StockBatch(product_id=prod.id, warehouse_id=wh.id, batch_no="TEA-B1", quantity=100.0, expiry_date=date.today() + timedelta(days=45))
+    batch = StockBatch(
+        product_id=prod.id,
+        warehouse_id=wh.id,
+        batch_no="TEA-B1",
+        quantity=100.0,
+        expiry_date=date.today() + timedelta(days=45),
+    )
     analytics_db.add(batch)
     analytics_db.commit()
 
@@ -487,7 +579,9 @@ def test_product_cost_trend_price_creep(analytics_db):
     )
     analytics_db.add(po1)
     analytics_db.commit()
-    item1 = PurchaseOrderItem(po_id=po1.id, product_id=prod.id, qty_ordered=50, qty_received=50, unit_cost=200.0)
+    item1 = PurchaseOrderItem(
+        po_id=po1.id, product_id=prod.id, qty_ordered=50, qty_received=50, unit_cost=200.0
+    )
 
     # PO 2: Crept cost = 250 (+25%)
     po2 = PurchaseOrder(
@@ -498,7 +592,9 @@ def test_product_cost_trend_price_creep(analytics_db):
     )
     analytics_db.add(po2)
     analytics_db.commit()
-    item2 = PurchaseOrderItem(po_id=po2.id, product_id=prod.id, qty_ordered=50, qty_received=50, unit_cost=250.0)
+    item2 = PurchaseOrderItem(
+        po_id=po2.id, product_id=prod.id, qty_ordered=50, qty_received=50, unit_cost=250.0
+    )
 
     analytics_db.add_all([item1, item2])
     analytics_db.commit()
@@ -528,7 +624,9 @@ def test_spend_analytics_rest_endpoints(analytics_db, mock_user):
         return StockAnalyticsService(analytics_repo=repo)
 
     test_app.dependency_overrides[get_current_user] = override_get_current_user
-    test_app.dependency_overrides[stock_analytics_router.get_stock_analytics_service] = override_get_service
+    test_app.dependency_overrides[stock_analytics_router.get_stock_analytics_service] = (
+        override_get_service
+    )
 
     client = TestClient(test_app)
 
@@ -551,4 +649,3 @@ def test_spend_analytics_rest_endpoints(analytics_db, mock_user):
     r4 = client.get("/analytics/stock/avg-cost-trend")
     assert r4.status_code == status.HTTP_200_OK
     assert "products" in r4.json()
-

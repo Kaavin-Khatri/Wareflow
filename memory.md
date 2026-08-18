@@ -1629,3 +1629,74 @@
 - `apps/web/lib/__tests__/stock-analytics.test.tsx`
 - `memory.md`
 - `codebase_audit.md`
+
+---
+
+## Step 7.1 — Supplier CRUD
+
+**Timestamp:** 2026-08-18T10:20:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- **Backend Schemas (`apps/api/app/schemas/suppliers.py`)**:
+  - Implemented `SupplierCreateRequest`, `SupplierUpdateRequest`, and `SupplierResponse` with field validators for uppercase GSTIN normalization, name cleaning, and length constraints.
+- **Repository Abstraction & Impl (`SupplierRepositoryInterface`)**:
+  - Defined `SupplierRepositoryInterface` Protocol in [`supplier_repository.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/repositories/interfaces/supplier_repository.py) (`get_by_id`, `get_by_name`, `list_suppliers`, `create_supplier`, `update_supplier`, `delete_supplier`).
+  - Implemented `SqlAlchemySupplierRepository` (using SQLAlchemy with case-insensitive search and active status filters) and `InMemorySupplierRepository` (for high-speed unit testing and DIP proof) in [`apps/api/app/repositories/impl/supplier_repository.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/repositories/impl/supplier_repository.py).
+- **Service Layer (`SupplierService` in `apps/api/app/services/supplier_service.py`)**:
+  - Implemented duplicate supplier name check (case-insensitive) raising friendly 409 Conflict.
+  - Implemented Indian 15-character GSTIN format validation (`^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$`).
+  - Implemented contact phone (7-15 digits) and email syntax validation.
+  - Integrated administrative audit logging (`supplier_created`, `supplier_updated`) recording before/after state diffs.
+- **Dependency Injection & Routing**:
+  - Wired `get_supplier_repository`, `get_db_supplier_repository`, and `get_supplier_service` in [`apps/api/app/core/di.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/core/di.py).
+  - Created [`apps/api/app/api/routers/suppliers.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/api/routers/suppliers.py) (`GET /suppliers`, `POST /suppliers`, `GET /suppliers/{id}`, `PATCH /suppliers/{id}`).
+  - Registered `suppliers.router` in [`apps/api/app/main.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/main.py).
+- **Frontend Liquid Glass Admin UI (`apps/web/app/admin/suppliers/page.tsx`)**:
+  - Built `/admin/suppliers` using `ListViewTemplate` and responsive `DataTable`.
+  - Added KPI summary cards: Total Vendors, Active Suppliers, GSTIN Verified, and FSSAI Certified.
+  - Added live text search and status filter tabs (All / Active / Inactive).
+  - Added Create / Edit Supplier modal with validation for company name, contact person, phone, email, address, 15-digit GSTIN, 14-digit FSSAI license, expiry date, and active toggle.
+  - Added "Suppliers & Vendors" navigation item to `apps/web/lib/nav.ts` under Wholesale Operations.
+- **Testing & Verification**:
+  - Added 6 automated Pytest tests in `apps/api/tests/test_suppliers.py` (InMemory CRUD, duplicate name 409, GSTIN validation, contact info checks, SqlAlchemy persistence, and FastAPI REST endpoints).
+  - 77/77 Pytest tests passing (100% green).
+  - Added 3 Vitest tests in `apps/web/lib/__tests__/suppliers.test.tsx` verifying stats rendering, search filtering, and create/update submission flow (59 tests passing across 15 test suites).
+  - 0 Ruff lint warnings, 0 ESLint errors, 100% Prettier formatted.
+  - Next.js production build (`next build`) succeeded with 23 routes.
+
+### Decisions
+
+- **Pattern Reused Identically from Phase 5**: Reused the exact `Protocol` interface + SQLAlchemy / InMemory repository + Domain Service + DI factory pattern established in Step 5.1, confirming complete generalization.
+- **GSTIN Normalization**: Handled at both schema level (uppercase transformation) and service regex validation level to protect against malformed tax identifiers.
+
+### Key values for future steps
+
+- Supplier Listing Endpoint: `GET /suppliers`
+- Supplier Creation Endpoint: `POST /suppliers`
+- Supplier Detail Endpoint: `GET /suppliers/{id}`
+- Supplier Patch Endpoint: `PATCH /suppliers/{id}`
+- Web Admin URL: `/admin/suppliers`
+- Permissions: `inventory:view` for read operations; `inventory:manage` for create/update.
+
+### Files Created
+
+- `apps/api/app/schemas/suppliers.py`
+- `apps/api/app/repositories/interfaces/supplier_repository.py`
+- `apps/api/app/repositories/impl/supplier_repository.py`
+- `apps/api/app/services/supplier_service.py`
+- `apps/api/app/api/routers/suppliers.py`
+- `apps/api/tests/test_suppliers.py`
+- `apps/web/app/admin/suppliers/page.tsx`
+- `apps/web/lib/__tests__/suppliers.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/web/lib/nav.ts`
+- `apps/web/app/admin/analytics/stock/page.tsx`
+- `memory.md`
+- `codebase_audit.md`
+
