@@ -408,6 +408,8 @@ wareflow/
 
 | Decision                          | Rationale                                                                                                           |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Universal DataTable Rule          | All future list and ledger screens must use `DataTable`; responsive mobile card-view is automatic below 768px       |
+| Low-Power Glass Degradation       | Low memory (<4GB), cores (<=4), or reduced-transparency drops expensive blurs to flat translucency at 60fps         |
 | Motion Signals State Change       | Motion is strictly reserved to draw attention to STATE CHANGES (active link shift, number count-up, table mutation) |
 | Direct-Ref Numeric Tickers        | Direct DOM node mutation during number count-up guarantees 60fps performance without React re-render cascades       |
 | Single Standard PageHeader        | Every page consumes standard `PageHeader` for typographic consistency, breadcrumbs, and responsive action layout    |

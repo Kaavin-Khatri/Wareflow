@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useEffect, useSyncExternalStore } from "react";
 import { AccentId, ACCENT_SWATCHES, ACCENT_LIST, AccentSwatch } from "@/lib/theme-accents";
 import { apiClient } from "@/lib/api-client";
+import { isLowPowerDevice } from "@/lib/device-performance";
 
 type Theme = "light" | "dark" | "system";
 type ResolvedTheme = "light" | "dark";
@@ -13,24 +14,32 @@ interface ThemeContextType {
   accent: AccentId;
   currentSwatch: AccentSwatch;
   availableAccents: AccentSwatch[];
+  isLowPower: boolean;
   setTheme: (theme: Theme) => void;
   setAccent: (accent: AccentId) => void;
   toggleTheme: () => void;
+  toggleLowPower: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = "wareflow-theme";
 const ACCENT_STORAGE_KEY = "wareflow-accent";
+const LOW_POWER_STORAGE_KEY = "wareflow-low-power";
 
 // Helper for subscribing to localStorage and system media queries
 function subscribe(callback: () => void) {
   window.addEventListener("storage", callback);
-  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-  mediaQuery.addEventListener("change", callback);
+  const colorSchemeMq = window.matchMedia("(prefers-color-scheme: dark)");
+  const transparencyMq = window.matchMedia("(prefers-reduced-transparency: reduce)");
+
+  colorSchemeMq.addEventListener("change", callback);
+  transparencyMq.addEventListener("change", callback);
+
   return () => {
     window.removeEventListener("storage", callback);
-    mediaQuery.removeEventListener("change", callback);
+    colorSchemeMq.removeEventListener("change", callback);
+    transparencyMq.removeEventListener("change", callback);
   };
 }
 
@@ -53,6 +62,17 @@ function getStoredAccent(): AccentId {
   }
 }
 
+function getStoredLowPower(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const saved = localStorage.getItem(LOW_POWER_STORAGE_KEY);
+    if (saved !== null) return saved === "true";
+    return isLowPowerDevice();
+  } catch {
+    return false;
+  }
+}
+
 function getSystemPrefersDark(): boolean {
   if (typeof window === "undefined") return true;
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -62,10 +82,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useSyncExternalStore(subscribe, getStoredTheme, () => "system" as Theme);
   const accent = useSyncExternalStore(subscribe, getStoredAccent, () => "violet" as AccentId);
   const systemDark = useSyncExternalStore(subscribe, getSystemPrefersDark, () => true);
+  const isLowPower = useSyncExternalStore(subscribe, getStoredLowPower, () => false);
 
   const resolvedTheme: ResolvedTheme = theme === "system" ? (systemDark ? "dark" : "light") : theme;
 
   const currentSwatch = ACCENT_SWATCHES[accent] || ACCENT_SWATCHES.violet;
+
+  // Synchronize low-power class on root DOM
+  useEffect(() => {
+    if (isLowPower) {
+      document.documentElement.classList.add("low-power-glass");
+    } else {
+      document.documentElement.classList.remove("low-power-glass");
+    }
+  }, [isLowPower]);
 
   // Apply dark/light class and colorScheme to root DOM
   useEffect(() => {
@@ -126,6 +156,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme(next);
   };
 
+  const toggleLowPower = () => {
+    try {
+      const next = !isLowPower;
+      localStorage.setItem(LOW_POWER_STORAGE_KEY, String(next));
+      window.dispatchEvent(new Event("storage"));
+    } catch {
+      // LocalStorage access fallback
+    }
+  };
+
   return (
     <ThemeContext.Provider
       value={{
@@ -134,9 +174,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         accent,
         currentSwatch,
         availableAccents: ACCENT_LIST,
+        isLowPower,
         setTheme,
         setAccent,
         toggleTheme,
+        toggleLowPower,
       }}
     >
       {children}
@@ -151,3 +193,5 @@ export function useTheme(): ThemeContextType {
   }
   return context;
 }
+
+export default ThemeProvider;

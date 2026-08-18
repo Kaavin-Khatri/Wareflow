@@ -294,3 +294,43 @@ body {
 .animate-ambient-3 {
   animation: ambient-float-3 20s ease-in-out infinite alternate;
 }
+
+/* Shimmer Animation for Skeleton Loaders */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* ==========================================================================
+   Low-Power & Reduced-Transparency Fallback Performance Layer
+   ========================================================================== */
+.low-power-glass .glass-panel,
+.low-power-glass .glass-panel-elevated,
+.low-power-glass .glass-input,
+.low-power-glass .glass-button-secondary,
+.low-power-glass .glass-card,
+.low-power-glass aside,
+.low-power-glass header {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.low-power-glass .glass-panel {
+  background: var(--surface) !important;
+}
+
+.low-power-glass .glass-panel-elevated {
+  background: var(--surface-elevated) !important;
+}
+
+.low-power-glass .glass-button-primary::before,
+.low-power-glass .glass-button-secondary::before {
+  display: none !important;
+}
+
+.low-power-glass .animate-ambient-1,
+.low-power-glass .animate-ambient-2,
+.low-power-glass .animate-ambient-3 {
+  animation: none !important;
+}

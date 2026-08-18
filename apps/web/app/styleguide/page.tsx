@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import AppLayout from "@/components/AppLayout";
 import { useTheme } from "@/components/ThemeProvider";
 import {
@@ -9,7 +9,6 @@ import {
   GlassCardTitle,
   GlassCardDescription,
   GlassModal,
-  GlassDropdown,
   GlassInput,
   GlassBadge,
 } from "@/components/glass";
@@ -23,26 +22,42 @@ import {
 } from "@/components/templates";
 import { AnimeCheckIcon, AnimeMorphIcon, AnimeMicroPress } from "@/components/motion/AnimeMicro";
 import { FadeIn } from "@/components/motion/GlassMotion";
+import { StatusBadge } from "@/components/StatusBadge";
+import { EmptyState } from "@/components/EmptyState";
+import { SkeletonCard } from "@/components/SkeletonPrimitives";
+import { DataTable, DataTableColumn } from "@/components/DataTable";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import {
-  MoreVertical,
   FileSpreadsheet,
   Plus,
   Trash2,
   Edit3,
   Layers,
-  Sparkles,
   LayoutGrid,
   Activity,
   Package,
   TrendingUp,
   AlertTriangle,
   Truck,
+  TableProperties,
+  Cpu,
 } from "lucide-react";
 
+interface SampleWholesaleItem {
+  id: string;
+  sku: string;
+  name: string;
+  category: string;
+  stock: number;
+  price: number;
+  status: string;
+}
+
 export default function StyleguidePage() {
-  const { theme, resolvedTheme, setTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState<"primitives" | "templates" | "motion">("primitives");
+  const { theme, resolvedTheme, setTheme, isLowPower, toggleLowPower } = useTheme();
+  const [activeTab, setActiveTab] = useState<
+    "primitives" | "data-primitives" | "templates" | "motion"
+  >("primitives");
   const [activeTemplatePreview, setActiveTemplatePreview] = useState<
     "list" | "detail" | "form" | "dashboard"
   >("list");
@@ -50,32 +65,136 @@ export default function StyleguidePage() {
   // Primitive States
   const [modalOpen, setModalOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("Basmati Premium Export 25kg");
-  const denseItems = Array.from({ length: 12 }, (_, i) => ({
-    id: `item-${i + 1}`,
-    name: `Wholesale Item SKU-00${i + 1}`,
-    stock: (i + 1) * 35,
-    price: (i + 1) * 1200,
-    status: (i % 4 === 0 ? "error" : i % 3 === 0 ? "warning" : "success") as
-      "error" | "warning" | "success",
-  }));
+
+  // DataTable Sample Data
+  const [tableLoading, setTableLoading] = useState(false);
+  const [tableData, setTableData] = useState<SampleWholesaleItem[]>([
+    {
+      id: "sku-1",
+      sku: "RICE-BAS-01",
+      name: "Basmati Premium Export 25kg",
+      category: "Grains & Rice",
+      stock: 450,
+      price: 2450,
+      status: "in_stock",
+    },
+    {
+      id: "sku-2",
+      sku: "OIL-SUN-05",
+      name: "Sunflower Pure Cooking Oil 15L",
+      category: "Edible Oils",
+      stock: 42,
+      price: 1850,
+      status: "low_stock",
+    },
+    {
+      id: "sku-3",
+      sku: "WHT-AAT-10",
+      name: "Chakki Fresh Whole Wheat 50kg",
+      category: "Flours & Grains",
+      stock: 0,
+      price: 1680,
+      status: "out_of_stock",
+    },
+    {
+      id: "sku-4",
+      sku: "PUL-TUR-02",
+      name: "Organic Tur Dal Polished 30kg",
+      category: "Pulses",
+      stock: 620,
+      price: 3200,
+      status: "in_stock",
+    },
+    {
+      id: "sku-5",
+      sku: "SUG-REF-01",
+      name: "Refined Crystal Sugar M-30 50kg",
+      category: "Sugar & Sweeteners",
+      stock: 890,
+      price: 1950,
+      status: "overstocked",
+    },
+  ]);
+
+  const tableColumns: DataTableColumn<SampleWholesaleItem>[] = [
+    {
+      key: "sku",
+      header: "SKU / Code",
+      sortable: true,
+      mobilePrimary: true,
+      render: (item) => (
+        <div>
+          <span className="font-mono font-bold text-[var(--accent)] block text-xs">{item.sku}</span>
+          <span className="text-[var(--text)] font-semibold text-xs">{item.name}</span>
+        </div>
+      ),
+    },
+    {
+      key: "category",
+      header: "Category",
+      sortable: true,
+      mobileLabel: "Category",
+      render: (item) => <span className="text-[var(--text-muted)] text-xs">{item.category}</span>,
+    },
+    {
+      key: "stock",
+      header: "Stock (Bags)",
+      sortable: true,
+      align: "right",
+      mobileLabel: "Current Stock",
+      render: (item) => (
+        <span className="font-mono font-semibold text-xs">
+          {item.stock.toLocaleString("en-IN")}
+        </span>
+      ),
+    },
+    {
+      key: "price",
+      header: "Wholesale Price (₹)",
+      sortable: true,
+      align: "right",
+      mobileLabel: "Wholesale Price",
+      render: (item) => (
+        <span className="font-mono text-xs text-[var(--text)]">
+          ₹{item.price.toLocaleString("en-IN")}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Stock Level",
+      sortable: true,
+      mobileLabel: "Inventory Status",
+      render: (item) => <StatusBadge status={item.status} />,
+    },
+    {
+      key: "actions",
+      header: "Action",
+      align: "right",
+      render: () => (
+        <GlassButton variant="ghost" size="sm">
+          Inspect
+        </GlassButton>
+      ),
+    },
+  ];
 
   // Motion & Anime.js States
-
   const [animeChecked, setAnimeChecked] = useState(false);
   const [animeMorphed, setAnimeMorphed] = useState(false);
   const [autoListRef] = useAutoAnimate();
   const [interactiveList, setInteractiveList] = useState([
-    { id: "1", title: "PO #894 — Basmati Rice 500 Bags", status: "In Transit", priority: "High" },
+    { id: "1", title: "PO #894 — Basmati Rice 500 Bags", status: "in_transit", priority: "High" },
     {
       id: "2",
       title: "SO #102 — APMC Vashi Grocery Hub",
-      status: "Dispatched",
+      status: "dispatched",
       priority: "Normal",
     },
     {
       id: "3",
       title: "Recall Batch #B-409 (Quarantined)",
-      status: "Critical",
+      status: "critical",
       priority: "Immediate",
     },
   ]);
@@ -86,7 +205,7 @@ export default function StyleguidePage() {
       {
         id: newId,
         title: `SO #${Math.floor(Math.random() * 900 + 100)} — Fast Order`,
-        status: "Pending",
+        status: "processing",
         priority: "Normal",
       },
       ...prev,
@@ -115,38 +234,54 @@ export default function StyleguidePage() {
               Design System & Motion Showcase
             </h1>
             <p className="text-sm text-[var(--text-muted)] mt-1">
-              Liquid Glass Primitives • Four Locked Page Templates • 5-Engine Layered Motion Stack
+              Liquid Glass Primitives • Empty/Skeleton/Status Primitives • Responsive DataTable •
+              Layered Motion Stack
             </p>
           </div>
 
-          {/* Theme Switcher Widget */}
-          <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-md">
-            <GlassButton
-              variant={theme === "light" ? "primary" : "ghost"}
-              size="sm"
-              onClick={() => setTheme("light")}
+          {/* Controls Widget: Theme + Low Power Fallback */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={toggleLowPower}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border ${
+                isLowPower
+                  ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-sm"
+                  : "bg-[var(--surface-hover)] text-[var(--text-muted)] border-[var(--border)] hover:text-[var(--text)]"
+              }`}
             >
-              Light
-            </GlassButton>
-            <GlassButton
-              variant={theme === "dark" ? "primary" : "ghost"}
-              size="sm"
-              onClick={() => setTheme("dark")}
-            >
-              Dark
-            </GlassButton>
-            <GlassButton
-              variant={theme === "system" ? "primary" : "ghost"}
-              size="sm"
-              onClick={() => setTheme("system")}
-            >
-              System ({resolvedTheme})
-            </GlassButton>
+              <Cpu className="w-3.5 h-3.5" />
+              <span>Low-Power Glass: {isLowPower ? "ON (Flat)" : "OFF (Refract)"}</span>
+            </button>
+
+            <div className="flex items-center gap-1 p-1 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-md">
+              <GlassButton
+                variant={theme === "light" ? "primary" : "ghost"}
+                size="sm"
+                onClick={() => setTheme("light")}
+              >
+                Light
+              </GlassButton>
+              <GlassButton
+                variant={theme === "dark" ? "primary" : "ghost"}
+                size="sm"
+                onClick={() => setTheme("dark")}
+              >
+                Dark
+              </GlassButton>
+              <GlassButton
+                variant={theme === "system" ? "primary" : "ghost"}
+                size="sm"
+                onClick={() => setTheme("system")}
+              >
+                System ({resolvedTheme})
+              </GlassButton>
+            </div>
           </div>
         </div>
 
         {/* Master Section Tabs */}
-        <div className="flex items-center gap-3 border-b border-[var(--border)] pb-3">
+        <div className="flex items-center gap-2 border-b border-[var(--border)] pb-3 overflow-x-auto">
           <GlassButton
             variant={activeTab === "primitives" ? "primary" : "outline"}
             size="sm"
@@ -154,6 +289,14 @@ export default function StyleguidePage() {
           >
             <Layers className="w-3.5 h-3.5" />
             Glass Primitives
+          </GlassButton>
+          <GlassButton
+            variant={activeTab === "data-primitives" ? "primary" : "outline"}
+            size="sm"
+            onClick={() => setActiveTab("data-primitives")}
+          >
+            <TableProperties className="w-3.5 h-3.5" />
+            Empty / Skeleton / Status / Table
           </GlassButton>
           <GlassButton
             variant={activeTab === "templates" ? "primary" : "outline"}
@@ -199,103 +342,276 @@ export default function StyleguidePage() {
                     Destructive Action
                   </GlassButton>
                 </div>
+                <div className="flex flex-wrap gap-4 items-center">
+                  <GlassButton variant="primary" size="sm">
+                    Small
+                  </GlassButton>
+                  <GlassButton variant="primary" size="md">
+                    Medium
+                  </GlassButton>
+                  <GlassButton variant="primary" size="lg">
+                    Large Interactive
+                  </GlassButton>
+                  <GlassButton variant="primary" size="md" disabled>
+                    Disabled State
+                  </GlassButton>
+                </div>
               </div>
             </section>
 
-            {/* 2. GlassCards & Panels */}
+            {/* 2. GlassCard & Modal */}
             <section className="space-y-4">
               <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">
-                2. GlassCards & Surface Elevation
+                2. GlassCard & Modal Primitives
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <GlassCard hoverable glow className="p-6 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <GlassBadge variant="accent" dot>
-                      Live Telemetry
-                    </GlassBadge>
-                    <Sparkles className="w-4 h-4 text-[var(--accent)]" />
-                  </div>
-                  <GlassCardTitle className="text-base">Luminous Specular Bevel</GlassCardTitle>
-                  <GlassCardDescription className="text-xs">
-                    Tuned for large viewport surface fill rates without GPU texture thrashing.
+                <GlassCard hoverable className="p-6 space-y-3">
+                  <GlassBadge variant="accent">GlassCard Hoverable</GlassBadge>
+                  <GlassCardTitle>Linear-Grade Surface Card</GlassCardTitle>
+                  <GlassCardDescription>
+                    Specially calibrated specular top-border gradient simulating real physical glass
+                    thickness.
                   </GlassCardDescription>
                 </GlassCard>
 
-                <GlassCard className="p-6 space-y-3">
-                  <GlassCardTitle className="text-base">
-                    Interactive Controls & Dialogs
-                  </GlassCardTitle>
-                  <GlassCardDescription className="text-xs">
-                    Modal dialogs and dropdown menus render with elevated z-index glass layers.
-                  </GlassCardDescription>
-                  <div className="flex items-center gap-3 pt-2">
-                    <GlassButton variant="primary" size="sm" onClick={() => setModalOpen(true)}>
-                      Open GlassModal
-                    </GlassButton>
-                    <GlassDropdown
-                      trigger={
-                        <GlassButton variant="outline" size="sm">
-                          <MoreVertical className="w-3.5 h-3.5" />
-                          Options
-                        </GlassButton>
-                      }
-                      items={[
-                        {
-                          id: "export",
-                          label: "Export CSV Report",
-                          icon: <FileSpreadsheet className="w-3.5 h-3.5" />,
-                          onClick: () => {},
-                        },
-                        {
-                          id: "duplicate",
-                          label: "Duplicate Record",
-                          icon: <Edit3 className="w-3.5 h-3.5" />,
-                          onClick: () => {},
-                        },
-                        {
-                          id: "archive",
-                          label: "Archive Item",
-                          icon: <Trash2 className="w-3.5 h-3.5 text-rose-400" />,
-                          destructive: true,
-                          onClick: () => {},
-                        },
-                      ]}
-                    />
+                <GlassCard className="p-6 space-y-3 flex flex-col justify-between">
+                  <div>
+                    <GlassBadge variant="neutral">GlassModal Trigger</GlassBadge>
+                    <GlassCardTitle className="mt-2">Elevated Modal Layer</GlassCardTitle>
+                    <GlassCardDescription>
+                      Full-screen backdrop blur and spring scale entrance.
+                    </GlassCardDescription>
                   </div>
+                  <GlassButton variant="primary" size="sm" onClick={() => setModalOpen(true)}>
+                    Open Elevated GlassModal
+                  </GlassButton>
                 </GlassCard>
               </div>
             </section>
           </div>
         )}
 
-        {/* TAB 2: FOUR LOCKED PAGE TEMPLATES */}
+        {/* TAB 2: DATA PRIMITIVES (Empty / Skeleton / Status / DataTable) */}
+        {activeTab === "data-primitives" && (
+          <div className="space-y-12">
+            {/* 1. StatusBadge Full Enum Matrix */}
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">
+                  1. Universal StatusBadge — Schema Enum Matrix
+                </h2>
+                <p className="text-xs text-[var(--text-muted)]">
+                  Every PO, SO, Invoice, Delivery, Return, Stock Level, and Auth status enum mapped
+                  to standard token colors.
+                </p>
+              </div>
+
+              <div className="p-6 rounded-3xl bg-[var(--glass-bg)] backdrop-blur-xl border border-[var(--glass-border)] space-y-6">
+                <div>
+                  <span className="text-[11px] font-bold text-[var(--text-subtle)] uppercase tracking-wider font-mono block mb-2.5">
+                    Orders & Fulfillment Statuses
+                  </span>
+                  <div className="flex flex-wrap gap-2.5">
+                    <StatusBadge status="draft" />
+                    <StatusBadge status="submitted" />
+                    <StatusBadge status="confirmed" />
+                    <StatusBadge status="processing" />
+                    <StatusBadge status="packed" />
+                    <StatusBadge status="dispatched" />
+                    <StatusBadge status="delivered" />
+                    <StatusBadge status="partially_received" />
+                    <StatusBadge status="received" />
+                    <StatusBadge status="cancelled" />
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-bold text-[var(--text-subtle)] uppercase tracking-wider font-mono block mb-2.5">
+                    Invoicing & Financial Statuses
+                  </span>
+                  <div className="flex flex-wrap gap-2.5">
+                    <StatusBadge status="issued" />
+                    <StatusBadge status="paid" />
+                    <StatusBadge status="partially_paid" />
+                    <StatusBadge status="overdue" />
+                    <StatusBadge status="upi" />
+                    <StatusBadge status="neft_rtgs" />
+                    <StatusBadge status="credit" />
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-bold text-[var(--text-subtle)] uppercase tracking-wider font-mono block mb-2.5">
+                    Inventory, Warehouse & Quality Control
+                  </span>
+                  <div className="flex flex-wrap gap-2.5">
+                    <StatusBadge status="in_stock" />
+                    <StatusBadge status="low_stock" />
+                    <StatusBadge status="out_of_stock" />
+                    <StatusBadge status="overstocked" />
+                    <StatusBadge status="inward" />
+                    <StatusBadge status="outward" />
+                    <StatusBadge status="good" />
+                    <StatusBadge status="damaged" />
+                    <StatusBadge status="critical" />
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-bold text-[var(--text-subtle)] uppercase tracking-wider font-mono block mb-2.5">
+                    Security, 2FA & Staff Access
+                  </span>
+                  <div className="flex flex-wrap gap-2.5">
+                    <StatusBadge status="active" />
+                    <StatusBadge status="suspended" />
+                    <StatusBadge status="invited" />
+                    <StatusBadge status="enrolled" />
+                    <StatusBadge status="not_enrolled" />
+                    <StatusBadge status="required" />
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* 2. Universal DataTable with Live Sorting and Mobile Card Restructuring */}
+            <section className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">
+                    2. Universal DataTable — Auto Mobile Card-View
+                  </h2>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Client sorting, key-value card restructuring below 768px, and built-in
+                    loading/empty modes.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <GlassButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTableLoading((prev) => !prev)}
+                  >
+                    Toggle Shimmer Loading ({tableLoading ? "Active" : "Off"})
+                  </GlassButton>
+                  <GlassButton
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setTableData((prev) =>
+                        prev.length > 0
+                          ? []
+                          : [
+                              {
+                                id: "sku-1",
+                                sku: "RICE-BAS-01",
+                                name: "Basmati Premium Export 25kg",
+                                category: "Grains & Rice",
+                                stock: 450,
+                                price: 2450,
+                                status: "in_stock",
+                              },
+                            ],
+                      )
+                    }
+                  >
+                    Toggle Empty State
+                  </GlassButton>
+                </div>
+              </div>
+
+              <DataTable
+                columns={tableColumns}
+                data={tableData}
+                keyExtractor={(item) => item.id}
+                isLoading={tableLoading}
+                emptyTitle="No wholesale items in catalog"
+                emptyDescription="Add a new SKU batch or clear your active category filters to view records."
+                emptyAction={
+                  <GlassButton variant="primary" size="sm">
+                    <Plus className="w-3.5 h-3.5" />
+                    Add First Product
+                  </GlassButton>
+                }
+              />
+            </section>
+
+            {/* 3. Skeleton Shimmer Loaders */}
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">
+                  3. Skeleton Shimmer Primitives
+                </h2>
+                <p className="text-xs text-[var(--text-muted)]">
+                  Fluid gradient sweep animations replacing flat static placeholders.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <SkeletonCard variant="kpi" />
+                <SkeletonCard variant="kpi" />
+                <SkeletonCard variant="kpi" />
+              </div>
+            </section>
+
+            {/* 4. EmptyState Showcase */}
+            <section className="space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">
+                  4. EmptyState Component
+                </h2>
+                <p className="text-xs text-[var(--text-muted)]">
+                  Motion-driven empty placeholder with action slots and warehouse-appropriate copy.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <EmptyState
+                  title="No Inward Dispatches Scheduled"
+                  description="All pending Purchase Orders have been received into inventory."
+                  action={
+                    <GlassButton variant="primary" size="sm">
+                      <Plus className="w-3.5 h-3.5" />
+                      Create Purchase Order
+                    </GlassButton>
+                  }
+                />
+
+                <EmptyState
+                  compact
+                  title="No Active Low-Stock Alerts"
+                  description="All warehouse SKU balances are currently above their reorder points."
+                />
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* TAB 3: LOCKED TEMPLATES */}
         {activeTab === "templates" && (
           <div className="space-y-8">
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-[var(--surface-overlay)] border border-[var(--glass-border)]">
-              <span className="text-xs font-semibold text-[var(--text-muted)]">
-                Previewing Template Blueprint:
-              </span>
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
+              <span className="text-xs text-[var(--text-muted)]">Select Template to inspect:</span>
+              <div className="flex gap-2">
                 <GlassButton
                   variant={activeTemplatePreview === "list" ? "primary" : "ghost"}
                   size="sm"
                   onClick={() => setActiveTemplatePreview("list")}
                 >
-                  1. ListView
+                  1. List View
                 </GlassButton>
                 <GlassButton
                   variant={activeTemplatePreview === "detail" ? "primary" : "ghost"}
                   size="sm"
                   onClick={() => setActiveTemplatePreview("detail")}
                 >
-                  2. DetailView (8/4 Grid)
+                  2. Detail View (8/4)
                 </GlassButton>
                 <GlassButton
                   variant={activeTemplatePreview === "form" ? "primary" : "ghost"}
                   size="sm"
                   onClick={() => setActiveTemplatePreview("form")}
                 >
-                  3. Form (Sticky Bar)
+                  3. Form (Sticky Action)
                 </GlassButton>
                 <GlassButton
                   variant={activeTemplatePreview === "dashboard" ? "primary" : "ghost"}
@@ -357,39 +673,7 @@ export default function StyleguidePage() {
                     </>
                   }
                 >
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-[var(--border)] text-[var(--text-muted)]">
-                        <th className="p-3">SKU</th>
-                        <th className="p-3">Item Description</th>
-                        <th className="p-3">Stock Units</th>
-                        <th className="p-3">Wholesale Price</th>
-                        <th className="p-3 text-right">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {denseItems.slice(0, 5).map((item) => (
-                        <tr
-                          key={item.id}
-                          className="border-b border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors"
-                        >
-                          <td className="p-3 font-mono text-[var(--accent)] font-semibold">
-                            {item.name.split(" ")[2]}
-                          </td>
-                          <td className="p-3 font-medium text-[var(--text)]">{item.name}</td>
-                          <td className="p-3 font-mono">{item.stock} bags</td>
-                          <td className="p-3 font-mono font-semibold">
-                            ₹{item.price.toLocaleString("en-IN")}
-                          </td>
-                          <td className="p-3 text-right">
-                            <GlassBadge variant={item.status} dot>
-                              {item.status}
-                            </GlassBadge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <DataTable columns={tableColumns} data={tableData} keyExtractor={(i) => i.id} />
                 </ListViewTemplate>
               </div>
             )}
@@ -398,77 +682,58 @@ export default function StyleguidePage() {
             {activeTemplatePreview === "detail" && (
               <div className="p-6 rounded-3xl bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-xl">
                 <DetailViewTemplate
-                  title="Purchase Order #PO-2026-089"
-                  subtitle="Supplier: Royal Agro Foods Pvt Ltd • FSSAI #11521018000492"
-                  backHref="/styleguide"
-                  backLabel="Back to Styleguide"
-                  statusBadge={
-                    <GlassBadge variant="success" dot>
-                      Confirmed by Supplier
-                    </GlassBadge>
-                  }
+                  title="Product: Basmati Premium Export 25kg"
+                  subtitle="SKU: RICE-BAS-01 • Category: Grains & Cereals"
+                  statusBadge={<StatusBadge status="in_stock" />}
+                  backHref="#templates"
+                  backLabel="Back to Inventory"
                   primaryAction={
-                    <GlassButton variant="primary" size="md">
-                      <Truck className="w-3.5 h-3.5" />
+                    <GlassButton variant="primary" size="sm">
                       Receive Stock (GRN)
                     </GlassButton>
                   }
                   secondaryActions={
-                    <GlassButton variant="outline" size="md">
-                      Download PDF
+                    <GlassButton variant="outline" size="sm">
+                      <Edit3 className="w-3.5 h-3.5" />
+                      Edit SKU
                     </GlassButton>
                   }
                   sidePanel={
-                    <div className="space-y-4">
-                      <GlassCard className="p-5 space-y-3">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                          Supplier Coordinates
-                        </h3>
-                        <div className="space-y-2 text-xs">
-                          <div>
-                            <span className="text-[var(--text-muted)] block">GSTIN:</span>
-                            <span className="font-mono font-semibold">27AAACR1234F1Z5</span>
-                          </div>
-                          <div>
-                            <span className="text-[var(--text-muted)] block">
-                              Dispatch Terminal:
-                            </span>
-                            <span className="font-medium">Bhiwandi Central Hub #4</span>
-                          </div>
+                    <GlassCard className="p-5 space-y-4 text-xs">
+                      <GlassCardTitle className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
+                        Wholesale Pricing & Taxes
+                      </GlassCardTitle>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-[var(--text-muted)]">Wholesale Price</span>
+                          <span className="font-mono font-bold">₹2,450.00 / bag</span>
                         </div>
-                      </GlassCard>
-
-                      <GlassCard className="p-5 space-y-3">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                          Order Financials
-                        </h3>
-                        <div className="space-y-1.5 text-xs">
-                          <div className="flex justify-between">
-                            <span className="text-[var(--text-muted)]">Subtotal:</span>
-                            <span className="font-mono">₹4,50,000</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-[var(--text-muted)]">GST (5%):</span>
-                            <span className="font-mono">₹22,500</span>
-                          </div>
-                          <div className="flex justify-between pt-2 border-t border-[var(--border)] font-bold text-[var(--accent)] text-sm">
-                            <span>Total Payable:</span>
-                            <span className="font-mono">₹4,72,500</span>
-                          </div>
+                        <div className="flex justify-between">
+                          <span className="text-[var(--text-muted)]">GST Rate</span>
+                          <span className="font-mono font-bold text-emerald-400">5% GST</span>
                         </div>
-                      </GlassCard>
-                    </div>
+                      </div>
+                    </GlassCard>
                   }
                 >
-                  <GlassCard className="p-6 space-y-4">
-                    <h3 className="text-sm font-bold text-[var(--text)]">
-                      PO Line Items (500 Bags Total)
-                    </h3>
-                    <div className="p-3 rounded-2xl bg-[var(--surface-hover)] text-xs flex justify-between">
-                      <span>Basmati Premium Extra Long 25kg</span>
-                      <span className="font-mono font-bold">500 units @ ₹900/unit</span>
-                    </div>
-                  </GlassCard>
+                  <div className="space-y-6">
+                    <GlassCard className="p-6 space-y-4">
+                      <GlassCardTitle className="text-base">Batch Breakdown (FIFO)</GlassCardTitle>
+                      <div className="space-y-3">
+                        <div className="p-3.5 rounded-xl bg-[var(--surface-hover)] flex items-center justify-between text-xs">
+                          <div>
+                            <span className="font-mono font-bold text-[var(--accent)] block">
+                              Batch #B-89021 (450 Bags)
+                            </span>
+                            <span className="text-[var(--text-muted)]">
+                              Received: 2026-08-10 • Expiry: 2028-08-10
+                            </span>
+                          </div>
+                          <StatusBadge status="good" />
+                        </div>
+                      </div>
+                    </GlassCard>
+                  </div>
                 </DetailViewTemplate>
               </div>
             )}
@@ -477,46 +742,33 @@ export default function StyleguidePage() {
             {activeTemplatePreview === "form" && (
               <div className="p-6 rounded-3xl bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-xl">
                 <FormTemplate
-                  title="Onboard Wholesale Retailer Account"
-                  description="Configure credit limits, pricing tier, and KYC compliance."
-                  backHref="/styleguide"
-                  backLabel="Back to Styleguide"
-                  isDirty={true}
-                  submitLabel="Save Retailer Account"
+                  title="Create Wholesale Purchase Order"
+                  description="Issue authorized procurement order with automatic FSSAI & GST validation."
+                  backHref="#templates"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    alert("PO Saved");
+                  }}
+                  submitLabel="Authorize & Issue PO"
+                  isSubmitting={false}
                 >
                   <FormSection
-                    title="1. Retailer Identity & Legal"
-                    description="Official business name and GSTIN coordinates."
+                    title="1. Supplier & Procurement Terminal"
+                    description="Select verified manufacturer."
                   >
-                    <div className="col-span-12 sm:col-span-6 space-y-1.5">
-                      <label className="text-xs font-medium text-[var(--text-muted)]">
-                        Business Name
-                      </label>
-                      <GlassInput defaultValue="Vashi APMC Wholesale Traders" />
-                    </div>
-                    <div className="col-span-12 sm:col-span-6 space-y-1.5">
-                      <label className="text-xs font-medium text-[var(--text-muted)]">
-                        GSTIN Number
-                      </label>
-                      <GlassInput defaultValue="27AABCU9603R1ZM" className="font-mono" />
-                    </div>
-                  </FormSection>
-
-                  <FormSection
-                    title="2. Credit Terms & Pricing Tier"
-                    description="Configure default credit limits and pricing multiplier."
-                  >
-                    <div className="col-span-12 sm:col-span-6 space-y-1.5">
-                      <label className="text-xs font-medium text-[var(--text-muted)]">
-                        Credit Limit (₹)
-                      </label>
-                      <GlassInput defaultValue="500000" className="font-mono" />
-                    </div>
-                    <div className="col-span-12 sm:col-span-6 space-y-1.5">
-                      <label className="text-xs font-medium text-[var(--text-muted)]">
-                        Pricing Tier
-                      </label>
-                      <GlassInput defaultValue="Tier-A (High Volume)" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-[var(--text)]">
+                          Supplier Account
+                        </label>
+                        <GlassInput defaultValue="Royal Agro Food Mills Pvt Ltd" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-[var(--text)]">
+                          Destination Terminal
+                        </label>
+                        <GlassInput defaultValue="Bhiwandi Central Hub (Terminal #1)" />
+                      </div>
                     </div>
                   </FormSection>
                 </FormTemplate>
@@ -527,62 +779,68 @@ export default function StyleguidePage() {
             {activeTemplatePreview === "dashboard" && (
               <div className="p-6 rounded-3xl bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-xl">
                 <DashboardTemplate
-                  title="Executive Wholesale Overview"
-                  description="Live telemetry synced across Bhiwandi Hub and APMC Terminal."
+                  title="Executive Wholesale Dashboard"
+                  description="Real-time GMV, batch expiry risk radar, and terminal dispatch velocity."
+                  badge={<StatusBadge status="in_stock" overrideLabel="Live Sync" />}
                   kpiMetrics={[
                     {
-                      id: "1",
-                      title: "Daily Revenue",
+                      id: "kpi-gmv",
+                      title: "Daily Wholesale GMV",
                       value: "₹8,45,200",
-                      change: "+18.4%",
+                      change: "+18.4% vs yesterday",
                       trend: "up",
                       icon: <TrendingUp className="w-4 h-4" />,
                     },
                     {
-                      id: "2",
-                      title: "Active Dispatches",
-                      value: "38 Orders",
-                      change: "+4 pending",
+                      id: "kpi-dispatches",
+                      title: "Active Vehicle Dispatches",
+                      value: "38 Runs",
+                      change: "4 trucks en-route",
                       trend: "neutral",
                       icon: <Truck className="w-4 h-4" />,
                     },
                     {
-                      id: "3",
-                      title: "Low Stock Alerts",
+                      id: "kpi-low-stock",
+                      title: "Low Stock Triggers",
                       value: "4 SKUs",
-                      change: "-2 reordered",
+                      change: "2 POs drafted",
                       trend: "down",
                       icon: <AlertTriangle className="w-4 h-4 text-amber-500" />,
                     },
                     {
-                      id: "4",
-                      title: "Total Warehouse Bags",
-                      value: "14,820",
-                      change: "+98.2% cap",
+                      id: "kpi-bags",
+                      title: "Warehouse Bags in Stock",
+                      value: "14,820 bags",
+                      change: "98.2% capacity",
                       trend: "up",
                       icon: <Package className="w-4 h-4" />,
                     },
                   ]}
                   mainContent={
-                    <GlassCard className="p-6 space-y-3 h-64 flex flex-col justify-center items-center text-center">
-                      <TrendingUp className="w-8 h-8 text-[var(--accent)] mb-2" />
-                      <GlassCardTitle>Revenue Run-Rate & Order Velocity</GlassCardTitle>
-                      <GlassCardDescription className="max-w-md text-xs">
-                        Real-time revenue charting container utilizing 8-column layout span.
-                      </GlassCardDescription>
+                    <GlassCard className="p-6 space-y-4">
+                      <GlassCardTitle className="text-base">
+                        Recent Wholesale Dispatches
+                      </GlassCardTitle>
+                      <DataTable
+                        columns={tableColumns}
+                        data={tableData}
+                        keyExtractor={(i) => i.id}
+                      />
                     </GlassCard>
                   }
                   sideContent={
-                    <GlassCard className="p-6 space-y-3">
+                    <GlassCard className="p-5 space-y-3">
                       <GlassCardTitle className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
-                        Urgent Operations Queue
+                        Terminal Radar
                       </GlassCardTitle>
                       <div className="space-y-2 text-xs">
-                        <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                          Reorder 500 bags Basmati Export (Warehouse 1)
+                        <div className="flex items-center justify-between">
+                          <span className="text-[var(--text-muted)]">Bhiwandi Hub</span>
+                          <StatusBadge status="active" />
                         </div>
-                        <div className="p-2.5 rounded-xl bg-violet-500/10 border border-violet-500/20 text-[var(--accent)]">
-                          Schedule Vehicle Run MH-04-AB-1290
+                        <div className="flex items-center justify-between">
+                          <span className="text-[var(--text-muted)]">APMC Terminal</span>
+                          <StatusBadge status="active" />
                         </div>
                       </div>
                     </GlassCard>
@@ -593,60 +851,41 @@ export default function StyleguidePage() {
           </div>
         )}
 
-        {/* TAB 3: MOTION & ANIME.JS LAYER */}
+        {/* TAB 4: MOTION & ANIME.JS */}
         {activeTab === "motion" && (
-          <div className="space-y-8">
-            {/* Anime.js Demo */}
+          <div className="space-y-10">
+            {/* Anime.js Micro-Interactions */}
             <section className="space-y-4">
-              <div className="flex items-center gap-2">
-                <GlassBadge variant="accent" dot>
-                  anime.js 5th Motion Engine
-                </GlassBadge>
-                <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">
-                  SVG Path Morphing & Micro-Interaction Demos
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* 1. Animated Check Draw */}
-                <GlassCard className="p-6 space-y-4 text-center flex flex-col items-center">
-                  <div className="w-12 h-12 rounded-2xl bg-[var(--surface-hover)] flex items-center justify-center text-[var(--accent)] border border-[var(--border)]">
-                    <AnimeCheckIcon checked={animeChecked} size={26} />
-                  </div>
-                  <GlassCardTitle className="text-sm">SVG Path Draw-In</GlassCardTitle>
+              <h2 className="text-lg font-bold text-[var(--text)] tracking-tight">
+                anime.js Micro-Interactions (SVG Path Morphing & Elastic Physics)
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <GlassCard
+                  hoverable
+                  onClick={() => setAnimeChecked((prev) => !prev)}
+                  className="p-6 flex flex-col items-center justify-center text-center space-y-3 cursor-pointer"
+                >
+                  <AnimeCheckIcon checked={animeChecked} />
+                  <GlassCardTitle className="text-sm">SVG Checkmark Draw</GlassCardTitle>
                   <GlassCardDescription className="text-xs">
-                    strokeDashoffset animated via anime.js easing curves.
+                    Stroke-dashoffset animation via anime.js.
                   </GlassCardDescription>
-                  <GlassButton
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setAnimeChecked((c) => !c)}
-                  >
-                    Toggle Check ({animeChecked ? "Checked" : "Unchecked"})
-                  </GlassButton>
                 </GlassCard>
 
-                {/* 2. Geometric Path Morph */}
-                <GlassCard className="p-6 space-y-4 text-center flex flex-col items-center">
-                  <div className="w-12 h-12 rounded-2xl bg-[var(--surface-hover)] flex items-center justify-center text-[var(--accent)] border border-[var(--border)]">
-                    <AnimeMorphIcon active={animeMorphed} size={26} />
-                  </div>
-                  <GlassCardTitle className="text-sm">SVG Shape Morphing</GlassCardTitle>
+                <GlassCard
+                  hoverable
+                  onClick={() => setAnimeMorphed((prev) => !prev)}
+                  className="p-6 flex flex-col items-center justify-center text-center space-y-3 cursor-pointer"
+                >
+                  <AnimeMorphIcon active={animeMorphed} />
+                  <GlassCardTitle className="text-sm">SVG Path Morphing</GlassCardTitle>
                   <GlassCardDescription className="text-xs">
-                    Numeric d-path coordinate interpolation between Box & Octagon.
+                    Smooth coordinate interpolation.
                   </GlassCardDescription>
-                  <GlassButton
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setAnimeMorphed((m) => !m)}
-                  >
-                    Morph Shape ({animeMorphed ? "Diamond" : "Square"})
-                  </GlassButton>
                 </GlassCard>
 
-                {/* 3. Micro Elastic Press */}
-                <GlassCard className="p-6 space-y-4 text-center flex flex-col items-center">
-                  <AnimeMicroPress className="p-4 rounded-2xl bg-[var(--surface-hover)] border border-[var(--accent-border)] text-[var(--accent)] font-semibold text-xs shadow-md">
+                <GlassCard className="p-6 flex flex-col items-center justify-center text-center space-y-3">
+                  <AnimeMicroPress className="px-4 py-2 rounded-xl bg-gradient-to-r from-[var(--accent)] to-[var(--accent-hover)] text-white text-xs font-bold shadow-md">
                     Click & Hold For Elastic Snap
                   </AnimeMicroPress>
                   <GlassCardTitle className="text-sm">Elastic Button Press</GlassCardTitle>
@@ -682,9 +921,7 @@ export default function StyleguidePage() {
                   >
                     <div className="flex items-center gap-3">
                       <span className="font-medium text-[var(--text)]">{item.title}</span>
-                      <GlassBadge variant={item.status === "Critical" ? "error" : "neutral"}>
-                        {item.status}
-                      </GlassBadge>
+                      <StatusBadge status={item.status} />
                     </div>
                     <GlassButton
                       variant="ghost"

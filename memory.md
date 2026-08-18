@@ -1166,3 +1166,96 @@
 - `apps/web/app/dashboard/page.tsx`
 - `apps/api/tests/test_staff_and_roles.py`
 - `codebase_audit.md`
+
+---
+
+## Step 4.7 — Empty/Skeleton/Status Primitives & Full Responsiveness Audit
+
+**Timestamp:** 2026-08-18T03:15:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Created universal `EmptyState.tsx` (`apps/web/components/EmptyState.tsx`) with subtle Motion entrance, frosted icon container, warehouse copy defaults ("No wholesale records found"), and primary/secondary action button slots.
+- Created fluid gradient shimmer `SkeletonPrimitives.tsx` (`apps/web/components/SkeletonPrimitives.tsx`):
+  - `SkeletonBox`: animated linear shimmer sweep.
+  - `SkeletonText`: variable lines with 75% last line width.
+  - `SkeletonBadge`: compact pill placeholder.
+  - `SkeletonCard`: KPI metric card & detail card shimmer layouts.
+  - `SkeletonTable(rows, cols)`: responsive grid shimmer matching table structures.
+- Implemented universal `StatusBadge.tsx` (`apps/web/components/StatusBadge.tsx`) mapping every schema enum to token colors (`neutral`, `accent`, `success`, `warning`, `error`) with pulse dot for active/in-progress states.
+- Implemented universal `DataTable.tsx` (`apps/web/components/DataTable.tsx`):
+  - Generic type safe `<T>` data grid.
+  - Sortable column headers with animated ascending/descending arrows.
+  - Smooth row diffing powered by `@formkit/auto-animate`.
+  - Built-in `isLoading` (`SkeletonTable`) and empty state (`EmptyState`) fallback views.
+  - Automatic mobile card-view transformation below `md` (768px): restructures table rows into stacked `GlassCard` units with primary title header, key-value grid, and touch-target action buttons (>= 44px).
+- Implemented Low-Power / Reduced-Transparency Fallback layer:
+  - `apps/web/lib/device-performance.ts`: checks `prefers-reduced-transparency`, hardware memory (<4GB), and CPU concurrency (<=4 cores).
+  - Wired into `ThemeProvider.tsx` using `useSyncExternalStore` for SSR/hydration safety.
+  - Added `.low-power-glass` CSS rules in `apps/web/app/globals.css` disabling GPU backdrop-filters and ambient floating animations, switching to flat translucent surfaces to preserve 60fps on budget mobile hardware.
+- Expanded `/styleguide` (`apps/web/app/styleguide/page.tsx`) with interactive showcases for `EmptyState`, `SkeletonCard`, `StatusBadge` matrix, live-sorted `DataTable` with shimmer/empty toggles, and real-time Low-Power Glass toggle.
+- Created unit test suite in `apps/web/lib/__tests__/ui-primitives.test.tsx` (all 48 web tests + 44 API tests passing, 100% clean Next.js build).
+
+### Verbatim Status → Color Map
+
+| Status Enum          | Badge Variant | Label              | Pulse Dot | Context                  |
+| -------------------- | ------------- | ------------------ | --------- | ------------------------ |
+| `draft`              | `neutral`     | Draft              | No        | PO / SO / Invoice        |
+| `submitted`          | `accent`      | Submitted          | Yes       | Purchase Order           |
+| `confirmed`          | `accent`      | Confirmed          | Yes       | Purchase / Sales Order   |
+| `processing`         | `accent`      | Processing         | Yes       | Warehouse Fulfillment    |
+| `packed`             | `accent`      | Packed             | Yes       | Warehouse Packing        |
+| `dispatched`         | `accent`      | Dispatched         | Yes       | Transport / Delivery     |
+| `in_transit`         | `accent`      | In Transit         | Yes       | Active Dispatch Run      |
+| `partially_received` | `warning`     | Partially Received | Yes       | Inward GRN               |
+| `received`           | `success`     | Received           | No        | Inward GRN Complete      |
+| `delivered`          | `success`     | Delivered          | No        | Sales Delivery           |
+| `cancelled`          | `error`       | Cancelled          | No        | Order Cancelled          |
+| `issued`             | `accent`      | Issued             | Yes       | Invoice Issued           |
+| `paid`               | `success`     | Paid               | No        | Full Payment Cleared     |
+| `partially_paid`     | `warning`     | Partially Paid     | Yes       | Partial Payment Received |
+| `overdue`            | `error`       | Overdue            | Yes       | Payment Overdue          |
+| `in_stock`           | `success`     | In Stock           | No        | Stock Balance Normal     |
+| `low_stock`          | `warning`     | Low Stock          | Yes       | Below Reorder Level      |
+| `out_of_stock`       | `error`       | Out of Stock       | Yes       | Zero Inventory Balance   |
+| `overstocked`        | `neutral`     | Overstocked        | No        | Exceeds Max Threshold    |
+| `inward`             | `success`     | Inward             | No        | Inventory Movement In    |
+| `outward`            | `accent`      | Outward            | No        | Inventory Movement Out   |
+| `good`               | `success`     | Good Condition     | No        | Batch Quality Passed     |
+| `damaged`            | `error`       | Damaged            | Yes       | Quality Rejection        |
+| `critical`           | `error`       | Critical Recall    | Yes       | Quarantine / Recall      |
+| `active`             | `success`     | Active             | No        | User / Staff Account     |
+| `suspended`          | `error`       | Suspended          | No        | Locked / Deactivated     |
+| `enrolled`           | `success`     | 2FA Enrolled       | No        | TOTP Enabled             |
+| `not_enrolled`       | `neutral`     | 2FA Disabled       | No        | TOTP Not Enrolled        |
+| `required`           | `warning`     | 2FA Required       | Yes       | Mandatory 2FA Pending    |
+
+### Decisions
+
+- **Universal DataTable Rule**: All future list and ledger screens across the system MUST use `DataTable` rather than bespoke HTML tables; mobile card-view is automatically handled at 768px.
+- **Graceful Performance Degradation**: Hardware capability and accessibility preferences automatically strip heavy multi-layer blur filters to ensure fluid 60fps responsiveness across low-end mobile devices without degrading UX or information hierarchy.
+
+### Key values for future steps
+
+- Universal Data Table: `apps/web/components/DataTable.tsx`
+- Status Badge Component: `apps/web/components/StatusBadge.tsx`
+- Empty State Component: `apps/web/components/EmptyState.tsx`
+- Skeleton Loaders: `apps/web/components/SkeletonPrimitives.tsx`
+- Low-Power Performance Utility: `apps/web/lib/device-performance.ts`
+
+### Files Created
+
+- `apps/web/components/StatusBadge.tsx`
+- `apps/web/components/EmptyState.tsx`
+- `apps/web/components/SkeletonPrimitives.tsx`
+- `apps/web/components/DataTable.tsx`
+- `apps/web/lib/device-performance.ts`
+- `apps/web/lib/__tests__/ui-primitives.test.tsx`
+
+### Files Modified
+
+- `apps/web/app/globals.css`
+- `apps/web/components/ThemeProvider.tsx`
+- `apps/web/app/styleguide/page.tsx`
+- `codebase_audit.md`
