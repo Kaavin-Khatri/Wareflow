@@ -1259,3 +1259,84 @@
 - `apps/web/components/ThemeProvider.tsx`
 - `apps/web/app/styleguide/page.tsx`
 - `codebase_audit.md`
+
+---
+
+## Step 5.1 — ProductRepository Interface + Product/Category CRUD
+
+**Timestamp:** 2026-08-18T14:25:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- **ProductRepository Interface Contract (`ProductRepositoryInterface`)**:
+  - Defined strict Python `Protocol` in `apps/api/app/repositories/interfaces/product_repository.py`.
+  - Comprehensive method surface for products: `get_by_id`, `get_by_sku`, `list_products` (with filters for `category_id`, `search`, `is_active`, `skip`, `limit`), `create_product`, `update_product`, `update_prices`, `deactivate_product`, `set_image_url`, `delete`, and `has_open_orders`.
+  - Category operations: `list_categories`, `get_category_by_id`, `create_category`, `update_category`, `delete_category`.
+  - Zero SQLAlchemy-specific types leaked into interface signatures.
+- **Implementations (`SqlAlchemyProductRepository` & `InMemoryProductRepository`)**:
+  - Implemented in `apps/api/app/repositories/impl/product_repository.py`.
+  - `SqlAlchemyProductRepository`: PostgreSQL ORM queries with eager relationship joins (`joinedload(Product.category)`), case-insensitive search, and open order detection across `PurchaseOrderItem` (excluding received/cancelled POs) and `SalesOrderItem` (excluding delivered/cancelled SOs).
+  - `InMemoryProductRepository`: In-memory dictionary store for fast, 100% isolated tests and proof of Dependency Inversion Principle.
+- **Product Domain Service (`ProductService`)**:
+  - Encapsulates business logic with constructor-injected repository (`ProductRepositoryInterface`), `AuditService`, and `StorageServiceInterface`.
+  - Enforces SKU natural key uniqueness (returns HTTP 409 Conflict if SKU exists).
+  - Enforces price non-negativity validation (`wholesale_price >= 0`, `cost_price >= 0`).
+  - Guards product deactivation: strictly blocks deactivation if open Purchase Orders or Sales Orders reference the SKU (returns HTTP 400 Bad Request).
+  - Emits immutable audit log records for `product_created`, `product_updated`, `product_price_updated`, `product_deactivated`, `product_image_updated`, and category mutations.
+- **Storage Service (`StorageServiceInterface` & `SupabaseStorageService`)**:
+  - Built in `apps/api/app/services/storage_service.py` with `MockStorageService` for unit testing.
+  - Enforces file type validation (JPEG, PNG, WebP) and size validation (<=5MB).
+  - Uploads to Supabase Storage `product-images` public bucket with unique UUID filename generation and public URL resolution.
+- **Schemas & Routers**:
+  - Created `apps/api/app/schemas/categories.py` and updated `apps/api/app/schemas/products.py` (with `description`, `content_details`, `category`, and image upload response schemas).
+  - Implemented `apps/api/app/api/routers/categories.py` and upgraded `apps/api/app/api/routers/products.py` with multipart image upload endpoint `POST /products/{id}/image`.
+  - Registered `categories` and `products` routers in `main.py` and wired DI dependencies in `di.py`.
+- **Frontend Management UI**:
+  - Created `/admin/products` (`apps/web/app/admin/products/page.tsx`) with `ListViewTemplate`, `DataTable`, category filters, live search, `StatusBadge`, Create/Edit `GlassModal`, and Drag-and-drop Image Upload modal with client-side type/size validation and thumbnail previews.
+  - Created `/admin/categories` (`apps/web/app/admin/categories/page.tsx`) with taxonomy tree visualization, create/edit modals, and delete guards.
+  - Updated `apps/web/lib/nav.ts` to include Product Catalog and Categories under Wholesale Operations.
+- **Testing & Verification**:
+  - Created unit tests in `apps/api/tests/test_products.py` verifying DIP swappability, duplicate SKU 409, open PO deactivation blocking, image validation, and CRUD endpoints.
+  - Created unit tests in `apps/web/lib/__tests__/products.test.tsx`.
+  - Monorepo 100% green: 48 backend pytest tests passing, 51 frontend vitest tests passing, 0 ESLint warnings, 0 ruff errors, and successful Next.js production build.
+
+### Decisions
+
+- **DIP Compliance as Architectural Mandate**: `ProductService` depends solely on `ProductRepositoryInterface` (Protocol) and `StorageServiceInterface`, never importing concrete database models or sessions directly.
+- **SKU as Natural Key**: Uniqueness is strictly enforced in both database unique indexes and service-layer validation with friendly 409 Conflict errors.
+- **Open Order Deactivation Guard**: Products referenced in active supply chain workflows (open POs or SOs) cannot be deactivated until orders are delivered, received, or cancelled.
+
+### Key values for future steps
+
+- Product Repository Interface: `apps/api/app/repositories/interfaces/product_repository.py`
+- Product Repository Impl: `apps/api/app/repositories/impl/product_repository.py`
+- Product Domain Service: `apps/api/app/services/product_service.py`
+- Storage Service: `apps/api/app/services/storage_service.py`
+- Product Schemas: `apps/api/app/schemas/products.py` & `categories.py`
+- Product Web Console: `/admin/products`
+- Category Web Console: `/admin/categories`
+
+### Files Created
+
+- `apps/api/app/schemas/categories.py`
+- `apps/api/app/api/routers/categories.py`
+- `apps/api/app/services/storage_service.py`
+- `apps/api/tests/test_products.py`
+- `apps/web/app/admin/products/page.tsx`
+- `apps/web/app/admin/categories/page.tsx`
+- `apps/web/lib/__tests__/products.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/repositories/interfaces/product_repository.py`
+- `apps/api/app/repositories/impl/product_repository.py`
+- `apps/api/app/services/product_service.py`
+- `apps/api/app/schemas/products.py`
+- `apps/api/app/api/routers/products.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/api/requirements.txt`
+- `apps/web/lib/nav.ts`
+- `codebase_audit.md`
+

@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routers import (
     audit,
+    categories,
     health,
     me,
     products,
@@ -51,6 +52,7 @@ def create_app() -> FastAPI:
     application.include_router(two_factor.router)
     application.include_router(audit.router)
     application.include_router(products.router)
+    application.include_router(categories.router)
     application.include_router(retailers.router)
 
     return application

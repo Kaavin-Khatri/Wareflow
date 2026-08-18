@@ -251,6 +251,7 @@ wareflow/
 │           │       ├── roles.py    # Role permissions matrix (/roles, /permissions)
 │           │       ├── two_factor.py# 2FA endpoints (/auth/2fa/*)
 │           │       ├── audit.py    # Admin Audit Log endpoint (/admin/audit-log)
+│           │       ├── categories.py# Product Category taxonomy (/categories)
 │           │       ├── products.py # Wholesale Products & Pricing (/products)
 │           │       └── retailers.py# Retailer accounts & credit limits (/retailers)
 │           ├── db/
@@ -279,6 +280,7 @@ wareflow/
 │           │   ├── profile_service.py
 │           │   ├── retailer_service.py
 │           │   ├── staff_service.py
+│           │   ├── storage_service.py
 │           │   └── two_factor_service.py
 │           ├── repositories/
 │           │   ├── interfaces/     # Protocol/ABC contracts
@@ -293,6 +295,7 @@ wareflow/
 │           │       └── retailer_repository.py
 │           ├── schemas/            # Pydantic request/response models
 │           │   ├── audit.py
+│           │   ├── categories.py
 │           │   ├── products.py
 │           │   ├── profile.py
 │           │   ├── retailers.py
@@ -369,8 +372,19 @@ wareflow/
 | POST   | `/auth/2fa/disable`                 | Disable 2FA after verifying code confirmation      | Yes (Authenticated)             |
 | POST   | `/auth/2fa/regenerate-backup-codes` | Regenerate 10 fresh recovery backup codes          | Yes (Authenticated)             |
 | GET    | `/admin/audit-log`                  | Get paginated admin action audit logs with diffs   | Yes (`audit:view` / Owner)      |
-| GET    | `/products`                         | List all wholesale products with pricing           | Yes (Authenticated)             |
+| GET    | `/categories`                       | List all product categories                        | Yes (Authenticated)             |
+| GET    | `/categories/{id}`                  | Get product category by ID                         | Yes (Authenticated)             |
+| POST   | `/categories`                       | Create new product category                        | Yes (`inventory:manage`)        |
+| PATCH  | `/categories/{id}`                  | Update product category metadata                   | Yes (`inventory:manage`)        |
+| DELETE | `/categories/{id}`                  | Delete product category                            | Yes (`inventory:manage`)        |
+| GET    | `/products`                         | List all wholesale products with pricing & filters | Yes (Authenticated)             |
+| POST   | `/products`                         | Create wholesale product entity (SKU unique)       | Yes (`inventory:manage`)        |
+| GET    | `/products/{id}`                    | Get wholesale product details                      | Yes (Authenticated)             |
+| PATCH  | `/products/{id}`                    | Update product metadata and pricing                | Yes (`inventory:manage`)        |
 | PATCH  | `/products/{id}/price`              | Update product selling/cost prices (audited)       | Yes (`inventory:manage`)        |
+| POST   | `/products/{id}/deactivate`         | Deactivate product (guarded against open orders)   | Yes (`inventory:manage`)        |
+| POST   | `/products/{id}/image`              | Upload product image (JPEG/PNG/WebP <=5MB)         | Yes (`inventory:manage`)        |
+| DELETE | `/products/{id}`                    | Permanently delete product record                  | Yes (`inventory:manage`)        |
 | GET    | `/retailers`                        | List all wholesale retailers                       | Yes (Authenticated)             |
 | PATCH  | `/retailers/{id}/credit-limit`      | Update retailer credit limit (audited)             | Yes (`settings:manage`)         |
 
@@ -408,6 +422,10 @@ wareflow/
 
 | Decision                          | Rationale                                                                                                           |
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| ProductRepository Protocol (DIP)  | `ProductService` depends exclusively on `ProductRepositoryInterface` (Protocol), never importing DB sessions        |
+| Natural Key SKU Uniqueness        | Enforced at both database layer and domain service layer with friendly 409 Conflict error details                   |
+| Open Orders Deactivation Guard    | Products linked to open Purchase Orders or Sales Orders cannot be deactivated to prevent broken fulfillment pipelines|
+| Cloud Storage Validation & Upload | Supabase Storage `product-images` bucket handles catalog media with strict <=5MB and JPEG/PNG/WebP validation       |
 | Universal DataTable Rule          | All future list and ledger screens must use `DataTable`; responsive mobile card-view is automatic below 768px       |
 | Low-Power Glass Degradation       | Low memory (<4GB), cores (<=4), or reduced-transparency drops expensive blurs to flat translucency at 60fps         |
 | Motion Signals State Change       | Motion is strictly reserved to draw attention to STATE CHANGES (active link shift, number count-up, table mutation) |

@@ -16,7 +16,6 @@ from app.models import Permission, Profile, Role, RolePermission
 from app.repositories.impl.profile_repository import SqlAlchemyProfileRepository
 
 
-
 @pytest.fixture
 def db_session():
     """Create isolated SQLite database session with seed roles, permissions, and profiles."""
@@ -93,7 +92,6 @@ def test_app(db_session: Session) -> FastAPI:
     app.dependency_overrides[get_profile_repository] = override_profile_repo
     app.dependency_overrides[get_db_session] = lambda: db_session
     return app
-
 
 
 @pytest.fixture

@@ -34,6 +34,18 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
     title: "Wholesale Operations",
     items: [
       {
+        name: "Product Catalog",
+        href: "/admin/products",
+        icon: "Package",
+        requiredPermission: "inventory:view",
+      },
+      {
+        name: "Categories",
+        href: "/admin/categories",
+        icon: "Tags",
+        requiredPermission: "inventory:view",
+      },
+      {
         name: "Inventory & Stock",
         href: "/inventory",
         icon: "Boxes",

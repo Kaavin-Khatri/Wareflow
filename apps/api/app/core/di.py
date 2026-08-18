@@ -12,6 +12,7 @@ from functools import lru_cache
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from app.core.config import Settings, get_settings
 from app.db.session import get_db_session
 from app.repositories.impl.audit_repository import SqlAlchemyAuditRepository
 from app.repositories.impl.product_repository import (
@@ -29,6 +30,7 @@ from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
 from app.services.retailer_service import RetailerService
 from app.services.staff_service import StaffService
+from app.services.storage_service import StorageServiceInterface, SupabaseStorageService
 from app.services.two_factor_service import TwoFactorService
 
 
@@ -58,6 +60,16 @@ def get_retailer_repository(db: Session = Depends(get_db_session)) -> RetailerRe
     return SqlAlchemyRetailerRepository(session=db)
 
 
+def get_storage_service(
+    settings: Settings = Depends(get_settings),
+) -> StorageServiceInterface:
+    """Factory for StorageServiceInterface using Supabase Storage."""
+    return SupabaseStorageService(
+        supabase_url=settings.supabase_url,
+        service_role_key=settings.supabase_service_role_key,
+    )
+
+
 def get_audit_service(
     audit_repo: AuditRepository = Depends(get_audit_repository),
     profile_repo: ProfileRepository = Depends(get_profile_repository),
@@ -69,9 +81,14 @@ def get_audit_service(
 def get_product_service(
     repo: ProductRepositoryInterface = Depends(get_db_product_repository),
     audit_service: AuditService = Depends(get_audit_service),
+    storage_service: StorageServiceInterface = Depends(get_storage_service),
 ) -> ProductService:
-    """Factory for ProductService with audit logging."""
-    return ProductService(repository=repo, audit_service=audit_service)
+    """Factory for ProductService with audit logging and object storage."""
+    return ProductService(
+        repository=repo,
+        audit_service=audit_service,
+        storage_service=storage_service,
+    )
 
 
 def get_profile_service(
