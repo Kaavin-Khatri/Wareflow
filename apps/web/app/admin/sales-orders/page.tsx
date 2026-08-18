@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import AppLayout from "@/components/AppLayout";
 import { ListViewTemplate } from "@/components/templates/ListViewTemplate";
 import { DataTable, DataTableColumn } from "@/components/DataTable";
@@ -25,7 +26,9 @@ import {
   FileSpreadsheet,
   Eye,
   Trash2,
+  RotateCcw,
 } from "lucide-react";
+
 
 
 export interface SalesOrderItem {
@@ -906,22 +909,21 @@ export default function SalesOrdersAdminPage() {
                     </GlassButton>
                   )}
 
-                  {selectedOrder.status === "shipped" && (
-                    <GlassButton
-                      type="button"
-                      variant="primary"
-                      size="sm"
-                      disabled={submitting}
-                      onClick={() => handleUpdateStatus(selectedOrder.id, "delivered")}
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Mark Delivered
-                    </GlassButton>
+                  {selectedOrder.status === "delivered" && (
+                    <div className="flex items-center gap-2">
+                      <Link href={`/admin/sales-returns?sales_order_id=${selectedOrder.id}`}>
+                        <GlassButton type="button" variant="secondary" size="sm">
+                          <RotateCcw className="w-3.5 h-3.5 mr-1" /> Request RMA Return
+                        </GlassButton>
+                      </Link>
+                    </div>
                   )}
                 </div>
               </div>
             </div>
           )}
         </GlassModal>
+
       </div>
     </AppLayout>
   );

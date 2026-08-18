@@ -40,6 +40,10 @@ from app.repositories.impl.sales_order_repository import (
     InMemorySalesOrderRepository,
     SqlAlchemySalesOrderRepository,
 )
+from app.repositories.impl.sales_return_repository import (
+    InMemorySalesReturnRepository,
+    SqlAlchemySalesReturnRepository,
+)
 from app.repositories.impl.stock_analytics_repository import (
     SqlAlchemyStockAnalyticsRepository,
 )
@@ -69,6 +73,9 @@ from app.repositories.interfaces.retailer_repository import RetailerRepository
 from app.repositories.interfaces.sales_order_repository import (
     SalesOrderRepositoryInterface,
 )
+from app.repositories.interfaces.sales_return_repository import (
+    SalesReturnRepositoryInterface,
+)
 from app.repositories.interfaces.stock_analytics_repository import (
     StockAnalyticsRepositoryInterface,
 )
@@ -85,6 +92,7 @@ from app.services.purchase_order_service import PurchaseOrderService
 from app.services.purchase_return_service import PurchaseReturnService
 from app.services.retailer_service import RetailerService
 from app.services.sales_order_service import SalesOrderService
+from app.services.sales_return_service import SalesReturnService
 from app.services.staff_service import StaffService
 from app.services.stock_analytics_service import StockAnalyticsService
 from app.services.stock_service import StockService
@@ -398,3 +406,34 @@ def get_sales_order_service(
         uom_service=uom_service,
         audit_service=audit_service,
     )
+
+
+@lru_cache
+def get_sales_return_repository() -> SalesReturnRepositoryInterface:
+    """Factory for in-memory SalesReturnRepositoryInterface."""
+    return InMemorySalesReturnRepository()
+
+
+def get_db_sales_return_repository(
+    db: Session = Depends(get_db_session),
+) -> SalesReturnRepositoryInterface:
+    """Factory for database-backed SalesReturnRepositoryInterface."""
+    return SqlAlchemySalesReturnRepository(session=db)
+
+
+def get_sales_return_service(
+    return_repo: SalesReturnRepositoryInterface = Depends(get_db_sales_return_repository),
+    sales_order_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> SalesReturnService:
+    """Factory for SalesReturnService with DIP dependencies."""
+    return SalesReturnService(
+        return_repo=return_repo,
+        sales_order_repo=sales_order_repo,
+        stock_repo=stock_repo,
+        product_repo=product_repo,
+        audit_service=audit_service,
+    )
+

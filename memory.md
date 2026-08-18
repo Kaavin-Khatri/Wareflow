@@ -2082,5 +2082,82 @@
 - `memory.md`
 - `codebase_audit.md`
 
+---
+
+## Step 8.3 — Retailer Returns (RMA In)
+
+**Timestamp:** 2026-08-18T15:20:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Schemas & DTOs (`apps/api/app/schemas/sales_returns.py`)**:
+   - Implemented `SalesReturnItemCreateRequest`, `SalesReturnCreateRequest`, `SalesReturnStatusUpdateRequest`, `SalesReturnItemResponse`, `SalesReturnResponse`, and `SalesReturnListResponse`.
+   - Included product metadata, line pricing, condition tags (`resellable` | `damaged`), and total credit adjustment values.
+2. **Stock Repository Inbound RMA Extension (`StockRepositoryInterface` & `SqlAlchemyStockRepository` / `InMemoryStockRepository`)**:
+   - Added `record_sales_return_stock(product_id, quantity, batch_id, warehouse_id, reference_id, created_by)` to atomically top up `StockBatch.quantity` and insert immutable `StockMovement(type=return_in, reference_type="sales_return")`.
+3. **Sales Return Repositories (`SalesReturnRepositoryInterface` & `SqlAlchemySalesReturnRepository` / `InMemorySalesReturnRepository`)**:
+   - Implemented protocol interface and implementations with eager-loading queries and cumulative returned quantities calculation (`get_returned_quantities_by_order`).
+4. **Sales Return Domain Service (`SalesReturnService`)**:
+   - **Sales Order Quantity Gate**: Validates that order exists and is in a returnable fulfillment status (`confirmed`, `packed`, `shipped`, `delivered`), and verifies requested return quantity does not exceed (`sold_qty - previously_returned_qty`).
+   - **Condition-Based Restocking Engine**: Items marked `resellable` increment sellable batch stock and insert `RETURN_IN` ledger movements. Items marked `damaged` are logged in return records for loss tracking and credit calculation, but strictly do NOT increment sellable stock.
+   - **Credit Adjustment Intent**: Pre-calculates line refund amounts based on original sales order unit pricing.
+   - **State Machine & Audit Logging**: `requested` -> `approved` (restocked) / `rejected`. Emits audit logs on creation, approval, and rejection.
+5. **FastAPI Endpoints (`apps/api/app/api/routers/sales_returns.py`)**:
+   - `GET /sales-returns`: Filterable by retailer, sales order ID, status, and search query.
+   - `POST /sales-returns`: Request new RMA return.
+   - `GET /sales-returns/{id}`: Detailed RMA return record.
+   - `PATCH /sales-returns/{id}/approve`: Approves return and restocks resellable inventory.
+   - `PATCH /sales-returns/{id}/reject`: Rejects return request.
+   - Registered router in `main.py` and DI factories in `di.py`.
+6. **Frontend Liquid Glass View (`apps/web/app/admin/sales-returns/page.tsx`)**:
+   - Built Liquid Glass layout with KPI cards: Total RMA Returns, Pending Approvals, Resellable Restocked Units, Damaged Write-offs.
+   - Filter pills (`All`, `Requested`, `Approved`, `Rejected`), `DataTable` with status badges and condition pills.
+   - Request RMA Return modal with sales order picker and line items condition assessment.
+   - Return Details modal with line items table, credit adjustment banner, and status actions (`Approve (Restock Resellable)`, `Reject Return`).
+   - Added direct "Request RMA Return" action button in `/admin/sales-orders` detail modal and updated `nav.ts` `Returns & RMA` link to `/admin/sales-returns`.
+7. **Automated Testing & QA Verification**:
+   - Backend `apps/api/tests/test_sales_returns.py` (7 tests covering sold quantity caps, cumulative return validation, resellable batch replenishment, damaged write-offs excluding sellable stock, rejection, and full FastAPI router integration).
+   - Frontend `apps/web/lib/__tests__/sales-returns.test.tsx` (5 tests covering KPI cards, search filtering, status tab filtering, modal creation, and approve/reject workflows).
+   - 117/117 Pytest backend tests passing (100% green).
+   - 96/96 Vitest frontend tests passing across 21 test files (100% green).
+   - 0 errors / 0 warnings on Ruff and ESLint; Next.js build succeeding with 29 static and dynamic routes.
+
+### Decisions
+
+- **Condition-Based Restocking Rule ("Not Every Return is Stock Back")**: Resellable stock returns to inventory batches via immutable `StockMovement(type=return_in)` ledger entries. Damaged stock is stored in `sales_return_items` for loss tracking and credit ledger adjustments, but is strictly excluded from sellable inventory batches to prevent corrupted inventory dispatch.
+- **Original Quantity Sold Cap**: A retailer return request cannot exceed the fulfilled quantity for any line item on that sales order, factoring in all active previous return requests on the order.
+- **Credit Adjustment Intent Stored**: Calculates the financial refund value upfront using the sales order line item's negotiated wholesale price, preparing seamless handoff for Phase 9 Billing & Invoicing credit notes.
+
+### Key values for future steps
+
+- Sales Returns API: `GET /sales-returns`, `POST /sales-returns`, `GET /sales-returns/{id}`, `PATCH /sales-returns/{id}/approve`, `PATCH /sales-returns/{id}/reject`
+- Web Route: `/admin/sales-returns`
+- Status Workflow: `requested` -> `approved` (restocked) / `rejected`
+- Condition Enum: `resellable` (restocks inventory), `damaged` (write-off / loss tracking only)
+
+### Files Created
+
+- `apps/api/app/schemas/sales_returns.py`
+- `apps/api/app/repositories/interfaces/sales_return_repository.py`
+- `apps/api/app/repositories/impl/sales_return_repository.py`
+- `apps/api/app/services/sales_return_service.py`
+- `apps/api/app/api/routers/sales_returns.py`
+- `apps/api/tests/test_sales_returns.py`
+- `apps/web/app/admin/sales-returns/page.tsx`
+- `apps/web/lib/__tests__/sales-returns.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/repositories/interfaces/stock_repository.py`
+- `apps/api/app/repositories/impl/stock_repository.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/web/app/admin/sales-orders/page.tsx`
+- `apps/web/lib/nav.ts`
+- `memory.md`
+- `codebase_audit.md`
+
+
 
 

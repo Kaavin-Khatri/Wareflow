@@ -102,11 +102,41 @@ class SqlAlchemySalesOrderRepository(SalesOrderRepositoryInterface):
 class InMemorySalesOrderRepository(SalesOrderRepositoryInterface):
     """In-Memory implementation of SalesOrderRepositoryInterface for fast isolated tests."""
 
-    def __init__(self, orders: list[dict[str, Any]] | None = None):
+    def __init__(
+        self,
+        orders: list[dict[str, Any] | SalesOrder] | None = None,
+        initial_data: list[dict[str, Any] | SalesOrder] | None = None,
+    ):
         self.orders: dict[str, dict[str, Any]] = {}
-        if orders:
-            for o in orders:
-                self.orders[o["id"]] = dict(o)
+        all_orders = orders or initial_data
+        if all_orders:
+            for o in all_orders:
+                if isinstance(o, SalesOrder):
+                    self.orders[o.id] = {
+                        "id": o.id,
+                        "so_number": o.so_number,
+                        "buyer_type": o.buyer_type,
+                        "retailer_id": o.retailer_id,
+                        "customer_id": o.customer_id,
+                        "status": o.status,
+                        "total_amount": o.total_amount,
+                        "order_date": o.order_date,
+                        "created_at": o.created_at,
+                        "items": [
+                            {
+                                "id": it.id,
+                                "so_id": it.so_id,
+                                "product_id": it.product_id,
+                                "qty": it.qty,
+                                "unit_price": it.unit_price,
+                                "uom_id": getattr(it, "uom_id", None),
+                            }
+                            for it in (o.items or [])
+                        ],
+                    }
+                else:
+                    self.orders[o["id"]] = dict(o)
+
 
     def _to_model(self, data: dict[str, Any]) -> SalesOrder:
         so = SalesOrder(

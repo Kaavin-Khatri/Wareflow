@@ -117,3 +117,20 @@ class StockRepositoryInterface(Protocol):
         - Insert compensating StockMovement(type=adjustment) rows
         """
         ...
+
+    def record_sales_return_stock(
+        self,
+        product_id: str,
+        quantity: float,
+        batch_id: str | None = None,
+        warehouse_id: str | None = None,
+        reference_id: str | None = None,
+        created_by: str | None = None,
+    ) -> tuple[StockBatch | None, Any]:
+        """
+        Record inbound stock return from a retailer (RMA In) for resellable items:
+        - Re-increment matching StockBatch quantity (or top up / create batch for product)
+        - Insert an immutable StockMovement(type=return_in, reference_type="sales_return") ledger entry
+        """
+        ...
+

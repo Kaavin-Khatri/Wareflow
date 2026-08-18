@@ -25,6 +25,7 @@ from app.api.routers import (
     retailers,
     roles,
     sales_orders,
+    sales_returns,
     staff,
     stock,
     stock_analytics,
@@ -67,11 +68,13 @@ def create_app() -> FastAPI:
     application.include_router(stock_analytics.router)
     application.include_router(retailers.router)
     application.include_router(sales_orders.router)
+    application.include_router(sales_returns.router)
     application.include_router(suppliers.router)
     application.include_router(purchase_orders.router)
     application.include_router(purchase_returns.router)
     application.include_router(business_settings.router)
     application.include_router(alerts.router)
+
 
     return application
 

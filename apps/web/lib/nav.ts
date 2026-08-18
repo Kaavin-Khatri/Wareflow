@@ -98,10 +98,11 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
       },
       {
         name: "Returns & RMA",
-        href: "/returns",
+        href: "/admin/sales-returns",
         icon: "RotateCcw",
         requiredPermission: "orders:view",
       },
+
     ],
   },
   {

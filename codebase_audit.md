@@ -462,11 +462,26 @@ wareflow/
 | GET    | `/analytics/stock/spend-by-category`   | Ranked procurement spend by product category        | Yes (Authenticated)             |
 | GET    | `/analytics/stock/avg-cost-trend`      | Product cost price movement and price creep tracker | Yes (Authenticated)             |
 | GET    | `/retailers`                           | List all wholesale retailers                        | Yes (Authenticated)             |
+| POST   | `/retailers`                           | Create wholesale retailer profile with pricing tier | Yes (`inventory:manage`)        |
+| GET    | `/retailers/{id}`                      | Get single retailer profile details                 | Yes (Authenticated)             |
+| PATCH  | `/retailers/{id}`                      | Update retailer information or status               | Yes (`inventory:manage`)        |
 | PATCH  | `/retailers/{id}/credit-limit`         | Update retailer credit limit (audited)              | Yes (`settings:manage`)         |
+| POST   | `/retailers/{id}/calculate-pricing`    | Calculate tier-discounted price per quantity        | Yes (Authenticated)             |
+| GET    | `/sales-orders`                        | List sales orders with status/retailer filters      | Yes (`orders:view`)             |
+| POST   | `/sales-orders`                        | Create new draft sales order                        | Yes (`orders:create`)           |
+| GET    | `/sales-orders/{id}`                   | Get sales order detail with line items & tier prices| Yes (`orders:view`)             |
+| POST   | `/sales-orders/{id}/confirm`           | Credit check + FIFO stock deduction confirmation    | Yes (`orders:create`)           |
+| PATCH  | `/sales-orders/{id}/status`            | Advance order fulfillment (packed, shipped, etc.)   | Yes (`orders:create`)           |
+| GET    | `/sales-returns`                       | List retailer sales returns (RMA In) with filters   | Yes (`orders:view`)             |
+| POST   | `/sales-returns`                       | Request retailer sales return (RMA In)              | Yes (`orders:create`)           |
+| GET    | `/sales-returns/{id}`                  | Get sales return record with condition assessment   | Yes (`orders:view`)             |
+| PATCH  | `/sales-returns/{id}/approve`          | Approve return & restock resellable items (RETURN_IN)| Yes (`inventory:manage`)       |
+| PATCH  | `/sales-returns/{id}/reject`           | Reject RMA return request                           | Yes (`orders:create`)           |
 | GET    | `/suppliers`                           | List goods suppliers with search & active filters   | Yes (Authenticated)             |
 | POST   | `/suppliers`                           | Register new supplier with GSTIN validation         | Yes (`inventory:manage`)        |
 | GET    | `/suppliers/{id}`                      | Retrieve details for a single supplier              | Yes (Authenticated)             |
 | PATCH  | `/suppliers/{id}`                      | Update supplier details, contacts, or active status | Yes (`inventory:manage`)        |
+
 
 ## Architecture Layers
 
@@ -523,6 +538,8 @@ wareflow/
 | Credit Check Order of Operations        | Credit verification (`credit_balance + order_total <= credit_limit`) strictly executes before inventory inspection; shortfalls abort with zero batch alterations    |
 | FIFO Oldest-Expiry Stock Deduction      | Confirming an order is the sole outbound path, consuming batches oldest-expiry-first (`expiry_date ASC nulls last, received_at ASC`) with atomic `StockMovement(type=out)` |
 | Compensating Cancellation Adjustments   | Cancelling a confirmed sales order creates `StockMovement(type=adjustment, reference_type="sales_order_cancellation")` rows and refunds credit, preserving ledger  |
+| Condition-Based Return Restocking       | `SalesReturnService` enforces that resellable items restock batches with `RETURN_IN` movements, while damaged items are tracked for loss/credit without altering sellable inventory batches |
+
 
 | Cloud Storage Validation & Upload | Supabase Storage `product-images` bucket handles catalog media with strict <=5MB and JPEG/PNG/WebP validation |
 

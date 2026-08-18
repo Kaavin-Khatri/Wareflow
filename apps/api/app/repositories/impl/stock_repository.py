@@ -358,8 +358,54 @@ class SqlAlchemyStockRepository(StockRepositoryInterface):
 
         return compensating_movements
 
+    def record_sales_return_stock(
+        self,
+        product_id: str,
+        quantity: float,
+        batch_id: str | None = None,
+        warehouse_id: str | None = None,
+        reference_id: str | None = None,
+        created_by: str | None = None,
+    ) -> tuple[StockBatch | None, StockMovement]:
+        qty = round(float(quantity), 2)
+        batch = None
+        if batch_id:
+            batch = self.session.get(StockBatch, batch_id)
+        if not batch and product_id:
+            batches = self.get_batches_by_product(product_id, warehouse_id)
+            if batches:
+                batch = batches[0]
+
+        target_wh_id = warehouse_id
+        if batch:
+            batch.quantity = round(float(batch.quantity) + qty, 2)
+            target_wh_id = target_wh_id or batch.warehouse_id
+            self.session.flush()
+
+        if not target_wh_id:
+            wh_stmt = select(Warehouse).limit(1)
+            wh = self.session.execute(wh_stmt).scalar_one_or_none()
+            target_wh_id = wh.id if wh else "wh-default"
+
+        movement = StockMovement(
+            id=str(uuid.uuid4()),
+            product_id=product_id,
+            warehouse_id=target_wh_id,
+            batch_id=batch.id if batch else None,
+            type=StockMovementTypeEnum.RETURN_IN,
+            quantity=qty,
+            reference_type="sales_return",
+            reference_id=reference_id,
+            created_by=created_by,
+        )
+        self.session.add(movement)
+        self.session.flush()
+
+        return batch, movement
+
 
 class InMemoryStockRepository(StockRepositoryInterface):
+
     """In-Memory implementation of StockRepositoryInterface for isolated unit tests."""
 
     def __init__(
@@ -788,3 +834,72 @@ class InMemoryStockRepository(StockRepositoryInterface):
             compensating_movements.append(adj_movement)
 
         return compensating_movements
+
+    def record_sales_return_stock(
+        self,
+        product_id: str,
+        quantity: float,
+        batch_id: str | None = None,
+        warehouse_id: str | None = None,
+        reference_id: str | None = None,
+        created_by: str | None = None,
+    ) -> tuple[StockBatch | None, StockMovement]:
+        qty = round(float(quantity), 2)
+        batch_data = None
+        if batch_id and batch_id in self.batches:
+            batch_data = self.batches[batch_id]
+        elif product_id:
+            for b in self.batches.values():
+                if b["product_id"] == product_id and (
+                    not warehouse_id or b["warehouse_id"] == warehouse_id
+                ):
+                    batch_data = b
+                    break
+
+        target_wh_id = warehouse_id
+        if batch_data:
+            batch_data["quantity"] = round(float(batch_data["quantity"]) + qty, 2)
+            target_wh_id = target_wh_id or batch_data["warehouse_id"]
+
+        if not target_wh_id:
+            target_wh_id = next(iter(self.warehouses.keys()), "wh-default")
+
+        movement = StockMovement(
+            id=str(uuid.uuid4()),
+            product_id=product_id,
+            warehouse_id=target_wh_id,
+            batch_id=batch_data["id"] if batch_data else None,
+            type=StockMovementTypeEnum.RETURN_IN,
+            quantity=qty,
+            reference_type="sales_return",
+            reference_id=reference_id,
+            created_by=created_by,
+        )
+        self.movements.append(
+            {
+                "id": movement.id,
+                "product_id": movement.product_id,
+                "warehouse_id": movement.warehouse_id,
+                "batch_id": movement.batch_id,
+                "type": movement.type,
+                "quantity": movement.quantity,
+                "reference_type": movement.reference_type,
+                "reference_id": movement.reference_id,
+                "created_by": movement.created_by,
+            }
+        )
+
+        ret_batch = None
+        if batch_data:
+            ret_batch = StockBatch(
+                id=batch_data["id"],
+                product_id=batch_data["product_id"],
+                warehouse_id=batch_data["warehouse_id"],
+                batch_no=batch_data.get("batch_no", "BATCH-RET"),
+                quantity=batch_data["quantity"],
+                expiry_date=batch_data.get("expiry_date"),
+                received_at=batch_data.get("received_at", datetime.now(UTC)),
+            )
+
+        return ret_batch, movement
+
