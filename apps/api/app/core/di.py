@@ -23,6 +23,10 @@ from app.repositories.impl.customer_repository import (
     InMemoryCustomerRepository,
     SqlAlchemyCustomerRepository,
 )
+from app.repositories.impl.invoice_repository import (
+    InMemoryInvoiceRepository,
+    SqlAlchemyInvoiceRepository,
+)
 from app.repositories.impl.product_repository import (
     InMemoryProductRepository,
     SqlAlchemyProductRepository,
@@ -75,6 +79,9 @@ from app.repositories.interfaces.business_settings_repository import (
 from app.repositories.interfaces.customer_repository import (
     CustomerRepositoryInterface,
 )
+from app.repositories.interfaces.invoice_repository import (
+    InvoiceRepositoryInterface,
+)
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
 from app.repositories.interfaces.profile_repository import ProfileRepository
 from app.repositories.interfaces.purchase_order_repository import (
@@ -102,6 +109,7 @@ from app.services.alert_engine_service import AlertEngineService, ExpiringLicens
 from app.services.audit_service import AuditService
 from app.services.business_settings_service import BusinessSettingsService
 from app.services.customer_service import CustomerService
+from app.services.invoice_service import InvoiceService
 from app.services.pricing_strategy import PricingEngineService
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
@@ -525,6 +533,35 @@ def get_recall_service(
         stock_repo=stock_repo,
         audit_repo=audit_repo,
     )
+
+
+@lru_cache
+def get_invoice_repository() -> InvoiceRepositoryInterface:
+    """Factory for in-memory InvoiceRepositoryInterface."""
+    return InMemoryInvoiceRepository()
+
+
+def get_db_invoice_repository(
+    db: Session = Depends(get_db_session),
+) -> InvoiceRepositoryInterface:
+    """Factory for database-backed InvoiceRepositoryInterface."""
+    return SqlAlchemyInvoiceRepository(session=db)
+
+
+def get_invoice_service(
+    invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
+    sales_order_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    audit_repo: AuditRepository = Depends(get_audit_repository),
+) -> InvoiceService:
+    """Factory for InvoiceService with DIP dependencies."""
+    return InvoiceService(
+        invoice_repo=invoice_repo,
+        sales_order_repo=sales_order_repo,
+        product_repo=product_repo,
+        audit_repo=audit_repo,
+    )
+
 
 
 

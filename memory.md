@@ -2440,6 +2440,86 @@
 - `codebase_audit.md`
 - `memory.md`
 
+## Step 10.1 — Invoice Generation (GST-ready)
+
+**Timestamp:** 2026-08-18T16:58:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Pydantic V2 Schemas (`apps/api/app/schemas/invoices.py`)**:
+   - `InvoiceItemResponse`, `InvoiceResponse`, `InvoiceListItemResponse`, `InvoiceListResponse`.
+   - Frozen snapshot representation of line items, HSN codes, GST rate breakdown, subtotal, tax amount, and grand total.
+2. **Repository Layer & Dependency Inversion (`apps/api/app/repositories/interfaces/invoice_repository.py` & `apps/api/app/repositories/impl/invoice_repository.py`)**:
+   - Defined `InvoiceRepositoryInterface` Protocol (`get_by_id`, `get_by_sales_order_id`, `get_next_invoice_number`, `create_invoice`, `list_invoices`).
+   - Implemented `SqlAlchemyInvoiceRepository` with joined loads for line items and sales order metadata.
+   - Implemented `InMemoryInvoiceRepository` for fast, hermetic zero-IO domain testing with sequential financial-year numbering regex parser.
+3. **Domain Service (`apps/api/app/services/invoice_service.py`)**:
+   - `generate_invoice_for_sales_order(sales_order_id, current_user)`:
+     - **Status Guardrail**: Enforces order status must be `confirmed`, `packed`, `shipped`, or `delivered`. Rejects `draft` or `cancelled` orders with HTTP 422.
+     - **Idempotency**: Checks `invoice_repo.get_by_sales_order_id(sales_order_id)`; if already generated, returns existing invoice immediately without duplicates.
+     - **Frozen Snapshotting**: Snapshots each `sales_order_item` into `InvoiceItem` at confirmed pricing and snapshots catalog `product_name` and `hsn_code` to ensure immunity from future catalog mutations.
+     - **GST Computation**: Calculates 18% default GST (or category-specific rate), item tax amounts, CGST/SGST breakdown, subtotal, and total amount.
+     - **Audit Logging**: Emits `INVOICE_GENERATED` audit event to `AdminAuditLog`.
+   - `get_invoice(invoice_id)`: Fetches frozen invoice by ID with full item details.
+   - `list_invoices(...)`: Paginated and filterable listing by retailer ID, buyer type, status (`unpaid`, `partially_paid`, `paid`, `overdue`), and search queries.
+4. **API Router & Dependency Injection (`apps/api/app/api/routers/invoices.py`, `apps/api/app/core/di.py`, `apps/api/app/main.py`)**:
+   - `POST /sales-orders/{id}/invoice`: Permission-guarded (`orders:manage`) invoice generation.
+   - `GET /invoices`: Permission-guarded (`orders:view` / `invoices:view`) filterable invoice list.
+   - `GET /invoices/{id}`: Permission-guarded invoice detail retrieval.
+   - Registered router with `/api/v1` prefix and OpenAPI tags `["Invoices & Billing"]`.
+5. **Frontend Web UI (`apps/web/app/admin/invoices/page.tsx`, `apps/web/app/admin/sales-orders/page.tsx`, `apps/web/lib/nav.ts`)**:
+   - Built `/admin/invoices` page with 4 KPI cards (Total Invoiced Value, Outstanding Unpaid, Collected Revenue, Active Invoices).
+   - Invoices `DataTable` with status filtering tabs (`all`, `unpaid`, `paid`, `partially_paid`, `overdue`), search filter, and currency formatting.
+   - **GST Tax Invoice Preview & Print Modal (`GlassModal`)**: Full compliant wholesale tax invoice layout including distributor credentials (GSTIN, FSSAI), buyer billing details, frozen line item matrix with HSN codes, and CGST/SGST tax breakdown with browser print/PDF export support.
+   - Updated Sales Order detail modal with "Generate / View Invoice" button for confirmed/in-flight orders.
+   - Added `GST Invoices` link in sidebar navigation under Wholesale Operations (`nav.ts`).
+6. **Automated Testing & QA Verification**:
+   - Backend `apps/api/tests/test_invoices.py` (5 tests passing: idempotency verification, frozen snapshotting against price hikes, gap-free financial-year sequence e.g. `INV/2026-27/0001`, draft/cancelled rejection guardrail, HTTP client router test).
+   - Frontend `apps/web/lib/__tests__/invoices.test.tsx` (3 tests passing: dashboard KPIs, status filtering, invoice preview modal).
+   - Full test suites: 142 / 142 Pytest tests passing (100% green); 111 / 111 Vitest tests passing across 26 test suites (100% green).
+   - 0 errors / 0 warnings on Ruff and ESLint; Next.js production build cleanly compiled with 35 routes.
+
+### Decisions
+
+- **Invoice Numbering Scheme**: Recorded verbatim — Indian financial year prefixed, sequential gap-free (e.g. `INV/2026-27/0001`). Financial year calculated from April 1 to March 31.
+- **Frozen Snapshot Principle**: Invoice is a frozen accounting document. Product names, HSN codes, quantities, unit prices, tax rates, and totals are permanently captured upon creation and never live-recalculated from the order or product catalog.
+- **Idempotency Guarantee**: Generating an invoice twice for the same sales order returns the existing invoice and invoice number without creating a duplicate record or incrementing sequence numbers.
+- **Strict Order Status Guardrail**: Only orders in status `confirmed` or later (`confirmed`, `packed`, `shipped`, `delivered`) can be invoiced; `draft` or `cancelled` orders are blocked.
+
+### Key values for future steps
+
+- Invoice Model: `Invoice`, `InvoiceItem` (`apps/api/app/models/billing.py`)
+- Invoice Repository Interface: `apps/api/app/repositories/interfaces/invoice_repository.py`
+- Invoice Repository Impl: `apps/api/app/repositories/impl/invoice_repository.py`
+- Invoice Domain Service: `apps/api/app/services/invoice_service.py`
+- Invoice Router: `apps/api/app/api/routers/invoices.py` (`POST /sales-orders/{id}/invoice`, `GET /invoices`, `GET /invoices/{id}`)
+- Web Route: `/admin/invoices`
+- Navigation: `nav.ts` -> `/admin/invoices` (`invoices:view`)
+
+### Files Created
+
+- `apps/api/app/schemas/invoices.py`
+- `apps/api/app/repositories/interfaces/invoice_repository.py`
+- `apps/api/app/repositories/impl/invoice_repository.py`
+- `apps/api/app/services/invoice_service.py`
+- `apps/api/app/api/routers/invoices.py`
+- `apps/api/tests/test_invoices.py`
+- `apps/web/app/admin/invoices/page.tsx`
+- `apps/web/lib/__tests__/invoices.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/api/app/repositories/impl/product_repository.py`
+- `apps/api/app/repositories/impl/sales_order_repository.py`
+- `apps/web/app/admin/sales-orders/page.tsx`
+- `apps/web/lib/nav.ts`
+- `codebase_audit.md`
+- `memory.md`
+
+
 
 
 

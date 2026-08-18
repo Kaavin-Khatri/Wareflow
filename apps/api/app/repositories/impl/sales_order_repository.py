@@ -159,7 +159,12 @@ class InMemorySalesOrderRepository(SalesOrderRepositoryInterface):
                 pricing_tier=r_data.get("pricing_tier", "standard"),
                 credit_limit=float(r_data.get("credit_limit", 0.0)),
                 credit_balance=float(r_data.get("credit_balance", 0.0)),
+                gstin=r_data.get("gstin"),
+                phone=r_data.get("phone"),
+                email=r_data.get("email"),
+                address=r_data.get("address"),
             )
+
 
         items: list[SalesOrderItem] = []
         for item_data in data.get("items", []):
@@ -263,8 +268,13 @@ class InMemorySalesOrderRepository(SalesOrderRepositoryInterface):
                 "pricing_tier": getattr(order.retailer, "pricing_tier", "standard"),
                 "credit_limit": float(order.retailer.credit_limit),
                 "credit_balance": float(order.retailer.credit_balance),
+                "gstin": getattr(order.retailer, "gstin", None),
+                "phone": getattr(order.retailer, "phone", None),
+                "email": getattr(order.retailer, "email", None),
+                "address": getattr(order.retailer, "address", None),
             }
         self.orders[order.id] = order_dict
+
         return self._to_model(order_dict)
 
     def update(self, order: SalesOrder) -> SalesOrder:

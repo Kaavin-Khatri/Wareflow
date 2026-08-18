@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import AppLayout from "@/components/AppLayout";
 import { ListViewTemplate } from "@/components/templates/ListViewTemplate";
 import { DataTable, DataTableColumn } from "@/components/DataTable";
@@ -24,10 +25,12 @@ import {
   Sparkles,
   AlertTriangle,
   FileSpreadsheet,
+  FileText,
   Eye,
   Trash2,
   RotateCcw,
 } from "lucide-react";
+
 
 
 
@@ -102,6 +105,9 @@ export default function SalesOrdersAdminPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
+  const router = useRouter();
+
 
   // New order form state
   const [buyerType, setBuyerType] = useState<"retailer" | "customer">("retailer");
@@ -298,6 +304,22 @@ export default function SalesOrdersAdminPage() {
       setSubmitting(false);
     }
   }
+
+  async function handleGenerateInvoice(orderId: string) {
+    setActionError(null);
+    setGeneratingInvoice(true);
+    try {
+      await apiClient.post(`/sales-orders/${orderId}/invoice`);
+      router.push("/admin/invoices");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setActionError(message || "Failed to generate invoice.");
+    } finally {
+      setGeneratingInvoice(false);
+    }
+  }
+
+
 
 
   const columns: DataTableColumn<SalesOrder>[] = [
@@ -968,7 +990,21 @@ export default function SalesOrdersAdminPage() {
                       </Link>
                     </div>
                   )}
+
+                  {selectedOrder.status !== "draft" && selectedOrder.status !== "cancelled" && (
+                    <GlassButton
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={generatingInvoice}
+                      onClick={() => handleGenerateInvoice(selectedOrder.id)}
+                    >
+                      <FileText className="w-3.5 h-3.5 mr-1 text-purple-400" />
+                      {generatingInvoice ? "Generating..." : "Generate / View Invoice"}
+                    </GlassButton>
+                  )}
                 </div>
+
               </div>
             </div>
           )}

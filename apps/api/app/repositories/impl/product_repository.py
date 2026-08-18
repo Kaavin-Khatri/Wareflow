@@ -45,8 +45,10 @@ class InMemoryProductRepository(ProductRepositoryInterface):
                     "cost_price": float(item.cost_price or 0.0),
                     "wholesale_price": float(item.wholesale_price or 0.0),
                     "unit": item.unit,
+                    "hsn_code": getattr(item, "hsn_code", None),
                     "is_active": getattr(item, "is_active", True),
                 }
+
             else:
                 self._products[item["id"]] = dict(item)
 

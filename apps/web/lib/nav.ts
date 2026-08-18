@@ -126,10 +126,12 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
 
       {
         name: "GST Invoices",
-        href: "/invoices",
+        href: "/admin/invoices",
         icon: "ReceiptText",
         requiredPermission: "invoices:view",
       },
+
+
       {
         name: "Returns & RMA",
         href: "/admin/sales-returns",

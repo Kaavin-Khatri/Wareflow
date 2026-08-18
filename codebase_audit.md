@@ -565,14 +565,12 @@ wareflow/
 | Recall Outbound Ledger Traceability     | `RecallService` automatically traces every affected sales order and buyer via `stock_movements(type=out, reference_type='sales_order')` references, eliminating separate manual recall tracking logs |
 | Unsellable Recalled Stock Isolation     | Recalled batches are dynamically excluded from FIFO sales deductions without deleting historical batch records, keeping complete compliance auditability intact |
 | Notification Engine Zero-Duplication   | Recall broadcasts reuse the existing notification engine / audit log infrastructure with zero new messaging channel code |
-
-
-
-
-
-
+| Invoice Numbering Verbatim Sequence     | Indian financial-year prefixed sequential gap-free numbering (`INV/YYYY-YY/0001`, e.g. `INV/2026-27/0001`) enforced via repository regex sequence parser |
+| Frozen Invoicing Accounting Document    | Invoice is a frozen snapshot where line prices, HSN codes, product names, GST rates (18%), and totals are permanently locked at issuance time, immune to later catalog edits |
+| Idempotent Order Invoicing              | Re-requesting invoice generation for an already-invoiced sales order returns the existing invoice without duplicate creation or sequence number gaps |
+| Invoice Status Guardrail                | Invoicing is strictly limited to sales orders in status `confirmed` or later (`confirmed`, `packed`, `shipped`, `delivered`). Draft or cancelled orders are rejected |
+| InvoiceRepository Protocol (DIP)        | `InvoiceService` depends exclusively on `InvoiceRepositoryInterface` Protocol, guaranteeing zero DB coupling |
 | Cloud Storage Validation & Upload | Supabase Storage `product-images` bucket handles catalog media with strict <=5MB and JPEG/PNG/WebP validation |
-
 | Universal DataTable Rule | All future list and ledger screens must use `DataTable`; responsive mobile card-view is automatic below 768px |
 | Low-Power Glass Degradation | Low memory (<4GB), cores (<=4), or reduced-transparency drops expensive blurs to flat translucency at 60fps |
 | Motion Signals State Change | Motion is strictly reserved to draw attention to STATE CHANGES (active link shift, number count-up, table mutation) |
@@ -635,7 +633,9 @@ wareflow/
   - `sales_order_created`: Creation of draft sales order with line items (`POST /sales-orders`)
   - `sales_order_confirmed`: Confirmation of sales order with credit reservation & FIFO batch deduction (`POST /sales-orders/{id}/confirm`)
   - `sales_order_status_updated`: Fulfillment status changes (packed, shipped, delivered, cancelled) (`PATCH /sales-orders/{id}/status`)
+  - `invoice_generated`: Generation of sequential GST tax invoice for confirmed sales order (`POST /sales-orders/{id}/invoice`)
   - `retailer_created`: Registration of a new wholesale retailer account (`POST /retailers`)
+
 
   - `retailer_updated`: Updates to retailer contact info, pricing tier, or active status (`PATCH /retailers/{id}`)
   - `retailer_credit_limit_updated`: Retailer authorized credit limit adjustments (`PATCH /retailers/{id}/credit-limit`)
