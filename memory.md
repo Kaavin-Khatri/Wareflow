@@ -1934,3 +1934,75 @@
 - `memory.md`
 - `codebase_audit.md`
 
+---
+
+## Step 8.1 — Retailer CRUD & Bulk Pricing Tiers
+**Timestamp:** 2026-08-18T19:35:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Retailer Domain Schemas & Repository Protocol (DIP) (`apps/api/app/schemas/retailers.py`, `apps/api/app/repositories/interfaces/retailer_repository.py`, `apps/api/app/repositories/impl/retailer_repository.py`)**:
+   - Extended `RetailerResponse`, `RetailerCreateRequest`, and `RetailerUpdateRequest` with `pricing_tier` enum (`standard`, `silver`, `gold`), address, GSTIN, credit limits, balances, and computed `available_credit`.
+   - Updated `RetailerRepository` protocol with full CRUD operations (`get_by_id`, `get_by_name`, `list_all`, `create`, `update`, `update_credit_limit`).
+   - Implemented `SqlAlchemyRetailerRepository` and fast in-memory mock `InMemoryRetailerRepository`.
+2. **Pluggable Pricing Strategy Engine (Open/Closed Principle) (`apps/api/app/services/pricing_strategy.py`)**:
+   - Defined abstract `PricingStrategy` interface specifying `calculate_unit_price` and `calculate_line`.
+   - Built concrete strategies:
+     - `StandardPricingStrategy`: 0% discount (base wholesale price).
+     - `SilverPricingStrategy`: 5% discount on bulk line totals.
+     - `GoldPricingStrategy`: 10% discount on bulk line totals.
+     - `TieredDiscountPricingStrategy`: Volume-tiered quantity thresholds.
+   - Built `PricingEngineService` strategy registry enabling zero-modification extension of custom tiers (e.g. Platinum VIP).
+3. **Retailer Domain Service (`apps/api/app/services/retailer_service.py`)**:
+   - `RetailerService` managing retailer lifecycle, duplicate name prevention, pricing calculations, and automated audit logging for creations, updates, and credit limit alterations.
+4. **FastAPI Endpoints (`apps/api/app/api/routers/retailers.py`, `apps/api/app/core/di.py`)**:
+   - `GET /retailers` (pagination + search query + active filter).
+   - `POST /retailers` (retailer registration with tier assignment).
+   - `GET /retailers/{id}` (fetch single retailer profile).
+   - `PATCH /retailers/{id}` (profile/tier updates).
+   - `PATCH /retailers/{id}/credit-limit` (authorized credit updates with audit logging).
+5. **Frontend Web UI (`apps/web/app/admin/retailers/page.tsx`, `apps/web/lib/nav.ts`)**:
+   - Liquid Glass UI for `/admin/retailers` with KPI metric cards (Total Retailers, Active Accounts, Gold & Silver Tiers, Total Credit Extended).
+   - Responsive `DataTable` with tier badges, contact indicators, credit availability breakdown, and active status indicators.
+   - Modal create/edit form with real-time tier selector and credit limit inputs.
+   - Added `Retailers & B2B` to navigation sidebar.
+6. **Automated Testing & QA Verification**:
+   - Backend `apps/api/tests/test_retailers.py` (11 tests covering pricing strategies, gold vs standard price differentiation proof, OCP platinum tier extension proof, repository CRUD, service validations, and API HTTP lifecycle).
+   - Frontend `apps/web/lib/__tests__/retailers.test.tsx` (4 tests covering KPI cards, search filtering, status tab filtering, and modal registration).
+   - 103/103 Pytest backend tests passing.
+   - 86/86 Vitest frontend tests passing.
+   - 0 errors/0 warnings on Ruff and ESLint; Next.js build succeeding with 27 static routes.
+
+### Decisions
+
+- **Open/Closed Pricing Engine**: `PricingStrategy` pattern decouples discount calculation from order and checkout services. Adding new pricing schemes requires writing one new `PricingStrategy` subclass and registering it, requiring zero changes to order processing logic.
+- **Credit Line Visibility**: Track both `credit_limit` and `credit_balance` with computed `available_credit` to safeguard against retailer over-extension during subsequent sales order dispatch.
+
+### Key values for future steps
+
+- Retailers API: `GET /retailers`, `POST /retailers`, `GET /retailers/{id}`, `PATCH /retailers/{id}`
+- Pricing Engine: `PricingEngineService` (injectable into future `SalesOrderService`)
+- Web Route: `/admin/retailers`
+- Pricing Tiers: `standard` (0%), `silver` (5%), `gold` (10%)
+
+### Files Created
+
+- `apps/api/app/services/pricing_strategy.py`
+- `apps/api/tests/test_retailers.py`
+- `apps/web/app/admin/retailers/page.tsx`
+- `apps/web/lib/__tests__/retailers.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/schemas/retailers.py`
+- `apps/api/app/repositories/interfaces/retailer_repository.py`
+- `apps/api/app/repositories/impl/retailer_repository.py`
+- `apps/api/app/services/retailer_service.py`
+- `apps/api/app/api/routers/retailers.py`
+- `apps/api/app/core/di.py`
+- `apps/web/lib/nav.ts`
+- `memory.md`
+- `codebase_audit.md`
+
+

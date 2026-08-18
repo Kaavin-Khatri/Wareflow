@@ -58,6 +58,12 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         requiredPermission: "inventory:view",
       },
       {
+        name: "Retailers & B2B",
+        href: "/admin/retailers",
+        icon: "Store",
+        requiredPermission: "inventory:view",
+      },
+      {
         name: "Purchase Orders",
         href: "/admin/purchase-orders",
         icon: "FileSpreadsheet",
@@ -69,6 +75,7 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         icon: "Undo2",
         requiredPermission: "inventory:view",
       },
+
 
       {
         name: "Stock Analytics",

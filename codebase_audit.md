@@ -505,6 +505,8 @@ wareflow/
 | Business Settings Protocol (DIP)        | `BusinessSettingsService` depends exclusively on `BusinessSettingsRepositoryInterface` Protocol, guaranteeing complete database abstraction                                                         |
 | Open/Closed Alert Engine (OCP)          | `AlertEngineService` consumes extensible `AlertRule` strategies (such as `ExpiringLicenseRule`), allowing new compliance rules without modifying core engine logic                                |
 | Human Decision Guard for Expired FSSAI  | Expired supplier licenses trigger a non-blocking confirmation dialog requiring explicit user risk acknowledgment before PO creation, balancing regulatory safety with practical operations        |
+| RetailerRepository Protocol (DIP)       | `RetailerService` depends exclusively on `RetailerRepository` Protocol, enforcing unique retailer naming, phone/email validation, and complete mockability                                          |
+| Pluggable Pricing Strategy (OCP)        | `PricingEngineService` coordinates extensible `PricingStrategy` implementations (`Standard`, `Silver`, `Gold`, `TieredDiscount`), allowing custom tiers with zero sales order engine modifications |
 
 | Cloud Storage Validation & Upload | Supabase Storage `product-images` bucket handles catalog media with strict <=5MB and JPEG/PNG/WebP validation |
 | Universal DataTable Rule | All future list and ledger screens must use `DataTable`; responsive mobile card-view is automatic below 768px |
@@ -566,9 +568,11 @@ wareflow/
 ## Security & Audit Log Coverage
 
 - **Audited Operations**:
+  - `retailer_created`: Registration of a new wholesale retailer account (`POST /retailers`)
+  - `retailer_updated`: Updates to retailer contact info, pricing tier, or active status (`PATCH /retailers/{id}`)
+  - `retailer_credit_limit_updated`: Retailer authorized credit limit adjustments (`PATCH /retailers/{id}/credit-limit`)
   - `business_settings_updated`: Legal business entity details, GSTIN, or FSSAI license updates (`PUT /settings/business`)
   - `product_price_updated`: Product wholesale and cost price alterations (`PATCH /products/{id}/price`)
-  - `retailer_credit_limit_updated`: Retailer authorized credit limit adjustments (`PATCH /retailers/{id}/credit-limit`)
   - `role_permissions_updated`: Permission matrix role-to-permission mapping updates (`PATCH /roles/{id}/permissions`)
   - `staff_role_updated`: Staff member role reassignments (`PATCH /staff/{id}/role`)
   - `staff_status_updated`: Staff member activation / suspension toggles (`PATCH /staff/{id}/status`)
@@ -587,20 +591,8 @@ wareflow/
 - PostgreSQL connection passwords percent-encoded (`%40` for `@`) in connection strings
 - Server-side `httpOnly` session cookies protect Next.js routes with `sameSite: lax`
 
-- RFC 6238 TOTP two-factor authentication mandatory for financial and administrative roles (`Owner`, `Manager`, `Accountant`)
-- TOTP secrets and backup codes encrypted at rest with Fernet symmetric cryptography
-- Single-use recovery backup codes permanently deleted from database record on use
-- Database permissions loaded live per request for `CurrentUser` from `role_permissions`
-- `require_permission(code)` raises 403 naming the specific missing permission code
-- `require_2fa_if_enrolled` enforces 2FA challenge completion before sensitive operations
-- Tokens never trusted from client alone
-- .env files git-ignored forever (Secrets Rule #1)
-- .env.example updated with placeholders for every new var (Secrets Rule #2)
-- CORS restricted to allowed origins loaded dynamically from `ALLOWED_ORIGINS` settings
-- PostgreSQL connection passwords percent-encoded (`%40` for `@`) in connection strings
-- Server-side `httpOnly` session cookies protect Next.js routes with `sameSite: lax`
-
 ## Known Issues
 
 - **Forward-Built Pre-Phase 6 Purchasing Spend Charts**: Spend-over-time, supplier spend, and category spend charts are intentionally forward-built to complete the Stock Analytics UI, but stay at zero / display empty states until Phase 6 (Purchase Orders & Receiving) produces real purchase order receipt transactions. This is expected and documented.
 - **Supabase Free Project Inactivity Pause**: Supabase free-tier projects automatically pause after ~1 week of inactivity. If API endpoints return connection errors after an idle period, unpause the project from the Supabase dashboard.
+

@@ -32,7 +32,10 @@ from app.repositories.impl.purchase_return_repository import (
     InMemoryPurchaseReturnRepository,
     SqlAlchemyPurchaseReturnRepository,
 )
-from app.repositories.impl.retailer_repository import SqlAlchemyRetailerRepository
+from app.repositories.impl.retailer_repository import (
+    InMemoryRetailerRepository,
+    SqlAlchemyRetailerRepository,
+)
 from app.repositories.impl.stock_analytics_repository import (
     SqlAlchemyStockAnalyticsRepository,
 )
@@ -68,6 +71,7 @@ from app.repositories.interfaces.uom_repository import UomRepositoryInterface
 from app.services.alert_engine_service import AlertEngineService, ExpiringLicenseRule
 from app.services.audit_service import AuditService
 from app.services.business_settings_service import BusinessSettingsService
+from app.services.pricing_strategy import PricingEngineService
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
 from app.services.purchase_order_service import PurchaseOrderService
@@ -106,11 +110,6 @@ def get_profile_repository(db: Session = Depends(get_db_session)) -> ProfileRepo
 def get_audit_repository(db: Session = Depends(get_db_session)) -> AuditRepository:
     """Factory for AuditRepository interface."""
     return SqlAlchemyAuditRepository(session=db)
-
-
-def get_retailer_repository(db: Session = Depends(get_db_session)) -> RetailerRepository:
-    """Factory for RetailerRepository interface."""
-    return SqlAlchemyRetailerRepository(session=db)
 
 
 def get_storage_service(
@@ -167,12 +166,36 @@ def get_staff_service(
     return StaffService(profile_repo=repo, audit_service=audit_service)
 
 
+@lru_cache
+def get_in_memory_retailer_repository() -> RetailerRepository:
+    """Factory for in-memory RetailerRepository."""
+    return InMemoryRetailerRepository()
+
+
+def get_retailer_repository(db: Session = Depends(get_db_session)) -> RetailerRepository:
+    """Factory for database-backed RetailerRepository interface."""
+    return SqlAlchemyRetailerRepository(session=db)
+
+
+@lru_cache
+def get_pricing_engine_service() -> PricingEngineService:
+    """Factory for PricingEngineService (OCP strategy registry)."""
+    return PricingEngineService()
+
+
 def get_retailer_service(
     repo: RetailerRepository = Depends(get_retailer_repository),
     audit_service: AuditService = Depends(get_audit_service),
+    pricing_engine: PricingEngineService = Depends(get_pricing_engine_service),
 ) -> RetailerService:
-    """Factory for RetailerService with audit logging."""
-    return RetailerService(retailer_repo=repo, audit_service=audit_service)
+    """Factory for RetailerService with audit logging and pluggable pricing."""
+    return RetailerService(
+        retailer_repo=repo,
+        audit_service=audit_service,
+        pricing_engine=pricing_engine,
+    )
+
+
 
 
 def get_two_factor_service(
