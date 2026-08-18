@@ -18,29 +18,31 @@
 
 ## Stack & Versions
 
-| Layer              | Technology              | Version   |
-| ------------------ | ----------------------- | --------- |
-| Frontend framework | Next.js (App Router)    | 16.3.1    |
-| Frontend language  | TypeScript              | 5.9.3     |
-| UI library         | React                   | 19.2.8    |
-| CSS framework      | Tailwind CSS            | 4.3.3     |
-| Motion Stack (UI)  | motion (Framer Motion)  | 13.1.0    |
-| Motion (Timelines) | gsap                    | 3.15.0    |
-| Motion (Physics)   | @react-spring/web       | 10.1.2    |
-| Motion (Lists)     | @formkit/auto-animate   | 0.10.0    |
-| Motion (Micro SVG) | animejs                 | 3.2.2     |
-| Icons & Utility    | lucide-react, clsx, cva | latest    |
-| Auth client        | Firebase Web SDK        | 12.17.1   |
-| Test Runner (web)  | Vitest                  | 4.1.10    |
-| Backend framework  | FastAPI                 | >=0.115.0 |
-| Backend language   | Python                  | 3.14.6    |
-| ORM                | SQLAlchemy              | >=2.0.0   |
-| Migrations         | Alembic                 | >=1.13.0  |
-| Validation         | Pydantic                | >=2.0.0   |
-| Auth (backend)     | Firebase Admin SDK      | >=6.0.0   |
-| 2FA (TOTP & QR)    | pyotp + qrcode          | >=2.9.0   |
-| Encryption         | cryptography            | >=42.0.0  |
-| Test Runner (api)  | Pytest + pytest-cov     | >=8.0.0   |
+| Layer              | Technology                | Version   |
+| ------------------ | ------------------------- | --------- |
+| Frontend framework | Next.js (App Router)      | 16.3.1    |
+| Frontend language  | TypeScript                | 5.9.3     |
+| UI library         | React                     | 19.2.8    |
+| CSS framework      | Tailwind CSS              | 4.3.3     |
+| 3D WebGL Engine    | @react-three/fiber, three | 9.6.0     |
+| 3D Helpers & Drei  | @react-three/drei         | 10.7.7    |
+| Motion Stack (UI)  | motion (Framer Motion)    | 13.1.0    |
+| Motion (Timelines) | gsap + ScrollTrigger      | 3.15.0    |
+| Motion (Physics)   | @react-spring/web         | 10.1.2    |
+| Motion (Lists)     | @formkit/auto-animate     | 0.10.0    |
+| Motion (Micro SVG) | animejs                   | 3.2.2     |
+| Icons & Utility    | lucide-react, clsx, cva   | latest    |
+| Auth client        | Firebase Web SDK          | 12.17.1   |
+| Test Runner (web)  | Vitest                    | 4.1.10    |
+| Backend framework  | FastAPI                   | >=0.115.0 |
+| Backend language   | Python                    | 3.14.6    |
+| ORM                | SQLAlchemy                | >=2.0.0   |
+| Migrations         | Alembic                   | >=1.13.0  |
+| Validation         | Pydantic                  | >=2.0.0   |
+| Auth (backend)     | Firebase Admin SDK        | >=6.0.0   |
+| 2FA (TOTP & QR)    | pyotp + qrcode            | >=2.9.0   |
+| Encryption         | cryptography              | >=42.0.0  |
+| Test Runner (api)  | Pytest + pytest-cov       | >=8.0.0   |
 
 ## Services
 
@@ -125,9 +127,17 @@ wareflow/
 │   │   ├── components/
 │   │   │   ├── Sidebar.tsx         # Liquid glass dynamic navigation sidebar
 │   │   │   ├── AppLayout.tsx       # Modern topbar & responsive container layout
-│   │   │   ├── GradientBackdrop.tsx# Multi-orb GPU-accelerated liquid gradient backdrop
+│   │   │   ├── GradientBackdrop.tsx# Multi-orb GPU-accelerated animated gradient backdrop
 │   │   │   ├── ThemeProvider.tsx   # React 19 useSyncExternalStore theme + accent context
 │   │   │   ├── ThemeToggle.tsx     # Animated sun/moon liquid glass toggle button
+│   │   │   ├── marketing/          # 3D & Animated Public Landing Page
+│   │   │   │   ├── HeroScene.tsx      # Safe dynamic loader with reduced-motion bypass
+│   │   │   │   ├── Hero3DCanvas.tsx   # React Three Fiber low-poly floating node scene
+│   │   │   │   ├── Hero3DFallback.tsx # Accessible specular glass schematic fallback
+│   │   │   │   ├── AceternityBeams.tsx# Dynamic light rays & ambient radiant grid
+│   │   │   │   ├── BentoGrid.tsx      # GSAP ScrollTrigger 5-cell feature showcase
+│   │   │   │   ├── MarketingNav.tsx   # Floating liquid glass navbar with CTAs
+│   │   │   │   └── MarketingFooter.tsx# Clean luxury B2B footer
 │   │   │   ├── motion/             # Layered motion stack infrastructure
 │   │   │   │   ├── MotionProvider.tsx # Shared spring presets (snappy, glassMorph, gentle)
 │   │   │   │   ├── GlassMotion.tsx    # Reusable wrappers (PageTransition, FadeIn, Stagger)
@@ -160,10 +170,11 @@ wareflow/
 │   │   │       ├── nav.test.ts
 │   │   │       ├── theme.test.ts
 │   │   │       ├── glass-primitives.test.tsx
-│   │   │       └── templates.test.tsx
+│   │   │       ├── templates.test.tsx
+│   │   │       └── marketing.test.tsx
 │   │   └── app/                    # App Router pages
 │   │       ├── layout.tsx          # Root layout with anti-flash script & ThemeProvider
-│   │       ├── page.tsx
+│   │       ├── page.tsx            # Public-facing 3D animated marketing landing page
 │   │       ├── globals.css         # Liquid glass design tokens & animations
 │   │       ├── styleguide/page.tsx # Interactive glass primitives, templates & motion showcase
 │   │       ├── (auth)/             # Authentication route group
@@ -383,6 +394,9 @@ wareflow/
 
 | Decision                          | Rationale                                                                                                         |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Performance-Budget Gates Motion   | 3D scenes lazy-load dynamically with zero SSR, cap DPR to 1.5, and degrade immediately on low-power devices       |
+| First-Class Reduced Motion        | Every animation (R3F, GSAP ScrollTrigger, CSS keyframes, motion springs) honors `prefers-reduced-motion: reduce`  |
+| Dynamic Site-Wide Background      | 4-orb GPU-accelerated animated gradient mesh with anti-banding noise provides alive visual backdrop to all pages  |
 | Locked Four Page Templates        | Every screen across all 19 phases must map strictly to ListView, DetailView, Form, or DashboardTemplate           |
 | 12-Column Responsive Grid System  | Strict 12-col grid + 4px base spacing scale modeled on Linear, Stripe Dashboard, and Notion benchmarks            |
 | Narrowly Scoped anime.js Motion   | `animejs` added as 5th motion engine strictly for SVG path draw/morph and micro-press physics (0 library overlap) |

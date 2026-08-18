@@ -16,7 +16,7 @@ export default function GradientBackdrop() {
         className="absolute -top-[20%] -left-[10%] w-[65vw] h-[65vw] max-w-[900px] max-h-[900px] rounded-full blur-[100px] sm:blur-[140px] opacity-70 dark:opacity-40 animate-ambient-1 transition-all duration-700 will-change-transform"
         style={{
           background:
-            "radial-gradient(circle, var(--accent) 0%, rgba(124, 58, 237, 0.15) 50%, transparent 75%)",
+            "radial-gradient(circle, var(--accent) 0%, rgba(124, 58, 237, 0.18) 50%, transparent 75%)",
         }}
       />
 
@@ -25,16 +25,25 @@ export default function GradientBackdrop() {
         className="absolute top-[10%] -right-[15%] w-[55vw] h-[55vw] max-w-[750px] max-h-[750px] rounded-full blur-[90px] sm:blur-[130px] opacity-50 dark:opacity-30 animate-ambient-2 transition-all duration-700 will-change-transform"
         style={{
           background:
-            "radial-gradient(circle, rgba(168, 85, 247, 0.8) 0%, rgba(147, 51, 234, 0.12) 45%, transparent 70%)",
+            "radial-gradient(circle, rgba(168, 85, 247, 0.8) 0%, rgba(147, 51, 234, 0.15) 45%, transparent 70%)",
         }}
       />
 
-      {/* Ambient Orb 3 — Bottom Center Subtle Horizon Bloom */}
+      {/* Ambient Orb 3 — Bottom Center Horizon Bloom */}
       <div
-        className="absolute -bottom-[25%] left-[20%] w-[70vw] h-[50vw] max-w-[1000px] max-h-[600px] rounded-full blur-[110px] sm:blur-[160px] opacity-40 dark:opacity-25 animate-ambient-3 transition-all duration-700 will-change-transform"
+        className="absolute -bottom-[25%] left-[20%] w-[70vw] h-[50vw] max-w-[1000px] max-h-[600px] rounded-full blur-[110px] sm:blur-[160px] opacity-45 dark:opacity-28 animate-ambient-3 transition-all duration-700 will-change-transform"
         style={{
           background:
-            "radial-gradient(ellipse, var(--accent) 0%, rgba(124, 58, 237, 0.08) 55%, transparent 80%)",
+            "radial-gradient(ellipse, var(--accent) 0%, rgba(124, 58, 237, 0.12) 55%, transparent 80%)",
+        }}
+      />
+
+      {/* Ambient Orb 4 — Mid-Screen Dynamic Drifting Core */}
+      <div
+        className="absolute top-[45%] left-[10%] w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] rounded-full blur-[100px] sm:blur-[140px] opacity-35 dark:opacity-20 animate-ambient-2 transition-all duration-700 will-change-transform"
+        style={{
+          background:
+            "radial-gradient(circle, rgba(99, 102, 241, 0.7) 0%, rgba(124, 58, 237, 0.1) 60%, transparent 80%)",
         }}
       />
 
