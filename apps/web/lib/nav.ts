@@ -69,6 +69,13 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         icon: "ArrowLeftRight",
         requiredPermission: "inventory:manage",
       },
+      {
+        name: "Batch Recalls",
+        href: "/admin/stock/recalls",
+        icon: "ShieldAlert",
+        requiredPermission: "inventory:manage",
+      },
+
 
       {
         name: "Suppliers & Vendors",

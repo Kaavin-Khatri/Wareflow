@@ -36,6 +36,10 @@ from app.repositories.impl.purchase_return_repository import (
     InMemoryPurchaseReturnRepository,
     SqlAlchemyPurchaseReturnRepository,
 )
+from app.repositories.impl.recall_repository import (
+    InMemoryRecallRepository,
+    SqlAlchemyRecallRepository,
+)
 from app.repositories.impl.retailer_repository import (
     InMemoryRetailerRepository,
     SqlAlchemyRetailerRepository,
@@ -79,6 +83,7 @@ from app.repositories.interfaces.purchase_order_repository import (
 from app.repositories.interfaces.purchase_return_repository import (
     PurchaseReturnRepositoryInterface,
 )
+from app.repositories.interfaces.recall_repository import RecallRepositoryInterface
 from app.repositories.interfaces.retailer_repository import RetailerRepository
 from app.repositories.interfaces.sales_order_repository import (
     SalesOrderRepositoryInterface,
@@ -102,6 +107,7 @@ from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
 from app.services.purchase_order_service import PurchaseOrderService
 from app.services.purchase_return_service import PurchaseReturnService
+from app.services.recall_service import RecallService
 from app.services.retailer_service import RetailerService
 from app.services.sales_order_service import SalesOrderService
 from app.services.sales_return_service import SalesReturnService
@@ -493,5 +499,32 @@ def get_sales_return_service(
         product_repo=product_repo,
         audit_service=audit_service,
     )
+
+
+@lru_cache
+def get_recall_repository() -> RecallRepositoryInterface:
+    """Factory for in-memory RecallRepositoryInterface."""
+    return InMemoryRecallRepository()
+
+
+def get_db_recall_repository(
+    db: Session = Depends(get_db_session),
+) -> RecallRepositoryInterface:
+    """Factory for database-backed RecallRepositoryInterface."""
+    return SqlAlchemyRecallRepository(session=db)
+
+
+def get_recall_service(
+    recall_repo: RecallRepositoryInterface = Depends(get_db_recall_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    audit_repo: AuditRepository = Depends(get_audit_repository),
+) -> RecallService:
+    """Factory for RecallService with DIP dependencies."""
+    return RecallService(
+        recall_repo=recall_repo,
+        stock_repo=stock_repo,
+        audit_repo=audit_repo,
+    )
+
 
 

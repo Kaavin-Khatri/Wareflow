@@ -4,6 +4,12 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.security import CurrentUser, get_current_user
+from app.schemas.recalls import (
+    BatchRecallCreateRequest,
+    BatchRecallListResponse,
+    BatchRecallNotifyResponse,
+    BatchRecallResponse,
+)
 from app.schemas.stock import (
     ProductStockResponse,
     StockBatchResponse,
@@ -190,5 +196,85 @@ def list_stock_transfers(
         end_date=end_date,
         search=search,
     )
+
+
+def get_recall_service() -> Any:
+    from app.core.di import get_recall_service as di_get_recall_service
+
+    return di_get_recall_service()
+
+
+@router.post(
+    "/stock/recalls",
+    response_model=BatchRecallResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_batch_recall(
+    payload: BatchRecallCreateRequest,
+    service: Annotated[Any, Depends(get_recall_service)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> BatchRecallResponse:
+    """
+    Initiate a product batch recall:
+    - Flags the batch unsellable immediately (excluded from sales order deductions)
+    - Traces all past sales orders and affected buyers that drew from this batch
+    """
+    return service.initiate_recall(payload=payload, current_user=current_user)
+
+
+@router.get("/stock/recalls", response_model=BatchRecallListResponse)
+def list_batch_recalls(
+    service: Annotated[Any, Depends(get_recall_service)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    page: Annotated[int, Query(ge=1, description="Page number")] = 1,
+    page_size: Annotated[int, Query(ge=1, le=200, description="Items per page")] = 50,
+    status: Annotated[str | None, Query(description="Filter by recall status (initiated, notifying, resolved)")] = None,
+    severity: Annotated[str | None, Query(description="Filter by severity (low, medium, critical)")] = None,
+    product_id: Annotated[str | None, Query(description="Filter by product ID")] = None,
+    search: Annotated[str | None, Query(description="Search query")] = None,
+) -> BatchRecallListResponse:
+    """Fetch paginated, filterable batch recall history."""
+    return service.list_recalls(
+        page=page,
+        page_size=page_size,
+        status_filter=status,
+        severity_filter=severity,
+        product_id=product_id,
+        search=search,
+    )
+
+
+@router.get("/stock/recalls/{recall_id}", response_model=BatchRecallResponse)
+def get_batch_recall(
+    recall_id: str,
+    service: Annotated[Any, Depends(get_recall_service)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> BatchRecallResponse:
+    """Retrieve full recall details with all traced affected orders and buyer notification statuses."""
+    return service.get_recall_details(recall_id=recall_id)
+
+
+@router.patch("/stock/recalls/{recall_id}/notify", response_model=BatchRecallNotifyResponse)
+def notify_batch_recall(
+    recall_id: str,
+    service: Annotated[Any, Depends(get_recall_service)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> BatchRecallNotifyResponse:
+    """
+    Broadcast recall alerts to all affected retailers via WhatsApp & Email
+    and mark affected orders with notified timestamps.
+    """
+    return service.notify_affected_retailers(recall_id=recall_id, current_user=current_user)
+
+
+@router.patch("/stock/recalls/{recall_id}/resolve", response_model=BatchRecallResponse)
+def resolve_batch_recall(
+    recall_id: str,
+    service: Annotated[Any, Depends(get_recall_service)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> BatchRecallResponse:
+    """Mark a batch recall as resolved once all affected retailers are confirmed handled."""
+    return service.resolve_recall(recall_id=recall_id, current_user=current_user)
+
 
 

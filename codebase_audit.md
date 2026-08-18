@@ -273,7 +273,7 @@ wareflow/
 │           │       ├── categories.py# Product Category taxonomy (/categories)
 │           │       ├── products.py # Wholesale Products & Pricing (/products)
 │           │       ├── uom.py      # Unit of Measure & Conversions (/uom, /products/{id}/conversions)
-│           │       ├── stock.py    # Multi-Warehouse Stock Overview, Adjustments, Ledger & Transfers (/stock/*, /stock/adjustments, /stock/movements, /stock/transfers, /products/{id}/stock)
+│           │       ├── stock.py    # Multi-Warehouse Stock Overview, Adjustments, Ledger, Transfers & Recalls (/stock/*, /stock/adjustments, /stock/movements, /stock/transfers, /stock/recalls, /products/{id}/stock)
 │           │       ├── stock_analytics.py # Stock Valuation & Composition Analytics (/analytics/stock/*)
 │           │       ├── suppliers.py# Vendor / Supplier profiles (/suppliers)
 │           │       ├── purchase_orders.py # Purchase Orders & Receiving (/purchase-orders)
@@ -297,7 +297,7 @@ wareflow/
 │           │   ├── delivery.py     # Deliveries
 │           │   ├── auth_rbac.py    # Roles, Permissions, RolePermissions
 │           │   ├── portal.py       # Customers, Subscriptions, Magic Tokens, Inquiries
-│           │   ├── recalls.py      # BatchRecalls, RecallAffectedOrders
+│           │   ├── recalls.py      # BatchRecalls, RecallAffectedOrders (in active use)
 │           │   ├── inventory.py    # StockMovements (Append-only Ledger)
 │           │   ├── notification.py # Alert Notifications
 │           │   └── audit_and_settings.py # AdminAuditLog, BusinessSettings
@@ -561,6 +561,11 @@ wareflow/
 | Recount Permission Role Gate (RBAC)     | The `recount` adjustment reason strictly enforces `stock.recount` permission code or `Owner` role, preventing unauthorized floor staff from adding arbitrary inventory balances |
 | Human Label Ledger Synthesis            | `StockService.list_movements` enriches append-only movements with contextual activity labels (PO receipt, SO dispatch, return, recount, damage note) directly in the API |
 | Atomic Paired-Movement Transfers        | `TransferService` executes inter-warehouse stock relocation as a single atomic transaction: source `StockMovement(type=out)` paired with destination `StockMovement(type=in)`, preserving batch identity and rollback safety |
+
+| Recall Outbound Ledger Traceability     | `RecallService` automatically traces every affected sales order and buyer via `stock_movements(type=out, reference_type='sales_order')` references, eliminating separate manual recall tracking logs |
+| Unsellable Recalled Stock Isolation     | Recalled batches are dynamically excluded from FIFO sales deductions without deleting historical batch records, keeping complete compliance auditability intact |
+| Notification Engine Zero-Duplication   | Recall broadcasts reuse the existing notification engine / audit log infrastructure with zero new messaging channel code |
+
 
 
 

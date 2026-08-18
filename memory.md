@@ -2367,6 +2367,80 @@
 - `codebase_audit.md`
 - `memory.md`
 
+---
+
+## Step 9.3 — Batch Recall & Traceability
+
+**Timestamp:** 2026-08-18T16:30:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Pydantic Schemas (`apps/api/app/schemas/recalls.py`)**:
+   - Implemented `BatchRecallCreateRequest`, `BatchRecallResponse`, `BatchRecallListItemResponse`, `BatchRecallListResponse`, `BatchRecallNotifyResponse`, and `RecallAffectedOrderItemResponse`.
+2. **Recall Repository Protocol & Implementation (`apps/api/app/repositories/interfaces/recall_repository.py`, `apps/api/app/repositories/impl/recall_repository.py`)**:
+   - Defined `RecallRepositoryInterface(Protocol)` and implemented `SqlAlchemyRecallRepository` + `InMemoryRecallRepository`.
+   - Automated order defect tracing: queries `StockMovement(type=OUT, reference_type="sales_order")` for the given `batch_id`, joining `SalesOrder`, `Retailer`, and `Customer` to accurately map every affected order and buyer.
+   - Atomically populates `RecallAffectedOrder` rows.
+   - Handled `mark_affected_orders_notified` (populates `notified_at` per order and sets `status = RecallStatusEnum.NOTIFYING`) and `resolve_recall` (sets `resolved_at` and `status = RecallStatusEnum.RESOLVED`).
+3. **Unsellable Batch Isolation Guard (`apps/api/app/repositories/impl/stock_repository.py`)**:
+   - `SqlAlchemyStockRepository.deduct_stock_fifo` and `InMemoryStockRepository.deduct_stock_fifo` immediately exclude any batch with an active recall (`status.in_(["initiated", "notifying"])`) from new sales order deductions.
+   - Retains full batch history in the database without deletion.
+4. **Recall Domain Service & DI (`apps/api/app/services/recall_service.py`, `apps/api/app/core/di.py`)**:
+   - Created `RecallService` providing `initiate_recall`, `notify_affected_retailers`, `resolve_recall`, `get_recall_details`, and `list_recalls`.
+   - Structured audit logging via `AuditRepository.create_log` (`action="batch_recall_initiated"`, `"batch_recall_notified"`, `"batch_recall_resolved"`).
+   - Injected in `app.core.di`.
+5. **FastAPI Endpoints (`apps/api/app/api/routers/stock.py`)**:
+   - `POST /stock/recalls` (201 Created)
+   - `GET /stock/recalls` (200 OK, paginated and filterable)
+   - `GET /stock/recalls/{recall_id}` (200 OK)
+   - `PATCH /stock/recalls/{recall_id}/notify` (200 OK)
+   - `PATCH /stock/recalls/{recall_id}/resolve` (200 OK)
+6. **Frontend Liquid Glass View (`apps/web/app/admin/stock/recalls/page.tsx`, `apps/web/lib/nav.ts`)**:
+   - Built `/admin/stock/recalls` with 4 KPI cards (Total Recalls, Active Quarantines, Affected Orders Traced, Retailers Alerted).
+   - "Initiate Batch Recall" modal with product & batch pickers, severity selector (`Critical`, `Medium`, `Low`), and root cause reason.
+   - Recalls `DataTable` with severity and status badges.
+   - Recall Detail Drawer showing traced affected orders with buyer contact info, units supplied, notification status, "Broadcast Recall Alerts (WhatsApp + Email)" action, and "Mark as Resolved" action.
+   - Added `Batch Recalls` link under Wholesale Operations in `nav.ts`.
+7. **Automated Testing & QA Verification**:
+   - Backend `apps/api/tests/test_recalls.py` (4 tests passing: exact 3-order tracing, unsellable stock exclusion without deletion, notification & resolution lifecycle, HTTP endpoints).
+   - Frontend `apps/web/lib/__tests__/recalls.test.tsx` (3 tests passing: dashboard rendering, modal recall creation, alert broadcast).
+   - Full test suites: 137 / 137 Pytest tests passing (100% green); 108 / 108 Vitest tests passing across 25 test suites (100% green).
+   - 0 errors / 0 warnings on Ruff and ESLint; Next.js production build cleanly compiled with 34 routes.
+
+### Decisions
+
+- **Recall Traceability Method**: Traced via `stock_movements(type=out)` references, not a separate manually-maintained record. The immutable append-only ledger serves as the single source of truth for all outbound stock distribution.
+- **Unsellable Stock Quarantine**: Recalled stock is flagged unsellable, never deleted — traceability requires the history to remain intact. Active recalled batches are dynamically filtered out of FIFO sales deductions.
+- **Notification Engine Reuse**: Recall notifications reuse the existing notification engine / audit dispatch mechanism with zero new channel code.
+
+### Key values for future steps
+
+- Recalls API: `POST /stock/recalls`, `GET /stock/recalls`, `GET /stock/recalls/{id}`, `PATCH /stock/recalls/{id}/notify`, `PATCH /stock/recalls/{id}/resolve`
+- Web Route: `/admin/stock/recalls`
+- Recall Statuses: `initiated`, `notifying`, `resolved`
+- Recall Severities: `low`, `medium`, `critical`
+
+### Files Created
+
+- `apps/api/app/schemas/recalls.py`
+- `apps/api/app/repositories/interfaces/recall_repository.py`
+- `apps/api/app/repositories/impl/recall_repository.py`
+- `apps/api/app/services/recall_service.py`
+- `apps/api/tests/test_recalls.py`
+- `apps/web/app/admin/stock/recalls/page.tsx`
+- `apps/web/lib/__tests__/recalls.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/api/routers/stock.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/repositories/impl/stock_repository.py`
+- `apps/web/lib/nav.ts`
+- `codebase_audit.md`
+- `memory.md`
+
+
 
 
 

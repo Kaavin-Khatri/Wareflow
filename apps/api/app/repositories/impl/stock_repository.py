@@ -277,9 +277,20 @@ class SqlAlchemyStockRepository(StockRepositoryInterface):
         if target_qty <= 0:
             return []
 
+
+        from app.models.recalls import BatchRecall, RecallStatusEnum
+
+        recalled_subq = select(BatchRecall.batch_id).where(
+            BatchRecall.status.in_([RecallStatusEnum.INITIATED, RecallStatusEnum.NOTIFYING])
+        )
+        recalled_batch_ids = set(self.session.scalars(recalled_subq).all())
+
         batches = self.get_batches_by_product(product_id, warehouse_id)
-        active_batches = [b for b in batches if float(b.quantity) > 0]
+        active_batches = [
+            b for b in batches if float(b.quantity) > 0 and b.id not in recalled_batch_ids
+        ]
         total_available = round(sum(float(b.quantity) for b in active_batches), 2)
+
 
         if total_available < target_qty:
             shortfall = round(target_qty - total_available, 2)
@@ -530,6 +541,8 @@ class InMemoryStockRepository(StockRepositoryInterface):
         self.products: dict[str, dict[str, Any]] = {}
         self.batches: dict[str, dict[str, Any]] = {}
         self.movements: list[dict[str, Any]] = []
+        self.recalled_batch_ids: set[str] = set()
+
 
         if warehouses:
             for w in warehouses:
@@ -840,8 +853,12 @@ class InMemoryStockRepository(StockRepositoryInterface):
             return []
 
         batches = self.get_batches_by_product(product_id, warehouse_id)
-        active_batches = [b for b in batches if float(b.quantity) > 0]
+        recalled_ids = getattr(self, "recalled_batch_ids", set())
+        active_batches = [
+            b for b in batches if float(b.quantity) > 0 and b.id not in recalled_ids
+        ]
         total_available = round(sum(float(b.quantity) for b in active_batches), 2)
+
 
         if total_available < target_qty:
             shortfall = round(target_qty - total_available, 2)
