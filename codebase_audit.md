@@ -476,11 +476,16 @@ wareflow/
 | POST   | `/sales-returns`                       | Request retailer sales return (RMA In)              | Yes (`orders:create`)           |
 | GET    | `/sales-returns/{id}`                  | Get sales return record with condition assessment   | Yes (`orders:view`)             |
 | PATCH  | `/sales-returns/{id}/approve`          | Approve return & restock resellable items (RETURN_IN)| Yes (`inventory:manage`)       |
-| PATCH  | `/sales-returns/{id}/reject`           | Reject RMA return request                           | Yes (`orders:create`)           |
+| GET    | `/customers`                           | List registered walk-in and direct buyers           | Yes (Authenticated)             |
+| POST   | `/customers`                           | Register new direct customer (standard pricing)     | Yes (`orders:create`)           |
+| GET    | `/customers/{id}`                      | Get customer profile details                        | Yes (Authenticated)             |
+| PATCH  | `/customers/{id}`                      | Update customer profile and contact info            | Yes (`orders:create`)           |
+| DELETE | `/customers/{id}`                      | Delete customer (guarded against active orders)     | Yes (`orders:create`)           |
 | GET    | `/suppliers`                           | List goods suppliers with search & active filters   | Yes (Authenticated)             |
 | POST   | `/suppliers`                           | Register new supplier with GSTIN validation         | Yes (`inventory:manage`)        |
 | GET    | `/suppliers/{id}`                      | Retrieve details for a single supplier              | Yes (Authenticated)             |
 | PATCH  | `/suppliers/{id}`                      | Update supplier details, contacts, or active status | Yes (`inventory:manage`)        |
+
 
 
 ## Architecture Layers
@@ -539,6 +544,9 @@ wareflow/
 | FIFO Oldest-Expiry Stock Deduction      | Confirming an order is the sole outbound path, consuming batches oldest-expiry-first (`expiry_date ASC nulls last, received_at ASC`) with atomic `StockMovement(type=out)` |
 | Compensating Cancellation Adjustments   | Cancelling a confirmed sales order creates `StockMovement(type=adjustment, reference_type="sales_order_cancellation")` rows and refunds credit, preserving ledger  |
 | Condition-Based Return Restocking       | `SalesReturnService` enforces that resellable items restock batches with `RETURN_IN` movements, while damaged items are tracked for loss/credit without altering sellable inventory batches |
+| CustomerRepository Protocol (DIP)       | `CustomerService` depends exclusively on `CustomerRepositoryInterface` Protocol, guaranteeing complete database abstraction and zero ORM coupling in unit tests |
+| Shared Sales Order Pipeline for Buyers  | Direct customers reuse the exact same order pipeline (`buyer_type=customer`), bypassing credit checks (assumed cash/UPI immediate settlement) while honoring standard pricing and FIFO stock deductions |
+
 
 
 | Cloud Storage Validation & Upload | Supabase Storage `product-images` bucket handles catalog media with strict <=5MB and JPEG/PNG/WebP validation |

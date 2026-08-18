@@ -64,7 +64,14 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         requiredPermission: "inventory:view",
       },
       {
+        name: "Direct Customers",
+        href: "/admin/customers",
+        icon: "UserCheck",
+        requiredPermission: "inventory:view",
+      },
+      {
         name: "Purchase Orders",
+
         href: "/admin/purchase-orders",
         icon: "FileSpreadsheet",
         requiredPermission: "inventory:view",

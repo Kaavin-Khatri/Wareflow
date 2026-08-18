@@ -19,6 +19,10 @@ from app.repositories.impl.business_settings_repository import (
     InMemoryBusinessSettingsRepository,
     SqlAlchemyBusinessSettingsRepository,
 )
+from app.repositories.impl.customer_repository import (
+    InMemoryCustomerRepository,
+    SqlAlchemyCustomerRepository,
+)
 from app.repositories.impl.product_repository import (
     InMemoryProductRepository,
     SqlAlchemyProductRepository,
@@ -61,6 +65,9 @@ from app.repositories.interfaces.audit_repository import AuditRepository
 from app.repositories.interfaces.business_settings_repository import (
     BusinessSettingsRepositoryInterface,
 )
+from app.repositories.interfaces.customer_repository import (
+    CustomerRepositoryInterface,
+)
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
 from app.repositories.interfaces.profile_repository import ProfileRepository
 from app.repositories.interfaces.purchase_order_repository import (
@@ -85,6 +92,7 @@ from app.repositories.interfaces.uom_repository import UomRepositoryInterface
 from app.services.alert_engine_service import AlertEngineService, ExpiringLicenseRule
 from app.services.audit_service import AuditService
 from app.services.business_settings_service import BusinessSettingsService
+from app.services.customer_service import CustomerService
 from app.services.pricing_strategy import PricingEngineService
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
@@ -387,12 +395,39 @@ def get_db_sales_order_repository(
     return SqlAlchemySalesOrderRepository(session=db)
 
 
+@lru_cache
+def get_customer_repository() -> CustomerRepositoryInterface:
+    """Factory for in-memory CustomerRepositoryInterface."""
+    return InMemoryCustomerRepository()
+
+
+def get_db_customer_repository(
+    db: Session = Depends(get_db_session),
+) -> CustomerRepositoryInterface:
+    """Factory for database-backed CustomerRepositoryInterface."""
+    return SqlAlchemyCustomerRepository(session=db)
+
+
+def get_customer_service(
+    customer_repo: CustomerRepositoryInterface = Depends(get_db_customer_repository),
+    audit_repo: AuditRepository = Depends(get_audit_repository),
+    so_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
+) -> CustomerService:
+    """Factory for CustomerService with DIP dependencies."""
+    return CustomerService(
+        customer_repo=customer_repo,
+        audit_repo=audit_repo,
+        so_repo=so_repo,
+    )
+
+
 def get_sales_order_service(
     so_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
     retailer_repo: RetailerRepository = Depends(get_retailer_repository),
     stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
     product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
     pricing_engine: PricingEngineService = Depends(get_pricing_engine_service),
+    customer_repo: CustomerRepositoryInterface = Depends(get_db_customer_repository),
     uom_service: UomService = Depends(get_uom_service),
     audit_service: AuditService = Depends(get_audit_service),
 ) -> SalesOrderService:
@@ -403,6 +438,7 @@ def get_sales_order_service(
         stock_repo=stock_repo,
         product_repo=product_repo,
         pricing_engine=pricing_engine,
+        customer_repo=customer_repo,
         uom_service=uom_service,
         audit_service=audit_service,
     )
@@ -436,4 +472,5 @@ def get_sales_return_service(
         product_repo=product_repo,
         audit_service=audit_service,
     )
+
 

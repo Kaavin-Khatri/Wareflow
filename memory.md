@@ -2158,6 +2158,81 @@
 - `memory.md`
 - `codebase_audit.md`
 
+---
+
+## Step 8.4 — Walk-In / Direct End-Customer Management
+
+**Timestamp:** 2026-08-18T15:48:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Direct Customer Schemas (`apps/api/app/schemas/customers.py`)**:
+   - Built Pydantic V2 schemas: `CustomerCreateRequest`, `CustomerUpdateRequest`, `CustomerResponse`, and `CustomerListResponse`.
+   - Deliberately simplified entity without credit limits or pricing tiers (standard pricing only).
+2. **Customer Repositories (`apps/api/app/repositories/interfaces/customer_repository.py`, `apps/api/app/repositories/impl/customer_repository.py`)**:
+   - Built `CustomerRepositoryInterface` protocol defining `get_by_id`, `get_by_email`, `get_by_phone`, `list_all`, `create`, `update`, and `delete`.
+   - Implemented `SqlAlchemyCustomerRepository` with case-insensitive search and `InMemoryCustomerRepository` for unit tests.
+3. **Customer Domain Service & Active Orders Deletion Guard (`apps/api/app/services/customer_service.py`)**:
+   - `CustomerService` providing full CRUD operations, email/phone format validation, and structured audit logs via `AuditRepository.create_log()`.
+   - Built relational integrity guard: `delete_customer` checks associated sales orders and raises `422 Unprocessable Content` if order history exists.
+4. **Shared Sales Order Pipeline & Credit Check Bypass (`apps/api/app/services/sales_order_service.py`)**:
+   - Injected `CustomerRepositoryInterface` into `SalesOrderService`.
+   - Updated `_resolve_retailer` to validate customer existence when `buyer_type == BuyerTypeEnum.CUSTOMER`.
+   - `_check_and_reserve_credit` immediately no-ops for `buyer_type == BuyerTypeEnum.CUSTOMER` (direct buyers are assumed cash/UPI immediate settlement).
+   - Oldest-expiry FIFO batch deduction (`_deduct_stock_fifo`) and cancellation compensating adjustments work identically to retailer orders.
+   - Populated `customer_name` dynamically in `SalesOrderResponse`.
+5. **FastAPI Endpoints (`apps/api/app/api/routers/customers.py`, `apps/api/app/core/di.py`, `apps/api/app/main.py`)**:
+   - Registered endpoints: `GET /customers`, `POST /customers`, `GET /customers/{id}`, `PATCH /customers/{id}`, and `DELETE /customers/{id}`.
+   - Bound DI providers in `di.py` and registered `/customers` router in `main.py`.
+6. **Frontend Liquid Glass View (`apps/web/app/admin/customers/page.tsx`, `apps/web/app/admin/sales-orders/page.tsx`, `apps/web/lib/nav.ts`)**:
+   - Created `/admin/customers` with 4 KPI cards (Total Customers, Active Buyers, Direct Orders Placed, Direct Sales Volume).
+   - Filterable `DataTable` with contact details, order count, total spend, and action buttons.
+   - Registration and Edit modals with form validation.
+   - Customer Details modal with order telemetry and quick edit shortcut.
+   - Updated `/admin/sales-orders` Create Order modal with `Buyer Type` toggle (`Wholesale Retailer` vs `Direct Customer`), dynamic retailer/customer dropdown pickers, and informational standard pricing badge.
+   - Added `Direct Customers` link in Wholesale Operations sidebar navigation.
+7. **Automated Testing & QA Verification**:
+   - Backend `apps/api/tests/test_customers.py` (6 tests covering CRUD round-trip, credit-check skipping with FIFO stock deduction, customer order cancellation inventory restoration, invalid customer rejection, open orders deletion guard, and HTTP API endpoints).
+   - Frontend `apps/web/lib/__tests__/customers.test.tsx` (4 tests covering KPI rendering, search query filtering, customer registration, and edit profile updates).
+   - 123/123 Pytest backend tests passing (100% green).
+   - 100/100 Vitest frontend tests passing across 22 test files (100% green).
+   - 0 errors / 0 warnings on Ruff and ESLint; Next.js build succeeding with 30 static and dynamic routes.
+
+### Decisions
+
+- **Shared Sales Order Pipeline for All Buyers**: Direct end-customers reuse the exact same sales order and FIFO inventory fulfillment engine as B2B retailers via the `buyer_type` discriminator (`buyer_type=customer`), eliminating duplicate order processing logic.
+- **Credit Verification Bypass for Walk-Ins**: Direct walk-in buyers are assumed immediate payment (cash/UPI/POS), so `SalesOrderService._check_and_reserve_credit` and credit refund logic cleanly no-op while preserving FIFO batch deductions.
+- **Active Orders Deletion Guard**: A customer record with existing sales orders cannot be deleted, preserving relational integrity and accounting traceability.
+
+### Key values for future steps
+
+- Customers API: `GET /customers`, `POST /customers`, `GET /customers/{id}`, `PATCH /customers/{id}`, `DELETE /customers/{id}`
+- Web Route: `/admin/customers`
+- Order Integration: `SalesOrderCreateRequest(buyer_type="customer", customer_id="...")`
+
+### Files Created
+
+- `apps/api/app/schemas/customers.py`
+- `apps/api/app/repositories/interfaces/customer_repository.py`
+- `apps/api/app/repositories/impl/customer_repository.py`
+- `apps/api/app/services/customer_service.py`
+- `apps/api/app/api/routers/customers.py`
+- `apps/api/tests/test_customers.py`
+- `apps/web/app/admin/customers/page.tsx`
+- `apps/web/lib/__tests__/customers.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/services/sales_order_service.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/web/app/admin/sales-orders/page.tsx`
+- `apps/web/lib/nav.ts`
+- `codebase_audit.md`
+- `memory.md`
+
+
 
 
 

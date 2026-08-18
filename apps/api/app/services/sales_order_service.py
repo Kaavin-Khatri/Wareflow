@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import HTTPException, status
 
 from app.models.retailer import BuyerTypeEnum, Retailer, SalesOrder, SalesOrderItem, SOStatusEnum
+from app.repositories.interfaces.customer_repository import CustomerRepositoryInterface
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
 from app.repositories.interfaces.retailer_repository import RetailerRepository
 from app.repositories.interfaces.sales_order_repository import SalesOrderRepositoryInterface
@@ -41,6 +42,7 @@ class SalesOrderService:
         stock_repo: StockRepositoryInterface,
         product_repo: ProductRepositoryInterface,
         pricing_engine: PricingEngineService,
+        customer_repo: CustomerRepositoryInterface | None = None,
         uom_service: UomService | None = None,
         audit_service: AuditService | None = None,
     ):
@@ -49,6 +51,7 @@ class SalesOrderService:
         self.stock_repo = stock_repo
         self.product_repo = product_repo
         self.pricing_engine = pricing_engine
+        self.customer_repo = customer_repo
         self.uom_service = uom_service
         self.audit_service = audit_service
 
@@ -196,7 +199,17 @@ class SalesOrderService:
                     detail=f"Retailer '{payload.retailer_id}' not found.",
                 )
             return retailer
+
+        if payload.buyer_type == BuyerTypeEnum.CUSTOMER and payload.customer_id and self.customer_repo:
+            customer = self.customer_repo.get_by_id(payload.customer_id)
+            if not customer:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Customer '{payload.customer_id}' not found.",
+                )
         return None
+
+
 
     def _build_order_item(
         self, item_in: SalesOrderItemCreateRequest, pricing_tier: str
@@ -363,6 +376,12 @@ class SalesOrderService:
             else None
         )
 
+        customer_name = order.customer.name if getattr(order, "customer", None) else None
+        if not customer_name and order.customer_id and self.customer_repo:
+            cust = self.customer_repo.get_by_id(order.customer_id)
+            if cust:
+                customer_name = cust.name
+
         return SalesOrderResponse(
             id=order.id,
             so_number=order.so_number,
@@ -371,9 +390,11 @@ class SalesOrderService:
             retailer_name=retailer_name,
             retailer_pricing_tier=pricing_tier,
             customer_id=order.customer_id,
+            customer_name=customer_name,
             status=order.status,
             order_date=order.order_date,
             total_amount=float(order.total_amount),
             created_at=order.created_at,
             items=item_responses,
         )
+

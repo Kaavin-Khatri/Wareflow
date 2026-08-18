@@ -68,6 +68,12 @@ interface RetailerOption {
   credit_balance: number;
 }
 
+interface CustomerOption {
+  id: string;
+  name: string;
+  phone?: string | null;
+}
+
 interface ProductOption {
   id: string;
   name: string;
@@ -84,6 +90,7 @@ interface NewOrderLine {
 export default function SalesOrdersAdminPage() {
   const [orders, setOrders] = useState<SalesOrder[]>([]);
   const [retailers, setRetailers] = useState<RetailerOption[]>([]);
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -99,26 +106,30 @@ export default function SalesOrdersAdminPage() {
   // New order form state
   const [buyerType, setBuyerType] = useState<"retailer" | "customer">("retailer");
   const [selectedRetailerId, setSelectedRetailerId] = useState<string>("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [orderLines, setOrderLines] = useState<NewOrderLine[]>([
     { product_id: "", qty: 1 },
   ]);
 
   async function loadData() {
     try {
-      const [ordersRes, retailersRes, productsRes] = await Promise.all([
+      const [ordersRes, retailersRes, productsRes, customersRes] = await Promise.all([
         apiClient.get<SalesOrder[]>("/sales-orders"),
         apiClient.get<RetailerOption[]>("/retailers").catch(() => []),
         apiClient.get<ProductOption[]>("/products").catch(() => []),
+        apiClient.get<CustomerOption[]>("/customers").catch(() => []),
       ]);
       setOrders(ordersRes || []);
       setRetailers(retailersRes || []);
       setProducts(productsRes || []);
+      setCustomers(customersRes || []);
     } catch (err) {
       console.error("Failed to fetch sales orders:", err);
     } finally {
       setLoading(false);
     }
   }
+
 
   useEffect(() => {
     let ignore = false;
@@ -233,6 +244,7 @@ export default function SalesOrdersAdminPage() {
       const payload = {
         buyer_type: buyerType,
         retailer_id: buyerType === "retailer" ? selectedRetailerId : null,
+        customer_id: buyerType === "customer" && selectedCustomerId ? selectedCustomerId : null,
         items: validLines.map((l) => ({
           product_id: l.product_id,
           qty: Number(l.qty),
@@ -245,7 +257,9 @@ export default function SalesOrdersAdminPage() {
       // Reset form
       setOrderLines([{ product_id: "", qty: 1 }]);
       setSelectedRetailerId("");
+      setSelectedCustomerId("");
     } catch (err: unknown) {
+
       const message = err instanceof Error ? err.message : String(err);
       setActionError(message || "Failed to create sales order.");
     } finally {
@@ -594,7 +608,6 @@ export default function SalesOrdersAdminPage() {
                     required
                     className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
                   >
-
                     <option value="">-- Choose Retailer --</option>
                     {retailers.map((r) => (
                       <option key={r.id} value={r.id}>
@@ -604,10 +617,46 @@ export default function SalesOrdersAdminPage() {
                   </select>
                 </div>
               )}
+
+              {buyerType === "customer" && (
+                <div>
+                  <label htmlFor="customer-select" className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+                    Select Walk-In Customer
+                  </label>
+                  <select
+                    id="customer-select"
+                    value={selectedCustomerId}
+                    onChange={(e) => setSelectedCustomerId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="">-- Choose Walk-In Customer (Optional) --</option>
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {c.phone ? `(${c.phone})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
+            {/* Direct Customer Info Banner */}
+            {buyerType === "customer" && (
+              <div className="p-3 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-[var(--text)]">
+                    {customers.find((c) => c.id === selectedCustomerId)?.name || "Direct Walk-In Buyer"}
+                  </span>
+                  <GlassBadge variant="success">STANDARD PRICING</GlassBadge>
+                </div>
+                <p className="text-[11px] text-[var(--text-muted)] pt-0.5">
+                  Direct cash/UPI sale — skips credit limit verification, applies standard wholesale pricing, and deducts FIFO inventory immediately on confirmation.
+                </p>
+              </div>
+            )}
+
             {/* Retailer Info & Credit Banner */}
-            {selectedRetailer && (
+            {buyerType === "retailer" && selectedRetailer && (
               <div className="p-3 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] text-xs space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-[var(--text)]">
@@ -648,6 +697,7 @@ export default function SalesOrdersAdminPage() {
                 </div>
               </div>
             )}
+
 
             {/* Line Items Builder */}
             <div className="space-y-2 pt-2">
