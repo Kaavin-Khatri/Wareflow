@@ -86,3 +86,34 @@ class StockRepositoryInterface(Protocol):
         """
         ...
 
+    def deduct_stock_fifo(
+        self,
+        product_id: str,
+        quantity: float,
+        warehouse_id: str | None = None,
+        reference_type: str = "sales_order",
+        reference_id: str | None = None,
+        created_by: str | None = None,
+    ) -> list[tuple[StockBatch, float, Any]]:
+        """
+        Deduct quantity for a product using FIFO-by-expiry across one or more batches:
+        - Select batches ordered by expiry_date ASC (nulls last) and received_at ASC
+        - Decrement batch.quantity
+        - Insert StockMovement(type=out) per batch
+        - Raise ValueError (or InsufficientStockError) if available stock < quantity
+        """
+        ...
+
+    def restore_sales_order_stock(
+        self,
+        sales_order_id: str,
+        reason: str = "Order Cancelled",
+        created_by: str | None = None,
+    ) -> list[Any]:
+        """
+        Restore deducted stock for a cancelled sales order:
+        - Find all OUT movements referencing this sales order ID
+        - Re-increment the matching StockBatch quantities
+        - Insert compensating StockMovement(type=adjustment) rows
+        """
+        ...

@@ -277,7 +277,9 @@ wareflow/
 │           │       ├── stock_analytics.py # Stock Valuation & Composition Analytics (/analytics/stock/*)
 │           │       ├── suppliers.py# Vendor / Supplier profiles (/suppliers)
 │           │       ├── purchase_orders.py # Purchase Orders & Receiving (/purchase-orders)
-│           │       └── retailers.py# Retailer accounts & credit limits (/retailers)
+│           │       ├── purchase_returns.py# Supplier Returns (/purchase-returns)
+│           │       ├── retailers.py# Retailer accounts & credit limits (/retailers)
+│           │       └── sales_orders.py# Sales Orders & FIFO Fulfillment (/sales-orders)
 │           ├── db/
 │           │   ├── base.py         # SQLAlchemy DeclarativeBase
 │           │   └── session.py      # Engine (NullPool) + get_db_session dependency
@@ -299,25 +301,36 @@ wareflow/
 │           │   ├── notification.py # Alert Notifications
 │           │   └── audit_and_settings.py # AdminAuditLog, BusinessSettings
 │           ├── services/           # Business logic (depends on abstractions)
+│           │   ├── alert_engine_service.py
 │           │   ├── audit_service.py
+│           │   ├── business_settings_service.py
+│           │   ├── pricing_strategy.py
 │           │   ├── product_service.py
 │           │   ├── profile_service.py
+│           │   ├── purchase_order_service.py
+│           │   ├── purchase_return_service.py
 │           │   ├── retailer_service.py
+│           │   ├── sales_order_service.py
 │           │   ├── staff_service.py
 │           │   ├── stock_service.py
 │           │   ├── stock_analytics_service.py
 │           │   ├── storage_service.py
 │           │   ├── supplier_service.py
-│           │   ├── purchase_order_service.py
 │           │   ├── two_factor_service.py
 │           │   └── uom_service.py
 │           ├── repositories/
 │           │   ├── interfaces/     # Protocol/ABC contracts
+│           │   │   ├── alert_repository.py
 │           │   │   ├── audit_repository.py
+│           │   │   ├── business_settings_repository.py
 │           │   │   ├── product_repository.py
 │           │   │   ├── profile_repository.py
+│           │   │   ├── purchase_order_repository.py
+│           │   │   ├── purchase_return_repository.py
 │           │   │   ├── retailer_repository.py
+│           │   │   ├── sales_order_repository.py
 │           │   │   ├── stock_repository.py
+
 │           │   │   ├── stock_analytics_repository.py
 │           │   │   ├── supplier_repository.py
 │           │   │   ├── purchase_order_repository.py
@@ -507,8 +520,12 @@ wareflow/
 | Human Decision Guard for Expired FSSAI  | Expired supplier licenses trigger a non-blocking confirmation dialog requiring explicit user risk acknowledgment before PO creation, balancing regulatory safety with practical operations        |
 | RetailerRepository Protocol (DIP)       | `RetailerService` depends exclusively on `RetailerRepository` Protocol, enforcing unique retailer naming, phone/email validation, and complete mockability                                          |
 | Pluggable Pricing Strategy (OCP)        | `PricingEngineService` coordinates extensible `PricingStrategy` implementations (`Standard`, `Silver`, `Gold`, `TieredDiscount`), allowing custom tiers with zero sales order engine modifications |
+| Credit Check Order of Operations        | Credit verification (`credit_balance + order_total <= credit_limit`) strictly executes before inventory inspection; shortfalls abort with zero batch alterations    |
+| FIFO Oldest-Expiry Stock Deduction      | Confirming an order is the sole outbound path, consuming batches oldest-expiry-first (`expiry_date ASC nulls last, received_at ASC`) with atomic `StockMovement(type=out)` |
+| Compensating Cancellation Adjustments   | Cancelling a confirmed sales order creates `StockMovement(type=adjustment, reference_type="sales_order_cancellation")` rows and refunds credit, preserving ledger  |
 
 | Cloud Storage Validation & Upload | Supabase Storage `product-images` bucket handles catalog media with strict <=5MB and JPEG/PNG/WebP validation |
+
 | Universal DataTable Rule | All future list and ledger screens must use `DataTable`; responsive mobile card-view is automatic below 768px |
 | Low-Power Glass Degradation | Low memory (<4GB), cores (<=4), or reduced-transparency drops expensive blurs to flat translucency at 60fps |
 | Motion Signals State Change | Motion is strictly reserved to draw attention to STATE CHANGES (active link shift, number count-up, table mutation) |
@@ -568,7 +585,11 @@ wareflow/
 ## Security & Audit Log Coverage
 
 - **Audited Operations**:
+  - `sales_order_created`: Creation of draft sales order with line items (`POST /sales-orders`)
+  - `sales_order_confirmed`: Confirmation of sales order with credit reservation & FIFO batch deduction (`POST /sales-orders/{id}/confirm`)
+  - `sales_order_status_updated`: Fulfillment status changes (packed, shipped, delivered, cancelled) (`PATCH /sales-orders/{id}/status`)
   - `retailer_created`: Registration of a new wholesale retailer account (`POST /retailers`)
+
   - `retailer_updated`: Updates to retailer contact info, pricing tier, or active status (`PATCH /retailers/{id}`)
   - `retailer_credit_limit_updated`: Retailer authorized credit limit adjustments (`PATCH /retailers/{id}/credit-limit`)
   - `business_settings_updated`: Legal business entity details, GSTIN, or FSSAI license updates (`PUT /settings/business`)

@@ -20,9 +20,7 @@ class SqlAlchemyRetailerRepository(RetailerRepository):
         return self._session.scalar(select(Retailer).where(Retailer.id == retailer_id))
 
     def get_by_name(self, name: str) -> Retailer | None:
-        return self._session.scalar(
-            select(Retailer).where(Retailer.name.ilike(name.strip()))
-        )
+        return self._session.scalar(select(Retailer).where(Retailer.name.ilike(name.strip())))
 
     def list_all(
         self,

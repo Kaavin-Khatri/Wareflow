@@ -208,8 +208,6 @@ class RetailerService:
                 after={"name": retailer.name, "credit_limit": new_credit_limit},
             )
 
-
-
         return updated
 
     def calculate_price(

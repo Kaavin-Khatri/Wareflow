@@ -88,7 +88,9 @@ def test_purchase_return_in_memory_lifecycle_and_stock_deduction():
         initial_suppliers=[{"id": "sup-1", "name": "Tata Consumer", "is_active": True}]
     )
     product_repo = InMemoryProductRepository(
-        initial_products=[{"id": "prod-1", "name": "Tata Tea 500g", "sku": "TEA-500", "is_active": True}]
+        initial_products=[
+            {"id": "prod-1", "name": "Tata Tea 500g", "sku": "TEA-500", "is_active": True}
+        ]
     )
     returns_repo = InMemoryPurchaseReturnRepository()
 
@@ -164,7 +166,9 @@ def test_purchase_return_over_return_and_draft_guards():
         initial_suppliers=[{"id": "sup-1", "name": "Tata Consumer", "is_active": True}]
     )
     product_repo = InMemoryProductRepository(
-        initial_products=[{"id": "prod-1", "name": "Tata Tea 500g", "sku": "TEA-500", "is_active": True}]
+        initial_products=[
+            {"id": "prod-1", "name": "Tata Tea 500g", "sku": "TEA-500", "is_active": True}
+        ]
     )
     returns_repo = InMemoryPurchaseReturnRepository()
 
@@ -241,7 +245,9 @@ def test_purchase_return_status_transition_lifecycle():
         initial_suppliers=[{"id": "sup-1", "name": "Tata Consumer", "is_active": True}]
     )
     product_repo = InMemoryProductRepository(
-        initial_products=[{"id": "prod-1", "name": "Tata Tea 500g", "sku": "TEA-500", "is_active": True}]
+        initial_products=[
+            {"id": "prod-1", "name": "Tata Tea 500g", "sku": "TEA-500", "is_active": True}
+        ]
     )
     returns_repo = InMemoryPurchaseReturnRepository()
 
@@ -322,7 +328,6 @@ def test_purchase_return_sqlalchemy_db_persistence():
     testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     with testing_session_local() as session:
-
         # Seed Base Entities
         uom = UnitOfMeasure(id="uom-kg", name="Kilogram", abbreviation="kg")
         supplier = Supplier(id="sup-db-1", name="Fortune Foods Ltd", is_active=True)
@@ -450,7 +455,9 @@ def test_purchase_return_api_router_endpoints():
         initial_suppliers=[{"id": "sup-1", "name": "Tata Consumer", "is_active": True}]
     )
     product_repo = InMemoryProductRepository(
-        initial_products=[{"id": "prod-1", "name": "Tata Tea 500g", "sku": "TEA-500", "is_active": True}]
+        initial_products=[
+            {"id": "prod-1", "name": "Tata Tea 500g", "sku": "TEA-500", "is_active": True}
+        ]
     )
     returns_repo = InMemoryPurchaseReturnRepository()
 
@@ -469,7 +476,6 @@ def test_purchase_return_api_router_endpoints():
         role="Owner",
         permissions=["inventory:view", "inventory:manage"],
     )
-
 
     client = TestClient(app)
 

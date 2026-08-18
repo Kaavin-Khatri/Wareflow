@@ -85,10 +85,11 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
       },
       {
         name: "Orders & Dispatch",
-        href: "/orders",
+        href: "/admin/sales-orders",
         icon: "ShoppingBag",
-        requiredPermission: "orders:view",
+        requiredPermission: "inventory:view",
       },
+
       {
         name: "GST Invoices",
         href: "/invoices",

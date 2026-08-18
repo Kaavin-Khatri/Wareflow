@@ -31,7 +31,9 @@ class PurchaseReturnStatusUpdateRequest(BaseModel):
 
     status: PurchaseReturnStatusEnum = Field(..., description="Target status: shipped or credited")
     credit_note_ref: str | None = Field(
-        None, max_length=100, description="Vendor credit note reference number (required if status is credited)"
+        None,
+        max_length=100,
+        description="Vendor credit note reference number (required if status is credited)",
     )
 
 

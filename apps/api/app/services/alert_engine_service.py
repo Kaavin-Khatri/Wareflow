@@ -133,7 +133,6 @@ class ExpiringLicenseRule:
         # 2. Evaluate All Active Suppliers
         suppliers = self._supplier_repo.list_suppliers(skip=0, limit=1000)
         for s in suppliers:
-
             if not s.is_active:
                 continue
 
@@ -283,7 +282,6 @@ class AlertEngineService:
         if self._supplier_repo:
             suppliers = self._supplier_repo.list_suppliers(skip=0, limit=1000)
             for s in suppliers:
-
                 if not s.is_active:
                     continue
                 total_suppliers += 1

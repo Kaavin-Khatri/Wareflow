@@ -13,9 +13,13 @@ EMAIL_REGEX = re.compile(r"^[\w\.-]+@[\w\.-]+\.\w+$")
 class BusinessSettingsUpdateRequest(BaseModel):
     """Payload for updating distributor business settings & compliance profile."""
 
-    business_name: str = Field(..., min_length=2, max_length=255, description="Legal business / entity name")
+    business_name: str = Field(
+        ..., min_length=2, max_length=255, description="Legal business / entity name"
+    )
     gstin: str | None = Field(None, max_length=50, description="15-character Indian GSTIN")
-    fssai_license_no: str | None = Field(None, max_length=50, description="14-digit FSSAI food license number")
+    fssai_license_no: str | None = Field(
+        None, max_length=50, description="14-digit FSSAI food license number"
+    )
     fssai_expiry_date: date | None = Field(None, description="FSSAI certificate expiration date")
     address: str | None = Field(None, description="Registered business / warehouse address")
     phone: str | None = Field(None, max_length=50, description="Contact phone number")

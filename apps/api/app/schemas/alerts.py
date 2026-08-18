@@ -43,7 +43,6 @@ class AlertItemResponse(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
-
     model_config = ConfigDict(from_attributes=True)
 
 

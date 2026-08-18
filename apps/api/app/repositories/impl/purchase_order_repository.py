@@ -206,7 +206,6 @@ class InMemoryPurchaseOrderRepository(PurchaseOrderRepositoryInterface):
             else:
                 self.pos[item.id] = item
 
-
     def get_by_id(self, po_id: str) -> PurchaseOrder | None:
         return self.pos.get(po_id)
 

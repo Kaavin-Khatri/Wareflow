@@ -46,7 +46,6 @@ from app.services.retailer_service import RetailerService
 # ────────────────────────────────────────────────────────────
 
 
-
 def test_standard_pricing_strategy_no_discount():
     """Standard tier pricing keeps base unit price with 0% discount."""
     strategy = StandardPricingStrategy()
@@ -337,7 +336,6 @@ def retailer_api_client():
 
     client = TestClient(app)
     return client, mock_service
-
 
 
 def test_api_retailer_crud_lifecycle(retailer_api_client):

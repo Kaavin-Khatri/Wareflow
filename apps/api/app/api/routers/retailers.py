@@ -25,7 +25,9 @@ def list_retailers(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=200),
     is_active: bool | None = Query(None, description="Filter by active status"),
-    search: str | None = Query(None, description="Search query by name, contact, phone, email, or GSTIN"),
+    search: str | None = Query(
+        None, description="Search query by name, contact, phone, email, or GSTIN"
+    ),
     current_user: CurrentUser = Depends(get_current_user),
     service: RetailerService = Depends(get_retailer_service),
 ) -> list[RetailerResponse]:

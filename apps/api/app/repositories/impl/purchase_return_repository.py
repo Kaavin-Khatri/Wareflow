@@ -63,7 +63,6 @@ class SqlAlchemyPurchaseReturnRepository(PurchaseReturnRepositoryInterface):
         )
         return self.session.execute(stmt).unique().scalar_one_or_none()
 
-
     def list_all(
         self,
         supplier_id: str | None = None,

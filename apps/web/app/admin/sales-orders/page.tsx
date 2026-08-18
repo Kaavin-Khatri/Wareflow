@@ -1,0 +1,929 @@
+"use client";
+
+import React, { useState, useEffect, useMemo } from "react";
+import AppLayout from "@/components/AppLayout";
+import { ListViewTemplate } from "@/components/templates/ListViewTemplate";
+import { DataTable, DataTableColumn } from "@/components/DataTable";
+import { GlassCard } from "@/components/glass/GlassCard";
+import { GlassButton } from "@/components/glass/GlassButton";
+import { GlassModal } from "@/components/glass/GlassModal";
+import { GlassBadge } from "@/components/glass/GlassBadge";
+import { apiClient } from "@/lib/api-client";
+
+import {
+  ShoppingBag,
+  Clock,
+  Package,
+  Truck,
+  CheckCircle2,
+  XCircle,
+  Plus,
+  IndianRupee,
+  Crown,
+  Sparkles,
+  AlertTriangle,
+  FileSpreadsheet,
+  Eye,
+  Trash2,
+} from "lucide-react";
+
+
+export interface SalesOrderItem {
+  id: string;
+  so_id: string;
+  product_id: string;
+  product_name?: string | null;
+  product_sku?: string | null;
+  qty: number;
+  unit_price: number;
+  line_total: number;
+  uom_id?: string | null;
+  uom_code?: string | null;
+}
+
+export interface SalesOrder {
+  id: string;
+  so_number: string;
+  buyer_type: "retailer" | "customer";
+  retailer_id?: string | null;
+  retailer_name?: string | null;
+  retailer_pricing_tier?: string | null;
+  customer_id?: string | null;
+  customer_name?: string | null;
+  status: "draft" | "confirmed" | "packed" | "shipped" | "delivered" | "cancelled";
+  order_date: string;
+  total_amount: number;
+  created_at: string;
+  items: SalesOrderItem[];
+}
+
+interface RetailerOption {
+  id: string;
+  name: string;
+  pricing_tier: string;
+  credit_limit: number;
+  credit_balance: number;
+}
+
+interface ProductOption {
+  id: string;
+  name: string;
+  sku: string;
+  wholesale_price: number;
+}
+
+interface NewOrderLine {
+  product_id: string;
+  qty: number;
+  unit_price?: number;
+}
+
+export default function SalesOrdersAdminPage() {
+  const [orders, setOrders] = useState<SalesOrder[]>([]);
+  const [retailers, setRetailers] = useState<RetailerOption[]>([]);
+  const [products, setProducts] = useState<ProductOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Modals state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  // New order form state
+  const [buyerType, setBuyerType] = useState<"retailer" | "customer">("retailer");
+  const [selectedRetailerId, setSelectedRetailerId] = useState<string>("");
+  const [orderLines, setOrderLines] = useState<NewOrderLine[]>([
+    { product_id: "", qty: 1 },
+  ]);
+
+  async function loadData() {
+    try {
+      const [ordersRes, retailersRes, productsRes] = await Promise.all([
+        apiClient.get<SalesOrder[]>("/sales-orders"),
+        apiClient.get<RetailerOption[]>("/retailers").catch(() => []),
+        apiClient.get<ProductOption[]>("/products").catch(() => []),
+      ]);
+      setOrders(ordersRes || []);
+      setRetailers(retailersRes || []);
+      setProducts(productsRes || []);
+    } catch (err) {
+      console.error("Failed to fetch sales orders:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let ignore = false;
+    async function init() {
+      if (!ignore) {
+        await loadData();
+      }
+    }
+    init();
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const selectedRetailer = useMemo(() => {
+    return retailers.find((r) => r.id === selectedRetailerId);
+  }, [retailers, selectedRetailerId]);
+
+  // Calculate pricing for current create order form
+  const computedLines = useMemo(() => {
+    const tier = selectedRetailer?.pricing_tier || "standard";
+    const discountMultiplier =
+      tier === "gold" ? 0.9 : tier === "silver" ? 0.95 : 1.0;
+
+    return orderLines.map((line) => {
+      const prod = products.find((p) => p.id === line.product_id);
+      const basePrice = prod ? prod.wholesale_price : 0;
+      const unitPrice = Math.round(basePrice * discountMultiplier * 100) / 100;
+      const lineTotal = Math.round(unitPrice * (line.qty || 0) * 100) / 100;
+      return {
+        ...line,
+        product_name: prod ? prod.name : "",
+        sku: prod ? prod.sku : "",
+        basePrice,
+        unitPrice,
+        lineTotal,
+      };
+    });
+  }, [orderLines, products, selectedRetailer]);
+
+  const estimatedOrderTotal = useMemo(() => {
+    return computedLines.reduce((acc, curr) => acc + curr.lineTotal, 0);
+  }, [computedLines]);
+
+  const isCreditExceeded = useMemo(() => {
+    if (!selectedRetailer || selectedRetailer.credit_limit <= 0) return false;
+    const available = selectedRetailer.credit_limit - selectedRetailer.credit_balance;
+    return estimatedOrderTotal > available;
+  }, [selectedRetailer, estimatedOrderTotal]);
+
+  // KPI Calculations
+  const totalOrdersCount = orders.length;
+  const draftOrdersCount = orders.filter((o) => o.status === "draft").length;
+  const inFulfillmentCount = orders.filter((o) =>
+    ["confirmed", "packed", "shipped"].includes(o.status)
+  ).length;
+  const deliveredCount = orders.filter((o) => o.status === "delivered").length;
+  const totalRevenue = orders
+    .filter((o) => o.status !== "cancelled")
+    .reduce((acc, o) => acc + Number(o.total_amount || 0), 0);
+
+  // Filtered Orders
+  const filteredOrders = useMemo(() => {
+    return orders.filter((o) => {
+      const matchesStatus =
+        statusFilter === "ALL" || o.status.toLowerCase() === statusFilter.toLowerCase();
+      const q = searchQuery.toLowerCase();
+      const matchesSearch =
+        !q ||
+        o.so_number.toLowerCase().includes(q) ||
+        (o.retailer_name && o.retailer_name.toLowerCase().includes(q));
+      return matchesStatus && matchesSearch;
+    });
+  }, [orders, statusFilter, searchQuery]);
+
+  function handleAddLine() {
+    setOrderLines([...orderLines, { product_id: "", qty: 1 }]);
+  }
+
+  function handleRemoveLine(index: number) {
+    if (orderLines.length === 1) return;
+    setOrderLines(orderLines.filter((_, idx) => idx !== index));
+  }
+
+  function handleLineChange(
+    index: number,
+    field: keyof NewOrderLine,
+    value: string | number | undefined
+  ) {
+    const updated = [...orderLines];
+    updated[index] = { ...updated[index], [field]: value };
+    setOrderLines(updated);
+  }
+
+  async function handleCreateOrder(e: React.FormEvent) {
+    e.preventDefault();
+    setActionError(null);
+
+    const validLines = orderLines.filter((l) => l.product_id && l.qty > 0);
+    if (validLines.length === 0) {
+      setActionError("Please select at least one product with quantity > 0.");
+      return;
+    }
+
+    if (buyerType === "retailer" && !selectedRetailerId) {
+      setActionError("Please select a wholesale retailer.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const payload = {
+        buyer_type: buyerType,
+        retailer_id: buyerType === "retailer" ? selectedRetailerId : null,
+        items: validLines.map((l) => ({
+          product_id: l.product_id,
+          qty: Number(l.qty),
+        })),
+      };
+
+      await apiClient.post("/sales-orders", payload);
+      await loadData();
+      setIsCreateModalOpen(false);
+      // Reset form
+      setOrderLines([{ product_id: "", qty: 1 }]);
+      setSelectedRetailerId("");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setActionError(message || "Failed to create sales order.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleConfirmOrder(orderId: string) {
+    setActionError(null);
+    setSubmitting(true);
+    try {
+      const updated = await apiClient.post<SalesOrder>(`/sales-orders/${orderId}/confirm`);
+      setSelectedOrder(updated);
+      await loadData();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setActionError(message || "Failed to confirm sales order.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleUpdateStatus(orderId: string, nextStatus: string) {
+    setActionError(null);
+    setSubmitting(true);
+    try {
+      const updated = await apiClient.patch<SalesOrder>(`/sales-orders/${orderId}/status`, {
+        status: nextStatus,
+      });
+      setSelectedOrder(updated);
+      await loadData();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setActionError(message || "Failed to update order status.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+
+  const columns: DataTableColumn<SalesOrder>[] = [
+    {
+      key: "so_number",
+      header: "SO Number",
+      render: (order) => (
+        <div className="flex items-center gap-2">
+          <FileSpreadsheet className="w-4 h-4 text-purple-400" />
+          <span className="font-mono text-xs font-semibold text-[var(--text)]">
+            {order.so_number}
+          </span>
+        </div>
+      ),
+    },
+    {
+      key: "retailer_name",
+      header: "Retailer / Buyer",
+      render: (order) => (
+        <div>
+          <div className="font-medium text-xs text-[var(--text)]">
+            {order.retailer_name || "Direct Customer"}
+          </div>
+          {order.retailer_pricing_tier && (
+            <div className="flex items-center gap-1 mt-0.5">
+              {order.retailer_pricing_tier === "gold" ? (
+                <span className="inline-flex items-center gap-1 text-[10px] text-amber-400 font-mono">
+                  <Crown className="w-3 h-3" /> Gold (10% off)
+                </span>
+              ) : order.retailer_pricing_tier === "silver" ? (
+                <span className="inline-flex items-center gap-1 text-[10px] text-slate-300 font-mono">
+                  <Sparkles className="w-3 h-3" /> Silver (5% off)
+                </span>
+              ) : (
+                <span className="text-[10px] text-[var(--text-muted)] font-mono">
+                  Standard
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: "order_date",
+      header: "Order Date",
+      render: (order) => (
+        <span className="text-xs text-[var(--text-muted)]">
+          {new Date(order.order_date).toLocaleDateString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          })}
+        </span>
+      ),
+    },
+    {
+      key: "items",
+      header: "Lines",
+      render: (order) => (
+        <span className="text-xs font-mono text-[var(--text)]">
+          {order.items?.length || 0} items
+        </span>
+      ),
+    },
+    {
+      key: "total_amount",
+      header: "Total Amount",
+      render: (order) => (
+        <span className="font-mono text-xs font-bold text-emerald-400">
+          ₹{Number(order.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (order) => {
+        switch (order.status) {
+          case "draft":
+            return (
+              <GlassBadge variant="neutral">
+                <Clock className="w-3 h-3 mr-1" /> Draft
+              </GlassBadge>
+            );
+          case "confirmed":
+            return (
+              <GlassBadge variant="accent">
+                <CheckCircle2 className="w-3 h-3 mr-1" /> Confirmed
+              </GlassBadge>
+            );
+          case "packed":
+            return (
+              <GlassBadge variant="warning">
+                <Package className="w-3 h-3 mr-1" /> Packed
+              </GlassBadge>
+            );
+          case "shipped":
+            return (
+              <GlassBadge variant="accent">
+                <Truck className="w-3 h-3 mr-1" /> Shipped
+              </GlassBadge>
+            );
+          case "delivered":
+            return (
+              <GlassBadge variant="success">
+                <CheckCircle2 className="w-3 h-3 mr-1" /> Delivered
+              </GlassBadge>
+            );
+          case "cancelled":
+            return (
+              <GlassBadge variant="error">
+                <XCircle className="w-3 h-3 mr-1" /> Cancelled
+              </GlassBadge>
+            );
+          default:
+            return <GlassBadge variant="neutral">{order.status}</GlassBadge>;
+        }
+
+      },
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      align: "right",
+      render: (order) => (
+        <GlassButton
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setSelectedOrder(order);
+            setActionError(null);
+            setIsDetailModalOpen(true);
+          }}
+          className="text-xs"
+        >
+          <Eye className="w-3.5 h-3.5 mr-1" /> Details
+        </GlassButton>
+      ),
+    },
+  ];
+
+
+  return (
+    <AppLayout>
+      <div className="space-y-6 pb-12">
+        {/* KPI Header Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <GlassCard className="p-4">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-medium mb-1">
+              <span>Total Orders</span>
+              <ShoppingBag className="w-4 h-4 text-purple-400" />
+            </div>
+            <div className="text-2xl font-bold tracking-tight text-[var(--text)]">
+              {totalOrdersCount}
+            </div>
+          </GlassCard>
+
+          <GlassCard className="p-4">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-medium mb-1">
+              <span>Draft Orders</span>
+              <Clock className="w-4 h-4 text-amber-400" />
+            </div>
+            <div className="text-2xl font-bold tracking-tight text-amber-400">
+              {draftOrdersCount}
+            </div>
+          </GlassCard>
+
+          <GlassCard className="p-4">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-medium mb-1">
+              <span>In Fulfillment</span>
+              <Truck className="w-4 h-4 text-blue-400" />
+            </div>
+            <div className="text-2xl font-bold tracking-tight text-blue-400">
+              {inFulfillmentCount}
+            </div>
+          </GlassCard>
+
+          <GlassCard className="p-4">
+            <div className="flex items-center justify-between text-xs text-[var(--text-muted)] font-medium mb-1">
+              <span>Total Revenue</span>
+              <IndianRupee className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl font-bold tracking-tight text-emerald-400 font-mono">
+              ₹{Math.round(totalRevenue).toLocaleString("en-IN")}
+            </div>
+          </GlassCard>
+        </div>
+
+        {/* List View Template with DataTable */}
+        <ListViewTemplate
+          title="Sales Orders & Dispatch"
+          description="Manage wholesale B2B retailer sales orders, FIFO batch deductions, and fulfillment dispatch"
+          searchPlaceholder="Search by SO number or retailer..."
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          primaryAction={
+            <GlassButton
+              variant="primary"
+              onClick={() => {
+                setActionError(null);
+                setIsCreateModalOpen(true);
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Create Sales Order
+            </GlassButton>
+          }
+        >
+          {/* Status Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => setStatusFilter("ALL")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                statusFilter === "ALL"
+                  ? "bg-purple-600/30 text-purple-300 border border-purple-500/40"
+                  : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-transparent"
+              }`}
+            >
+              All Orders ({totalOrdersCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("DRAFT")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                statusFilter === "DRAFT"
+                  ? "bg-amber-600/30 text-amber-300 border border-amber-500/40"
+                  : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-transparent"
+              }`}
+            >
+              Drafts ({draftOrdersCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("CONFIRMED")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                statusFilter === "CONFIRMED"
+                  ? "bg-blue-600/30 text-blue-300 border border-blue-500/40"
+                  : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-transparent"
+              }`}
+            >
+              In Fulfillment ({inFulfillmentCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusFilter("DELIVERED")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                statusFilter === "DELIVERED"
+                  ? "bg-emerald-600/30 text-emerald-300 border border-emerald-500/40"
+                  : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] border border-transparent"
+              }`}
+            >
+              Delivered ({deliveredCount})
+            </button>
+          </div>
+
+          <DataTable
+            columns={columns}
+            data={filteredOrders}
+            keyExtractor={(order) => order.id}
+            isLoading={loading}
+            emptyTitle="No sales orders found"
+            emptyDescription="No sales orders matching your filters."
+          />
+        </ListViewTemplate>
+
+        {/* CREATE SALES ORDER MODAL */}
+
+        <GlassModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          title="Create New Sales Order"
+        >
+          <form onSubmit={handleCreateOrder} className="space-y-4">
+            {actionError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{actionError}</span>
+              </div>
+            )}
+
+            {/* Buyer Type & Retailer Selector */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+                  Buyer Type
+                </label>
+                <select
+                  value={buyerType}
+                  onChange={(e) => setBuyerType(e.target.value as "retailer" | "customer")}
+                  className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
+                >
+                  <option value="retailer">Wholesale Retailer</option>
+                  <option value="customer">Direct Customer</option>
+                </select>
+              </div>
+
+              {buyerType === "retailer" && (
+                <div>
+                  <label htmlFor="retailer-select" className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+                    Select Retailer *
+                  </label>
+                  <select
+                    id="retailer-select"
+                    value={selectedRetailerId}
+                    onChange={(e) => setSelectedRetailerId(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
+                  >
+
+                    <option value="">-- Choose Retailer --</option>
+                    {retailers.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name} ({r.pricing_tier.toUpperCase()} Tier)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Retailer Info & Credit Banner */}
+            {selectedRetailer && (
+              <div className="p-3 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-[var(--text)]">
+                    {selectedRetailer.name}
+                  </span>
+                  <GlassBadge
+                    variant={
+                      selectedRetailer.pricing_tier === "gold"
+                        ? "warning"
+                        : selectedRetailer.pricing_tier === "silver"
+                        ? "neutral"
+                        : "neutral"
+                    }
+                  >
+                    {selectedRetailer.pricing_tier.toUpperCase()} TIER
+                  </GlassBadge>
+                </div>
+                <div className="flex items-center justify-between text-[var(--text-muted)] pt-1">
+                  <span>
+                    Credit Limit: ₹{Number(selectedRetailer.credit_limit).toLocaleString("en-IN")}
+                  </span>
+                  <span>
+                    Used: ₹{Number(selectedRetailer.credit_balance).toLocaleString("en-IN")}
+                  </span>
+                  <span
+                    className={
+                      selectedRetailer.credit_limit - selectedRetailer.credit_balance <= 0
+                        ? "text-red-400 font-bold"
+                        : "text-emerald-400 font-medium"
+                    }
+                  >
+                    Available: ₹
+                    {Math.max(
+                      0,
+                      selectedRetailer.credit_limit - selectedRetailer.credit_balance
+                    ).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Line Items Builder */}
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[var(--text)] uppercase tracking-wider font-mono">
+                  Order Items
+                </span>
+                <GlassButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAddLine}
+                  className="text-xs"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Product
+                </GlassButton>
+              </div>
+
+              {computedLines.map((line, idx) => (
+                <div
+                  key={idx}
+                  className="grid grid-cols-12 gap-2 items-center p-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)]"
+                >
+                  <div className="col-span-6">
+                    <select
+                      value={line.product_id}
+                      onChange={(e) => handleLineChange(idx, "product_id", e.target.value)}
+                      required
+                      className="w-full px-2 py-1.5 rounded-lg bg-black/20 border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none"
+                    >
+                      <option value="">Select product...</option>
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} (₹{p.wholesale_price})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-2">
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={line.qty}
+                      onChange={(e) => handleLineChange(idx, "qty", Number(e.target.value))}
+                      required
+                      className="w-full px-2 py-1.5 rounded-lg bg-black/20 border border-[var(--glass-border)] text-xs text-center text-[var(--text)] focus:outline-none"
+                      placeholder="Qty"
+                    />
+                  </div>
+                  <div className="col-span-3 text-right">
+                    <span className="text-xs font-mono font-bold text-emerald-400">
+                      ₹{line.lineTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </span>
+                    <div className="text-[10px] text-[var(--text-muted)] font-mono">
+                      @ ₹{line.unitPrice.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="col-span-1 text-center">
+                    {orderLines.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLine(idx)}
+                        className="text-red-400 hover:text-red-300 p-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Total Summary & Credit Warning */}
+            <div className="p-3 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] flex items-center justify-between">
+              <span className="text-xs font-medium text-[var(--text-muted)]">
+                Estimated Total:
+              </span>
+              <span className="text-base font-bold font-mono text-emerald-400">
+                ₹{estimatedOrderTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+
+            {isCreditExceeded && (
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>
+                  Warning: This order total (₹{estimatedOrderTotal.toFixed(2)}) exceeds retailer available credit. Order will be created as Draft and confirmation will be blocked until credit is settled.
+                </span>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <GlassButton
+                type="button"
+                variant="ghost"
+                onClick={() => setIsCreateModalOpen(false)}
+              >
+                Cancel
+              </GlassButton>
+              <GlassButton type="submit" variant="primary" disabled={submitting}>
+                {submitting ? "Creating..." : "Create Draft Order"}
+              </GlassButton>
+            </div>
+          </form>
+        </GlassModal>
+
+        {/* ORDER DETAILS & FULFILLMENT MODAL */}
+        <GlassModal
+          isOpen={isDetailModalOpen}
+          onClose={() => setIsDetailModalOpen(false)}
+          title={`Sales Order: ${selectedOrder?.so_number || ""}`}
+        >
+          {selectedOrder && (
+            <div className="space-y-4">
+              {actionError && (
+                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{actionError}</span>
+                </div>
+              )}
+
+              {/* Order Metadata */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] text-xs">
+                <div>
+                  <span className="text-[var(--text-muted)] block">Retailer / Buyer</span>
+                  <span className="font-semibold text-[var(--text)]">
+                    {selectedOrder.retailer_name || "Direct Customer"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[var(--text-muted)] block">Status</span>
+                  <span className="font-semibold uppercase tracking-wider text-purple-400 font-mono">
+                    {selectedOrder.status}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[var(--text-muted)] block">Order Date</span>
+                  <span className="text-[var(--text)]">
+                    {new Date(selectedOrder.order_date).toLocaleDateString("en-IN")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[var(--text-muted)] block">Total Amount</span>
+                  <span className="font-bold text-emerald-400 font-mono text-sm">
+                    ₹{Number(selectedOrder.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Line Items Table */}
+              <div className="space-y-2">
+                <span className="text-xs font-semibold text-[var(--text)] uppercase tracking-wider font-mono">
+                  Line Items ({selectedOrder.items?.length || 0})
+                </span>
+                <div className="rounded-xl overflow-hidden border border-[var(--glass-border)]">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-black/20 text-[var(--text-muted)] font-mono text-[10px] uppercase">
+                      <tr>
+                        <th className="p-2.5">Product</th>
+                        <th className="p-2.5 text-center">SKU</th>
+                        <th className="p-2.5 text-center">Qty</th>
+                        <th className="p-2.5 text-right">Unit Price</th>
+                        <th className="p-2.5 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[var(--glass-border)] text-[var(--text)]">
+                      {selectedOrder.items?.map((it) => (
+                        <tr key={it.id} className="hover:bg-white/5">
+                          <td className="p-2.5 font-medium">{it.product_name || it.product_id}</td>
+                          <td className="p-2.5 text-center font-mono text-[var(--text-muted)]">
+                            {it.product_sku || "—"}
+                          </td>
+                          <td className="p-2.5 text-center font-mono font-semibold">{it.qty}</td>
+                          <td className="p-2.5 text-right font-mono">₹{it.unit_price.toFixed(2)}</td>
+                          <td className="p-2.5 text-right font-mono font-bold text-emerald-400">
+                            ₹{(it.qty * it.unit_price).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Fulfillment State Machine Actions */}
+              <div className="pt-3 border-t border-[var(--glass-border)] flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  {selectedOrder.status === "draft" && (
+                    <span className="text-[11px] text-[var(--text-muted)]">
+                      Ready to confirm order and deduct FIFO stock batches.
+                    </span>
+                  )}
+                  {selectedOrder.status === "confirmed" && (
+                    <span className="text-[11px] text-emerald-400 font-medium">
+                      Stock deducted FIFO. Ready for packing and warehouse dispatch.
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Status Actions */}
+                  {selectedOrder.status === "draft" && (
+                    <>
+                      <GlassButton
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        disabled={submitting}
+                        onClick={() => handleUpdateStatus(selectedOrder.id, "cancelled")}
+                      >
+                        Cancel Order
+                      </GlassButton>
+                      <GlassButton
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        disabled={submitting}
+                        onClick={() => handleConfirmOrder(selectedOrder.id)}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Confirm Order (Deduct FIFO)
+                      </GlassButton>
+                    </>
+                  )}
+
+                  {selectedOrder.status === "confirmed" && (
+                    <>
+                      <GlassButton
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        disabled={submitting}
+                        onClick={() => handleUpdateStatus(selectedOrder.id, "cancelled")}
+                      >
+                        Cancel (Restore Stock)
+                      </GlassButton>
+                      <GlassButton
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        disabled={submitting}
+                        onClick={() => handleUpdateStatus(selectedOrder.id, "packed")}
+                      >
+                        <Package className="w-3.5 h-3.5 mr-1" /> Mark Packed
+                      </GlassButton>
+                    </>
+                  )}
+
+
+                  {selectedOrder.status === "packed" && (
+                    <GlassButton
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      disabled={submitting}
+                      onClick={() => handleUpdateStatus(selectedOrder.id, "shipped")}
+                    >
+                      <Truck className="w-3.5 h-3.5 mr-1" /> Dispatch / Ship
+                    </GlassButton>
+                  )}
+
+                  {selectedOrder.status === "shipped" && (
+                    <GlassButton
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      disabled={submitting}
+                      onClick={() => handleUpdateStatus(selectedOrder.id, "delivered")}
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Mark Delivered
+                    </GlassButton>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </GlassModal>
+      </div>
+    </AppLayout>
+  );
+}
+

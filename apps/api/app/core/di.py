@@ -36,6 +36,10 @@ from app.repositories.impl.retailer_repository import (
     InMemoryRetailerRepository,
     SqlAlchemyRetailerRepository,
 )
+from app.repositories.impl.sales_order_repository import (
+    InMemorySalesOrderRepository,
+    SqlAlchemySalesOrderRepository,
+)
 from app.repositories.impl.stock_analytics_repository import (
     SqlAlchemyStockAnalyticsRepository,
 )
@@ -62,6 +66,9 @@ from app.repositories.interfaces.purchase_return_repository import (
     PurchaseReturnRepositoryInterface,
 )
 from app.repositories.interfaces.retailer_repository import RetailerRepository
+from app.repositories.interfaces.sales_order_repository import (
+    SalesOrderRepositoryInterface,
+)
 from app.repositories.interfaces.stock_analytics_repository import (
     StockAnalyticsRepositoryInterface,
 )
@@ -77,6 +84,7 @@ from app.services.profile_service import ProfileService
 from app.services.purchase_order_service import PurchaseOrderService
 from app.services.purchase_return_service import PurchaseReturnService
 from app.services.retailer_service import RetailerService
+from app.services.sales_order_service import SalesOrderService
 from app.services.staff_service import StaffService
 from app.services.stock_analytics_service import StockAnalyticsService
 from app.services.stock_service import StockService
@@ -196,8 +204,6 @@ def get_retailer_service(
     )
 
 
-
-
 def get_two_factor_service(
     repo: ProfileRepository = Depends(get_profile_repository),
 ) -> TwoFactorService:
@@ -285,7 +291,6 @@ def get_purchase_order_service(
 
 @lru_cache
 def get_purchase_return_repository() -> PurchaseReturnRepositoryInterface:
-
     """Factory for in-memory PurchaseReturnRepositoryInterface."""
     return InMemoryPurchaseReturnRepository()
 
@@ -361,5 +366,35 @@ def get_alert_engine_service(
     return engine
 
 
+@lru_cache
+def get_sales_order_repository() -> SalesOrderRepositoryInterface:
+    """Factory for in-memory SalesOrderRepositoryInterface."""
+    return InMemorySalesOrderRepository()
 
 
+def get_db_sales_order_repository(
+    db: Session = Depends(get_db_session),
+) -> SalesOrderRepositoryInterface:
+    """Factory for database-backed SalesOrderRepositoryInterface."""
+    return SqlAlchemySalesOrderRepository(session=db)
+
+
+def get_sales_order_service(
+    so_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
+    retailer_repo: RetailerRepository = Depends(get_retailer_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    pricing_engine: PricingEngineService = Depends(get_pricing_engine_service),
+    uom_service: UomService = Depends(get_uom_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> SalesOrderService:
+    """Factory for SalesOrderService with DIP dependencies."""
+    return SalesOrderService(
+        so_repo=so_repo,
+        retailer_repo=retailer_repo,
+        stock_repo=stock_repo,
+        product_repo=product_repo,
+        pricing_engine=pricing_engine,
+        uom_service=uom_service,
+        audit_service=audit_service,
+    )

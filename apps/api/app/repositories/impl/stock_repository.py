@@ -264,6 +264,100 @@ class SqlAlchemyStockRepository(StockRepositoryInterface):
 
         return batch, movement
 
+    def deduct_stock_fifo(
+        self,
+        product_id: str,
+        quantity: float,
+        warehouse_id: str | None = None,
+        reference_type: str = "sales_order",
+        reference_id: str | None = None,
+        created_by: str | None = None,
+    ) -> list[tuple[StockBatch, float, StockMovement]]:
+        target_qty = round(float(quantity), 2)
+        if target_qty <= 0:
+            return []
+
+        batches = self.get_batches_by_product(product_id, warehouse_id)
+        active_batches = [b for b in batches if float(b.quantity) > 0]
+        total_available = round(sum(float(b.quantity) for b in active_batches), 2)
+
+        if total_available < target_qty:
+            shortfall = round(target_qty - total_available, 2)
+            prod = self.get_product_with_base_uom(product_id)
+            prod_name = prod.name if prod else product_id
+            sku_info = f" (SKU: {prod.sku})" if prod and prod.sku else ""
+            raise ValueError(
+                f"Insufficient stock for product '{prod_name}'{sku_info}: required {target_qty}, available {total_available}, shortfall {shortfall}."
+            )
+
+        deductions: list[tuple[StockBatch, float, StockMovement]] = []
+        remaining_qty = target_qty
+
+        for batch in active_batches:
+            if remaining_qty <= 0:
+                break
+            batch_available = float(batch.quantity)
+            deduct_amount = min(batch_available, remaining_qty)
+            batch.quantity = round(batch_available - deduct_amount, 2)
+            self.session.flush()
+
+            movement = StockMovement(
+                id=str(uuid.uuid4()),
+                product_id=product_id,
+                warehouse_id=batch.warehouse_id,
+                batch_id=batch.id,
+                type=StockMovementTypeEnum.OUT,
+                quantity=round(deduct_amount, 2),
+                reference_type=reference_type,
+                reference_id=reference_id,
+                created_by=created_by,
+            )
+            self.session.add(movement)
+            self.session.flush()
+
+            deductions.append((batch, deduct_amount, movement))
+            remaining_qty = round(remaining_qty - deduct_amount, 2)
+
+        return deductions
+
+    def restore_sales_order_stock(
+        self,
+        sales_order_id: str,
+        reason: str = "Order Cancelled",
+        created_by: str | None = None,
+    ) -> list[StockMovement]:
+        stmt = select(StockMovement).where(
+            StockMovement.reference_type == "sales_order",
+            StockMovement.reference_id == sales_order_id,
+            StockMovement.type == StockMovementTypeEnum.OUT,
+        )
+        out_movements = list(self.session.execute(stmt).scalars().all())
+        compensating_movements: list[StockMovement] = []
+
+        for out_mov in out_movements:
+            if out_mov.batch_id:
+                batch = self.session.get(StockBatch, out_mov.batch_id)
+                if batch:
+                    batch.quantity = round(float(batch.quantity) + float(out_mov.quantity), 2)
+                    self.session.flush()
+
+            adj_movement = StockMovement(
+                id=str(uuid.uuid4()),
+                product_id=out_mov.product_id,
+                warehouse_id=out_mov.warehouse_id,
+                batch_id=out_mov.batch_id,
+                type=StockMovementTypeEnum.ADJUSTMENT,
+                quantity=round(float(out_mov.quantity), 2),
+                reference_type="sales_order_cancellation",
+                reference_id=sales_order_id,
+                created_by=created_by,
+            )
+            self.session.add(adj_movement)
+            self.session.flush()
+            compensating_movements.append(adj_movement)
+
+        return compensating_movements
+
 
 class InMemoryStockRepository(StockRepositoryInterface):
     """In-Memory implementation of StockRepositoryInterface for isolated unit tests."""
@@ -277,6 +371,7 @@ class InMemoryStockRepository(StockRepositoryInterface):
         self.warehouses: dict[str, dict[str, Any]] = {}
         self.products: dict[str, dict[str, Any]] = {}
         self.batches: dict[str, dict[str, Any]] = {}
+        self.movements: list[dict[str, Any]] = []
 
         if warehouses:
             for w in warehouses:
@@ -558,5 +653,138 @@ class InMemoryStockRepository(StockRepositoryInterface):
             reference_id=reference_id,
             created_by=created_by,
         )
+        self.movements.append(
+            {
+                "id": movement.id,
+                "product_id": movement.product_id,
+                "warehouse_id": movement.warehouse_id,
+                "batch_id": movement.batch_id,
+                "type": movement.type,
+                "quantity": movement.quantity,
+                "reference_type": movement.reference_type,
+                "reference_id": movement.reference_id,
+                "created_by": movement.created_by,
+            }
+        )
         return batch_model, movement
 
+    def deduct_stock_fifo(
+        self,
+        product_id: str,
+        quantity: float,
+        warehouse_id: str | None = None,
+        reference_type: str = "sales_order",
+        reference_id: str | None = None,
+        created_by: str | None = None,
+    ) -> list[tuple[StockBatch, float, StockMovement]]:
+        target_qty = round(float(quantity), 2)
+        if target_qty <= 0:
+            return []
+
+        batches = self.get_batches_by_product(product_id, warehouse_id)
+        active_batches = [b for b in batches if float(b.quantity) > 0]
+        total_available = round(sum(float(b.quantity) for b in active_batches), 2)
+
+        if total_available < target_qty:
+            shortfall = round(target_qty - total_available, 2)
+            prod = self.get_product_with_base_uom(product_id)
+            prod_name = prod.name if prod else product_id
+            sku_info = f" (SKU: {prod.sku})" if prod and prod.sku else ""
+            raise ValueError(
+                f"Insufficient stock for product '{prod_name}'{sku_info}: required {target_qty}, available {total_available}, shortfall {shortfall}."
+            )
+
+        deductions: list[tuple[StockBatch, float, StockMovement]] = []
+        remaining_qty = target_qty
+
+        for batch in active_batches:
+            if remaining_qty <= 0:
+                break
+            batch_available = float(batch.quantity)
+            deduct_amount = min(batch_available, remaining_qty)
+
+            # Update in-memory batch dictionary
+            if batch.id in self.batches:
+                self.batches[batch.id]["quantity"] = round(batch_available - deduct_amount, 2)
+            batch.quantity = round(batch_available - deduct_amount, 2)
+
+            movement = StockMovement(
+                id=str(uuid.uuid4()),
+                product_id=product_id,
+                warehouse_id=batch.warehouse_id,
+                batch_id=batch.id,
+                type=StockMovementTypeEnum.OUT,
+                quantity=round(deduct_amount, 2),
+                reference_type=reference_type,
+                reference_id=reference_id,
+                created_by=created_by,
+            )
+            self.movements.append(
+                {
+                    "id": movement.id,
+                    "product_id": movement.product_id,
+                    "warehouse_id": movement.warehouse_id,
+                    "batch_id": movement.batch_id,
+                    "type": movement.type,
+                    "quantity": movement.quantity,
+                    "reference_type": movement.reference_type,
+                    "reference_id": movement.reference_id,
+                    "created_by": movement.created_by,
+                }
+            )
+
+            deductions.append((batch, deduct_amount, movement))
+            remaining_qty = round(remaining_qty - deduct_amount, 2)
+
+        return deductions
+
+    def restore_sales_order_stock(
+        self,
+        sales_order_id: str,
+        reason: str = "Order Cancelled",
+        created_by: str | None = None,
+    ) -> list[StockMovement]:
+        out_movements = [
+            m
+            for m in self.movements
+            if m.get("reference_type") == "sales_order"
+            and m.get("reference_id") == sales_order_id
+            and m.get("type") == StockMovementTypeEnum.OUT
+        ]
+        compensating_movements: list[StockMovement] = []
+
+        for out_mov in out_movements:
+            batch_id = out_mov.get("batch_id")
+            if batch_id and batch_id in self.batches:
+                curr_b_qty = float(self.batches[batch_id]["quantity"])
+                self.batches[batch_id]["quantity"] = round(
+                    curr_b_qty + float(out_mov["quantity"]), 2
+                )
+
+            adj_movement = StockMovement(
+                id=str(uuid.uuid4()),
+                product_id=out_mov["product_id"],
+                warehouse_id=out_mov["warehouse_id"],
+                batch_id=batch_id,
+                type=StockMovementTypeEnum.ADJUSTMENT,
+                quantity=round(float(out_mov["quantity"]), 2),
+                reference_type="sales_order_cancellation",
+                reference_id=sales_order_id,
+                created_by=created_by,
+            )
+            self.movements.append(
+                {
+                    "id": adj_movement.id,
+                    "product_id": adj_movement.product_id,
+                    "warehouse_id": adj_movement.warehouse_id,
+                    "batch_id": adj_movement.batch_id,
+                    "type": adj_movement.type,
+                    "quantity": adj_movement.quantity,
+                    "reference_type": adj_movement.reference_type,
+                    "reference_id": adj_movement.reference_id,
+                    "created_by": adj_movement.created_by,
+                }
+            )
+            compensating_movements.append(adj_movement)
+
+        return compensating_movements

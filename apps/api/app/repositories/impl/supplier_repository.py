@@ -25,8 +25,7 @@ class InMemorySupplierRepository(SupplierRepositoryInterface):
         initial_suppliers: list[Any] | None = None,
     ) -> None:
         self._suppliers: dict[str, dict[str, Any]] = {}
-        for item in (seed_suppliers or initial_suppliers or []):
-
+        for item in seed_suppliers or initial_suppliers or []:
             if isinstance(item, Supplier):
                 self._suppliers[item.id] = {
                     "id": item.id,

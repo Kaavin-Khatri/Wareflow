@@ -55,7 +55,6 @@ def create_purchase_return(
     return service.create_purchase_return(payload=payload, actor_id=current_user.id)
 
 
-
 @router.get(
     "/{id}",
     response_model=PurchaseReturnResponse,
@@ -91,4 +90,3 @@ def update_purchase_return_status(
         payload=payload,
         actor_id=current_user.id,
     )
-

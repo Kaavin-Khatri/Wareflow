@@ -2005,4 +2005,82 @@
 - `memory.md`
 - `codebase_audit.md`
 
+---
+
+## Step 8.2 — Sales Orders, Stock Deduction & Fulfillment
+
+**Timestamp:** 2026-08-18T15:05:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Sales Order Schemas & Data Transfer Objects (`apps/api/app/schemas/sales_orders.py`)**:
+   - Built Pydantic V2 schemas: `SalesOrderItemCreateRequest`, `SalesOrderCreateRequest`, `SalesOrderStatusUpdateRequest`, `SalesOrderItemResponse`, `SalesOrderResponse`, and `SalesOrderListResponse`.
+2. **FIFO-by-Expiry Stock Deduction & Compensating Adjustment Restoration (`apps/api/app/repositories/interfaces/stock_repository.py`, `apps/api/app/repositories/impl/stock_repository.py`)**:
+   - Added `deduct_stock_fifo` and `restore_sales_order_stock` to `StockRepositoryInterface`.
+   - In `SqlAlchemyStockRepository` and `InMemoryStockRepository`, implemented oldest-expiry-first (FIFO) allocation (`expiry_date ASC nulls last, received_at ASC`) across available batches with atomic `StockMovement(type=out, reference_type="sales_order")` generation.
+   - Implemented `restore_sales_order_stock` for cancelling confirmed orders, restoring deducted quantities to their exact source batches with compensating `StockMovement(type=adjustment, reference_type="sales_order_cancellation")` rows and credit balance refunds.
+3. **Sales Order Repositories (`apps/api/app/repositories/interfaces/sales_order_repository.py`, `apps/api/app/repositories/impl/sales_order_repository.py`)**:
+   - Built `SalesOrderRepositoryInterface` defining `get_by_id`, `get_by_so_number`, `list_all`, `create`, `update`, and `generate_next_so_number`.
+   - Implemented `SqlAlchemySalesOrderRepository` and `InMemorySalesOrderRepository`.
+4. **Sales Order Domain Service & Credit Limit Gate (`apps/api/app/services/sales_order_service.py`)**:
+   - `SalesOrderService` enforcing transactional domain logic:
+     - **Credit Gate First**: Checks `retailer.credit_balance + order_total <= retailer.credit_limit` (0 limit = cash-only, always allowed) **before** inspecting or touching inventory batches. Shortfalls return descriptive 422 HTTP exceptions naming the exact shortfall.
+     - **FIFO Stock Deduction Second**: Confirms order atomically consuming batches oldest-expiry-first. Insufficient stock raises 422 with shortfall details and aborts the entire transaction.
+     - **Fulfillment State Machine**: `draft` -> `confirmed` (stock deducted) -> `packed` -> `shipped` -> `delivered`, plus `cancelled`. Cancelling confirmed orders triggers compensating inventory adjustments and credit balance refunds.
+     - **Audit Logging**: Logs structured audit actions for order creation, confirmation, and status changes.
+5. **FastAPI Endpoints (`apps/api/app/api/routers/sales_orders.py`, `apps/api/app/core/di.py`, `apps/api/app/main.py`)**:
+   - `GET /sales-orders` (filterable by status, buyer type, retailer ID, search).
+   - `POST /sales-orders` (draft order creation with tier-adjusted pricing).
+   - `GET /sales-orders/{id}` (order details with line items).
+   - `POST /sales-orders/{id}/confirm` (credit check + atomic FIFO stock deduction).
+   - `PATCH /sales-orders/{id}/status` (fulfillment state advancement & cancellation).
+6. **Frontend Web UI (`apps/web/app/admin/sales-orders/page.tsx`, `apps/web/lib/nav.ts`)**:
+   - Liquid Glass UI for `/admin/sales-orders` with KPI metric cards (Total Orders, Draft Orders, In Fulfillment, Total Revenue).
+   - Filterable `DataTable` with status badges, retailer tier pills, and credit warning indicators.
+   - Interactive Create Order modal with live tier-discount calculation and credit availability warning indicator.
+   - Comprehensive Order Details view with line items table, batch allocation context, and status progression action buttons (`Confirm Order (Deduct FIFO)`, `Mark Packed`, `Dispatch / Ship`, `Mark Delivered`, `Cancel Order`).
+   - Wired `Orders & Dispatch` navigation in Wholesale Operations sidebar.
+7. **Automated Testing & QA Verification**:
+   - Backend `apps/api/tests/test_sales_orders.py` (7 tests covering credit limit check before stock inspection, cash-only accounts, FIFO oldest-expiry-first stock consumption across multiple batches, compensating stock restoration on cancellation, invalid state transition rejections, and FastAPI endpoint HTTP lifecycle).
+   - Frontend `apps/web/lib/__tests__/sales-orders.test.tsx` (5 tests covering KPI cards, search filtering, status tab filtering, modal draft creation, and order confirmation).
+   - 110/110 Pytest backend tests passing.
+   - 91/91 Vitest frontend tests passing across 20 test files.
+   - 0 errors/0 warnings on Ruff and ESLint; Next.js build succeeding with 28 static and dynamic routes.
+
+### Decisions
+
+- **Credit Limit Gate Before Stock Check**: Credit verification strictly precedes inventory allocation. If a retailer's credit balance exceeds credit limit, the transaction aborts with zero inventory batches altered.
+- **Compensating Adjustments for Cancellation**: Cancelling a confirmed order creates `StockMovement(type=adjustment)` referencing the original sales order rather than deleting movements, ensuring an immutable audit trail.
+- **Oldest-Expiry-First (FIFO)**: Sorting by `expiry_date ASC nulls last, received_at ASC` guarantees perishable inventory is dispatched before newer stock, minimizing spoilage.
+
+### Key values for future steps
+
+- Sales Orders API: `GET /sales-orders`, `POST /sales-orders`, `GET /sales-orders/{id}`, `POST /sales-orders/{id}/confirm`, `PATCH /sales-orders/{id}/status`
+- Web Route: `/admin/sales-orders`
+- Status Workflow: `draft` -> `confirmed` -> `packed` -> `shipped` -> `delivered` (or `cancelled`)
+
+### Files Created
+
+- `apps/api/app/schemas/sales_orders.py`
+- `apps/api/app/repositories/interfaces/sales_order_repository.py`
+- `apps/api/app/repositories/impl/sales_order_repository.py`
+- `apps/api/app/services/sales_order_service.py`
+- `apps/api/app/api/routers/sales_orders.py`
+- `apps/api/tests/test_sales_orders.py`
+- `apps/web/app/admin/sales-orders/page.tsx`
+- `apps/web/lib/__tests__/sales-orders.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/repositories/interfaces/stock_repository.py`
+- `apps/api/app/repositories/impl/stock_repository.py`
+- `apps/api/app/services/pricing_strategy.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/web/lib/nav.ts`
+- `memory.md`
+- `codebase_audit.md`
+
+
 

@@ -48,7 +48,9 @@ class PurchaseReturnService:
         elif self.product_repo:
             prod = self.product_repo.get_by_id(item.product_id)
             if prod:
-                prod_name = prod.name if hasattr(prod, "name") else prod.get("name", "Unknown Product")
+                prod_name = (
+                    prod.name if hasattr(prod, "name") else prod.get("name", "Unknown Product")
+                )
                 prod_sku = prod.sku if hasattr(prod, "sku") else prod.get("sku", "N/A")
 
         batch_no = "N/A"
@@ -78,7 +80,9 @@ class PurchaseReturnService:
         elif self.supplier_repo:
             sup = self.supplier_repo.get_by_id(ret.supplier_id)
             if sup:
-                supplier_name = sup.name if hasattr(sup, "name") else sup.get("name", "Unknown Supplier")
+                supplier_name = (
+                    sup.name if hasattr(sup, "name") else sup.get("name", "Unknown Supplier")
+                )
 
         po_number = "N/A"
         if getattr(ret, "purchase_order", None):
@@ -310,7 +314,6 @@ class PurchaseReturnService:
                 )
 
         return self._to_response(updated)
-
 
     def get_purchase_return(self, return_id: str) -> PurchaseReturnResponse:
         """Fetch single purchase return detail by ID."""

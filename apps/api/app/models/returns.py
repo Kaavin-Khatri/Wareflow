@@ -120,7 +120,6 @@ class PurchaseReturn(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-
     # Relationships
     purchase_order: Mapped["app.models.supplier.PurchaseOrder"] = relationship(  # noqa: F821
         "PurchaseOrder"

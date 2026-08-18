@@ -22,6 +22,11 @@ class PricingCalculationResult:
     discount_amount: float
     tier_applied: str
 
+    @property
+    def unit_price(self) -> float:
+        """Alias for effective_unit_price."""
+        return self.effective_unit_price
+
 
 class PricingStrategy(ABC):
     """Abstract Strategy interface for wholesale pricing rules (OCP)."""
@@ -39,7 +44,9 @@ class PricingStrategy(ABC):
         ...
 
     @abstractmethod
-    def calculate_unit_price(self, base_price: float, quantity: int = 1, context: dict[str, Any] | None = None) -> float:
+    def calculate_unit_price(
+        self, base_price: float, quantity: int = 1, context: dict[str, Any] | None = None
+    ) -> float:
         """Calculate discounted unit price per single item."""
         ...
 
@@ -192,7 +199,9 @@ class PricingEngineService:
     def get_strategy(self, tier: str | None) -> PricingStrategy:
         """Resolve strategy by tier name, falling back to Standard."""
         normalized = (tier or "standard").strip().lower()
-        return self._strategies.get(normalized, self._strategies.get("standard", StandardPricingStrategy()))
+        return self._strategies.get(
+            normalized, self._strategies.get("standard", StandardPricingStrategy())
+        )
 
     def calculate_line_price(
         self,

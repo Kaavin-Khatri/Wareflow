@@ -33,7 +33,6 @@ def mock_owner_user() -> CurrentUser:
     )
 
 
-
 @pytest.fixture
 def test_app(mock_owner_user: CurrentUser) -> FastAPI:
     """Fixture assembling isolated FastAPI app with overridden security and repository dependencies."""
@@ -54,14 +53,13 @@ def test_app(mock_owner_user: CurrentUser) -> FastAPI:
     from app.core.di import get_alert_engine_service, get_business_settings_service
 
     application.dependency_overrides[get_current_user] = lambda: mock_owner_user
-    application.dependency_overrides[require_permission("settings:manage")] = (
-        lambda: mock_owner_user
+    application.dependency_overrides[require_permission("settings:manage")] = lambda: (
+        mock_owner_user
     )
     application.dependency_overrides[get_business_settings_service] = lambda: biz_service
     application.dependency_overrides[get_alert_engine_service] = lambda: engine
 
     return application
-
 
 
 def test_business_settings_service_crud_and_status_computation() -> None:
