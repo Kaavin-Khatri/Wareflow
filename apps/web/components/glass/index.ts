@@ -5,3 +5,4 @@ export * from "./GlassModal";
 export * from "./GlassDropdown";
 export * from "./GlassInput";
 export * from "./GlassBadge";
+export * from "./GlassTiltCard";
