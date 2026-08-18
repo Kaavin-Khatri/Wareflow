@@ -90,7 +90,17 @@
 | `FIREBASE_SERVICE_ACCOUNT_KEY_PATH` | Path to Firebase Admin SDK JSON               | No (secret) |
 | `TOTP_ENCRYPTION_KEY`               | Secret encryption key for TOTP secrets/backup | No (secret) |
 | `RESEND_API_KEY`                    | Resend email API key                          | No (secret) |
-| `GROQ_API_KEY`                      | Groq LLM API key                              | No (secret) |
+| `GROQ_API_KEY`                      | Groq LLM API key                              | No          |
+
+## Layout & Shell Inventory (Step 4.6)
+
+| Component        | File                                            | Surface & Treatment                                        | Motion Stack Behavior                                                                           |
+| ---------------- | ----------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `AppLayout`      | `apps/web/components/AppLayout.tsx`             | Responsive shell, 360px viewport support, no x-scroll      | `AnimatePresence mode="wait"` + `PageTransition` wrapping route changes                         |
+| `Sidebar`        | `apps/web/components/Sidebar.tsx`               | Frosted `GlassNav` floating above gradient mesh            | `layoutId="active-sidebar-pill"` active link glider, spring-driven mobile drawer slide-over     |
+| `Topbar`         | `apps/web/components/Topbar.tsx`                | Frosted `GlassPanel` header with telemetry & notifications | `@formkit/auto-animate` for notification list item mutations, popover fade/scale                |
+| `PageHeader`     | `apps/web/components/PageHeader.tsx`            | Standardized header with breadcrumb, badge & actions slot  | Static crisp layout, responsive flex-wrap for buttons                                           |
+| `AnimatedNumber` | `apps/web/components/motion/AnimatedNumber.tsx` | Direct DOM node text tweening for numeric metrics          | Motion `animate()` tween on mount with snappy curve, instant render on `prefers-reduced-motion` |
 
 ## File Tree
 
@@ -125,8 +135,10 @@ wareflow/
 │   │   ├── middleware.ts           # Route guard and session cookie verification
 │   │   ├── .env.example
 │   │   ├── components/
-│   │   │   ├── Sidebar.tsx         # Liquid glass dynamic navigation sidebar
-│   │   │   ├── AppLayout.tsx       # Modern topbar & responsive container layout
+│   │   │   ├── AppLayout.tsx       # Modern layout composing Sidebar, Topbar & PageTransitions
+│   │   │   ├── Sidebar.tsx         # Liquid glass floating nav with layoutId active pill & mobile sheet
+│   │   │   ├── Topbar.tsx          # Frosted GlassPanel header with telemetry & AutoAnimate notifications
+│   │   │   ├── PageHeader.tsx      # Standardized title/description/badge/action slot header
 │   │   │   ├── GradientBackdrop.tsx# Multi-orb GPU-accelerated animated gradient backdrop
 │   │   │   ├── ThemeProvider.tsx   # React 19 useSyncExternalStore theme + accent context
 │   │   │   ├── ThemeToggle.tsx     # Animated sun/moon liquid glass toggle button
@@ -141,6 +153,7 @@ wareflow/
 │   │   │   ├── motion/             # Layered motion stack infrastructure
 │   │   │   │   ├── MotionProvider.tsx # Shared spring presets (snappy, glassMorph, gentle)
 │   │   │   │   ├── GlassMotion.tsx    # Reusable wrappers (PageTransition, FadeIn, Stagger)
+│   │   │   │   ├── AnimatedNumber.tsx # Direct-ref DOM numeric counter ticker
 │   │   │   │   └── AnimeMicro.tsx     # anime.js SVG path morphing & micro-press engine
 │   │   │   ├── templates/          # Four Locked Page Template System
 │   │   │   │   ├── ListViewTemplate.tsx   # Sticky filter bar, data table, bulk actions, pagination
@@ -171,7 +184,8 @@ wareflow/
 │   │   │       ├── theme.test.ts
 │   │   │       ├── glass-primitives.test.tsx
 │   │   │       ├── templates.test.tsx
-│   │   │       └── marketing.test.tsx
+│   │   │       ├── marketing.test.tsx
+│   │   │       └── dashboard-shell.test.tsx
 │   │   └── app/                    # App Router pages
 │   │       ├── layout.tsx          # Root layout with anti-flash script & ThemeProvider
 │   │       ├── page.tsx            # Public-facing 3D animated marketing landing page
@@ -185,7 +199,7 @@ wareflow/
 │   │       │   └── logout/route.ts # Server-side logout & cookie clear
 │   │       ├── api/auth/session/   # Session cookie handler (POST, PATCH for 2FA, DELETE)
 │   │       │   └── route.ts
-│   │       ├── dashboard/          # Authenticated workspace dashboard
+│   │       ├── dashboard/          # Authenticated workspace dashboard with live telemetry
 │   │       │   └── page.tsx
 │   │       ├── admin/
 │   │       │   ├── audit/page.tsx  # General Action Audit Log timeline & diff inspector
@@ -392,58 +406,61 @@ wareflow/
 
 ## Decisions
 
-| Decision                          | Rationale                                                                                                         |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Performance-Budget Gates Motion   | 3D scenes lazy-load dynamically with zero SSR, cap DPR to 1.5, and degrade immediately on low-power devices       |
-| First-Class Reduced Motion        | Every animation (R3F, GSAP ScrollTrigger, CSS keyframes, motion springs) honors `prefers-reduced-motion: reduce`  |
-| Dynamic Site-Wide Background      | 4-orb GPU-accelerated animated gradient mesh with anti-banding noise provides alive visual backdrop to all pages  |
-| Locked Four Page Templates        | Every screen across all 19 phases must map strictly to ListView, DetailView, Form, or DashboardTemplate           |
-| 12-Column Responsive Grid System  | Strict 12-col grid + 4px base spacing scale modeled on Linear, Stripe Dashboard, and Notion benchmarks            |
-| Narrowly Scoped anime.js Motion   | `animejs` added as 5th motion engine strictly for SVG path draw/morph and micro-press physics (0 library overlap) |
-| Theme Mode + Accent Locked Tokens | Theme mode (Light/Dark/System) + Accent are the ONLY customizable tokens; the black/white glass foundation stays  |
-| Curated Pre-Tested Swatches       | Scoped to 7 verified swatches to guarantee WCAG AA contrast against both true black and white backgrounds         |
-| Dual-Storage Persistence          | Preferences stored in `localStorage` for 0-latency paint and in Postgres `profiles` to follow users on login      |
-| Liquid Glass Default Primitives   | Real specular edge refraction & tactile spring compression as DEFAULT for all buttons and interactive controls    |
-| Surface-Area Inverted Refraction  | Refraction strength scales inversely with element size: full refraction for buttons/modals, light-edge for panels |
-| Segregated Motion Stack Ownership | `motion` for UI transitions, `gsap` for marketing timelines, `@formkit/auto-animate` for lists, `@react-spring`   |
-| Liquid Glass Visual Identity      | Black/white foundation + single Electric Violet (`#7C3AED`/`#8B5CF6`) accent + frosted glass overlays & blooms    |
-| Real Persisted Theme Toggle       | Explicit user choice stored in `localStorage` (`wareflow-theme`), defaulting to OS preference on 1st visit        |
-| GPU Gradient Backdrop             | Fixed multi-orb CSS backdrop drifting smoothly over noise grain layer, eliminating OLED banding                   |
-| Supabase = DB only                | Need SQL joins, transactions, referential integrity for accounting                                                |
-| Firebase = Auth only              | Best-in-class free Google/Apple Sign-In with minimal setup                                                        |
-| In-House RFC 6238 TOTP 2FA        | Standard TOTP avoids paid Firebase SMS MFA costs while delivering universal Google Authenticator/Authy support    |
-| Symmetric Secret Encryption       | TOTP secrets and backup codes encrypted at rest with Fernet (AES-128-CBC + HMAC-SHA256)                           |
-| Single-Use Atomic Backup Codes    | 10 backup codes generated at enrollment, permanently consumed upon single use                                     |
-| Operational Staff Exemption       | Warehouse/Sales staff exempt from mandatory 2FA to prevent delays during high-speed packing and shop-floor runs   |
-| General Admin Action Audit Log    | `admin_audit_log` records immutable before/after diffs for sensitive actions (price, credit, permissions, staff)  |
-| Humanized Audit Narratives        | `AuditService` synthesizes readable business sentences from raw diffs while preserving JSON diff inspection       |
-| SOLID from day one                | Prevents spaghetti; makes testing and swapping implementations easy                                               |
-| Application factory               | Testable app creation, supports different configs per environment                                                 |
-| pydantic-settings                 | Single source of truth for env vars, validates on startup                                                         |
-| Prettier (web)                    | Consistent formatting, 100 char line width matching ruff                                                          |
-| Ruff (api)                        | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N                                          |
-| eslint-config-prettier            | Disables ESLint rules that conflict with Prettier                                                                 |
-| Local PG on 5433                  | Avoid conflicts with system Postgres; Supabase stays primary                                                      |
-| Typed API Client                  | Type-safe fetch wrapper with ApiError extracting status & server message                                          |
-| DIP Container                     | Services receive repository Protocol interfaces via FastAPI Depends()                                             |
-| CI on Day One                     | GitHub Actions pipeline runs lint + format + test + build on every push                                           |
-| Automated QA                      | QA checklist items written as automated tests, enforced by CI                                                     |
-| Connection Split (Supabase)       | Port 6543 (transaction pooler) + NullPool for runtime; port 5432 (session pooler) for Alembic migrations          |
-| Prepared Statement Disabling      | `connect_args={"prepare_threshold": None}` prevents named prepared statement errors with Supavisor pooler         |
-| Schema v1 Completeness            | Core tables (UOM conversions, batch tracking, supplier FSSAI, retailer credit) created upfront                    |
-| Append-only Stock Ledger          | `stock_movements` is single source of truth for inventory balances                                                |
-| Frozen Invoicing Snapshot         | `invoice_items` freezes prices, taxes, and names at issuance time to ensure immutable accounting records          |
-| Single-Path Sales Orders          | `buyer_type` discriminator allows single order fulfillment engine to serve both B2B retailers and customers       |
-| Supplier Magic Links              | `supplier_access_tokens` provides no-login dispatch confirmations for suppliers                                   |
-| Distributor Identity Model        | `business_settings` provides single source of truth for distributor's legal/FSSAI profile                         |
-| Natural-Key Upsert Seed           | `scripts/seed.py` matches on unique natural keys to guarantee complete idempotency across repeated runs           |
-| Deliberate Low-Stock Seed Data    | Seed includes 4 products below reorder point to prove alert and notification engines                              |
-| Server-Side Session Cookies       | Next.js route handler sets `httpOnly` cookie on auth to allow Next.js middleware protection without waterfalls    |
-| First-User Owner Assignment       | Bootstrap assigns `Owner` role to 1st signed-in user; subsequent uninvited registrations receive 403 Forbidden    |
-| Data-Driven Permission Guards     | `require_permission(code)` enforces DB permission codes from `role_permissions` rather than hardcoded roles       |
-| Dual-Inbound Auth Support         | `get_current_user` extracts and verifies either Bearer tokens or `httpOnly` session cookies transparently         |
-| Dynamic RBAC Navigation           | Navigation menus filter items strictly against user's active permissions without hardcoded role branches          |
-| Server-Side User Provisioning     | Firebase Admin SDK creates users server-side only; service keys are never exposed to client bundles               |
+| Decision                          | Rationale                                                                                                           |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Motion Signals State Change       | Motion is strictly reserved to draw attention to STATE CHANGES (active link shift, number count-up, table mutation) |
+| Direct-Ref Numeric Tickers        | Direct DOM node mutation during number count-up guarantees 60fps performance without React re-render cascades       |
+| Single Standard PageHeader        | Every page consumes standard `PageHeader` for typographic consistency, breadcrumbs, and responsive action layout    |
+| Performance-Budget Gates Motion   | 3D scenes lazy-load dynamically with zero SSR, cap DPR to 1.5, and degrade immediately on low-power devices         |
+| First-Class Reduced Motion        | Every animation (R3F, GSAP ScrollTrigger, CSS keyframes, motion springs) honors `prefers-reduced-motion: reduce`    |
+| Dynamic Site-Wide Background      | 4-orb GPU-accelerated animated gradient mesh with anti-banding noise provides alive visual backdrop to all pages    |
+| Locked Four Page Templates        | Every screen across all 19 phases must map strictly to ListView, DetailView, Form, or DashboardTemplate             |
+| 12-Column Responsive Grid System  | Strict 12-col grid + 4px base spacing scale modeled on Linear, Stripe Dashboard, and Notion benchmarks              |
+| Narrowly Scoped anime.js Motion   | `animejs` added as 5th motion engine strictly for SVG path draw/morph and micro-press physics (0 library overlap)   |
+| Theme Mode + Accent Locked Tokens | Theme mode (Light/Dark/System) + Accent are the ONLY customizable tokens; the black/white glass foundation stays    |
+| Curated Pre-Tested Swatches       | Scoped to 7 verified swatches to guarantee WCAG AA contrast against both true black and white backgrounds           |
+| Dual-Storage Persistence          | Preferences stored in `localStorage` for 0-latency paint and in Postgres `profiles` to follow users on login        |
+| Liquid Glass Default Primitives   | Real specular edge refraction & tactile spring compression as DEFAULT for all buttons and interactive controls      |
+| Surface-Area Inverted Refraction  | Refraction strength scales inversely with element size: full refraction for buttons/modals, light-edge for panels   |
+| Segregated Motion Stack Ownership | `motion` for UI transitions, `gsap` for marketing timelines, `@formkit/auto-animate` for lists, `@react-spring`     |
+| Liquid Glass Visual Identity      | Black/white foundation + single Electric Violet (`#7C3AED`/`#8B5CF6`) accent + frosted glass overlays & blooms      |
+| Real Persisted Theme Toggle       | Explicit user choice stored in `localStorage` (`wareflow-theme`), defaulting to OS preference on 1st visit          |
+| GPU Gradient Backdrop             | Fixed multi-orb CSS backdrop drifting smoothly over noise grain layer, eliminating OLED banding                     |
+| Supabase = DB only                | Need SQL joins, transactions, referential integrity for accounting                                                  |
+| Firebase = Auth only              | Best-in-class free Google/Apple Sign-In with minimal setup                                                          |
+| In-House RFC 6238 TOTP 2FA        | Standard TOTP avoids paid Firebase SMS MFA costs while delivering universal Google Authenticator/Authy support      |
+| Symmetric Secret Encryption       | TOTP secrets and backup codes encrypted at rest with Fernet (AES-128-CBC + HMAC-SHA256)                             |
+| Single-Use Atomic Backup Codes    | 10 backup codes generated at enrollment, permanently consumed upon single use                                       |
+| Operational Staff Exemption       | Warehouse/Sales staff exempt from mandatory 2FA to prevent delays during high-speed packing and shop-floor runs     |
+| General Admin Action Audit Log    | `admin_audit_log` records immutable before/after diffs for sensitive actions (price, credit, permissions, staff)    |
+| Humanized Audit Narratives        | `AuditService` synthesizes readable business sentences from raw diffs while preserving JSON diff inspection         |
+| SOLID from day one                | Prevents spaghetti; makes testing and swapping implementations easy                                                 |
+| Application factory               | Testable app creation, supports different configs per environment                                                   |
+| pydantic-settings                 | Single source of truth for env vars, validates on startup                                                           |
+| Prettier (web)                    | Consistent formatting, 100 char line width matching ruff                                                            |
+| Ruff (api)                        | Fast Python linter+formatter, line-length 100, rules: E/W/F/I/B/UP/SIM/N                                            |
+| eslint-config-prettier            | Disables ESLint rules that conflict with Prettier                                                                   |
+| Local PG on 5433                  | Avoid conflicts with system Postgres; Supabase stays primary                                                        |
+| Typed API Client                  | Type-safe fetch wrapper with ApiError extracting status & server message                                            |
+| DIP Container                     | Services receive repository Protocol interfaces via FastAPI Depends()                                               |
+| CI on Day One                     | GitHub Actions pipeline runs lint + format + test + build on every push                                             |
+| Automated QA                      | QA checklist items written as automated tests, enforced by CI                                                       |
+| Connection Split (Supabase)       | Port 6543 (transaction pooler) + NullPool for runtime; port 5432 (session pooler) for Alembic migrations            |
+| Prepared Statement Disabling      | `connect_args={"prepare_threshold": None}` prevents named prepared statement errors with Supavisor pooler           |
+| Schema v1 Completeness            | Core tables (UOM conversions, batch tracking, supplier FSSAI, retailer credit) created upfront                      |
+| Append-only Stock Ledger          | `stock_movements` is single source of truth for inventory balances                                                  |
+| Frozen Invoicing Snapshot         | `invoice_items` freezes prices, taxes, and names at issuance time to ensure immutable accounting records            |
+| Single-Path Sales Orders          | `buyer_type` discriminator allows single order fulfillment engine to serve both B2B retailers and customers         |
+| Supplier Magic Links              | `supplier_access_tokens` provides no-login dispatch confirmations for suppliers                                     |
+| Distributor Identity Model        | `business_settings` provides single source of truth for distributor's legal/FSSAI profile                           |
+| Natural-Key Upsert Seed           | `scripts/seed.py` matches on unique natural keys to guarantee complete idempotency across repeated runs             |
+| Deliberate Low-Stock Seed Data    | Seed includes 4 products below reorder point to prove alert and notification engines                                |
+| Server-Side Session Cookies       | Next.js route handler sets `httpOnly` cookie on auth to allow Next.js middleware protection without waterfalls      |
+| First-User Owner Assignment       | Bootstrap assigns `Owner` role to 1st signed-in user; subsequent uninvited registrations receive 403 Forbidden      |
+| Data-Driven Permission Guards     | `require_permission(code)` enforces DB permission codes from `role_permissions` rather than hardcoded roles         |
+| Dual-Inbound Auth Support         | `get_current_user` extracts and verifies either Bearer tokens or `httpOnly` session cookies transparently           |
+| Dynamic RBAC Navigation           | Navigation menus filter items strictly against user's active permissions without hardcoded role branches            |
+| Server-Side User Provisioning     | Firebase Admin SDK creates users server-side only; service keys are never exposed to client bundles                 |
 
 ## Security & Audit Log Coverage
 

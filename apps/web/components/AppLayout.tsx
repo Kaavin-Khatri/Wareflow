@@ -1,50 +1,41 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { usePathname } from "next/navigation";
+import { AnimatePresence } from "motion/react";
 import Sidebar from "./Sidebar";
-import ThemeToggle from "./ThemeToggle";
+import Topbar from "./Topbar";
+import { PageTransition } from "./motion/GlassMotion";
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-export default function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children }: AppLayoutProps) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+
   return (
     <div className="flex h-screen w-full text-[var(--text)] antialiased overflow-hidden font-sans relative">
-      {/* Sidebar Navigation */}
-      <Sidebar />
+      {/* Sidebar Navigation (Desktop Persistent + Mobile Slide-Over Sheet) */}
+      <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
-        {/* Modern Glass Topbar */}
-        <header className="h-16 shrink-0 border-b border-[var(--border)] px-8 flex items-center justify-between glass-panel z-10">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-              <span className="font-semibold text-[var(--text)]">WareFlow</span>
-              <span>/</span>
-              <span className="font-mono text-[11px] px-2 py-0.5 rounded-md bg-[var(--accent-subtle)] text-[var(--accent)] font-medium border border-[var(--accent-border)]">
-                v0.1.0 • Liquid Glass
-              </span>
-            </div>
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+        {/* Modern Frosted Glass Topbar */}
+        <Topbar onMenuClick={() => setMobileMenuOpen(true)} />
+
+        {/* Scrollable Page Body with Motion Page Transition */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto w-full">
+            <AnimatePresence mode="wait">
+              <PageTransition key={pathname}>{children}</PageTransition>
+            </AnimatePresence>
           </div>
-
-          <div className="flex items-center gap-3">
-            {/* Quick Link / Status */}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl glass-panel text-xs text-[var(--text-muted)]">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Operational</span>
-            </div>
-
-            {/* Theme Toggle Button */}
-            <ThemeToggle />
-          </div>
-        </header>
-
-        {/* Scrollable Page Body */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-8">
-          <div className="max-w-7xl mx-auto">{children}</div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
+
+export default AppLayout;

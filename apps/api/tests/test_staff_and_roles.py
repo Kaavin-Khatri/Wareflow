@@ -10,9 +10,11 @@ from sqlalchemy.pool import StaticPool
 import app.models  # noqa: F401
 from app.core.di import get_profile_repository
 from app.db.base import Base
+from app.db.session import get_db_session
 from app.main import create_app
 from app.models import Permission, Profile, Role, RolePermission
 from app.repositories.impl.profile_repository import SqlAlchemyProfileRepository
+
 
 
 @pytest.fixture
@@ -82,14 +84,16 @@ def db_session():
 
 @pytest.fixture
 def test_app(db_session: Session) -> FastAPI:
-    """Create test FastAPI application with injected profile repository."""
+    """Create test FastAPI application with injected profile repository and test db session."""
     app = create_app()
 
     def override_profile_repo():
         return SqlAlchemyProfileRepository(session=db_session)
 
     app.dependency_overrides[get_profile_repository] = override_profile_repo
+    app.dependency_overrides[get_db_session] = lambda: db_session
     return app
+
 
 
 @pytest.fixture

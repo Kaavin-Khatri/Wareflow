@@ -3,12 +3,13 @@
 import React, { ReactNode } from "react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { FadeIn, StaggerContainer, StaggerItem } from "@/components/motion/GlassMotion";
+import { PageHeader } from "@/components/PageHeader";
 import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 export interface KpiMetric {
   id: string;
   title: string;
-  value: string | number;
+  value: ReactNode;
   change?: string;
   trend?: "up" | "down" | "neutral";
   subtitle?: string;
@@ -18,13 +19,17 @@ export interface KpiMetric {
 
 export interface DashboardTemplateProps {
   /** Dashboard title (e.g. Executive Overview, Warehouse Telemetry) */
-  title: string;
+  title: ReactNode;
   /** Subtitle or live sync status */
-  description?: string;
+  description?: ReactNode;
+  /** Live badge or status indicator */
+  badge?: ReactNode;
   /** Filter slot (e.g. date-range picker, warehouse selector) */
   filters?: ReactNode;
   /** Primary dashboard action (e.g. + New Transaction, Export Report) */
   primaryAction?: ReactNode;
+  /** Secondary actions (e.g. Export, Audit Log) */
+  secondaryActions?: ReactNode;
   /** Top row of 4-6 KPI metrics */
   kpiMetrics?: KpiMetric[];
   /** Custom KPI slot if not using standard array */
@@ -40,8 +45,10 @@ export interface DashboardTemplateProps {
 export function DashboardTemplate({
   title,
   description,
+  badge,
   filters,
   primaryAction,
+  secondaryActions,
   kpiMetrics,
   customKpiSlot,
   mainContent,
@@ -51,17 +58,20 @@ export function DashboardTemplate({
   return (
     <FadeIn className="w-full space-y-6 pb-16">
       {/* 1. Header with Controls */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-[var(--border)] pb-5">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text)]">{title}</h1>
-          {description && <p className="text-xs text-[var(--text-muted)]">{description}</p>}
-        </div>
-
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {filters}
-          {primaryAction}
-        </div>
-      </div>
+      <PageHeader
+        title={title}
+        description={description}
+        badge={badge}
+        primaryAction={primaryAction}
+        secondaryActions={
+          filters || secondaryActions ? (
+            <div className="flex items-center gap-2.5 flex-wrap">
+              {filters}
+              {secondaryActions}
+            </div>
+          ) : undefined
+        }
+      />
 
       {/* 2. Top KPI Metric Cards */}
       {customKpiSlot ? (

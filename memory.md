@@ -1102,3 +1102,67 @@
 - `apps/web/components/GradientBackdrop.tsx`
 - `apps/web/app/page.tsx`
 - `codebase_audit.md`
+
+---
+
+## Step 4.6 — Dashboard Shell with Page Transitions & Micro-interactions
+
+**Timestamp:** 2026-08-18T02:55:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Implemented standard `PageHeader` component (`apps/web/components/PageHeader.tsx`) providing responsive title, description, live badge, back-links, and primary/secondary action button slots for all application pages.
+- Upgraded `Sidebar.tsx` into a full `GlassNav`:
+  - Frosted liquid glass floating frame above the animated gradient backdrop.
+  - Motion active-item indicator pill (`layoutId="active-sidebar-pill"`) with smooth spring sliding physics between routes.
+  - Responsive mobile Sheet / Drawer below `lg` with smooth spring slide-in (`x: "-100%"` -> `x: 0`), accessible backdrop overlay, and automatic route-change dismiss.
+- Upgraded `Topbar.tsx`:
+  - Frosted `GlassPanel` floating header with responsive mobile hamburger trigger.
+  - Live 0.02s Settlement telemetry pill.
+  - Interactive Notification Center with `@formkit/auto-animate` for silky add/remove/dismiss actions.
+  - User profile menu with avatar initials, role badge, quick links (Appearance, 2FA Security, Audit Log, Styleguide), and server-side sign out.
+- Upgraded `AppLayout.tsx`:
+  - Integrated `AnimatePresence mode="wait"` and `PageTransition` keyed by `pathname` for smooth, non-jarring route transitions.
+  - Guaranteed 360px mobile responsiveness with zero horizontal overflow.
+- Built `AnimatedNumber.tsx` (`NumberTicker`):
+  - Direct ref DOM animation with `motion`'s `animate()` avoiding cascading React re-renders.
+  - Animates on initial paint with snappy easing `[0.16, 1, 0.3, 1]`.
+  - Does not re-animate distractingly on background refetches.
+  - Respects `prefers-reduced-motion: reduce` with instant text render.
+- Upgraded `apps/web/app/dashboard/page.tsx`:
+  - Uses `DashboardTemplate` and `PageHeader`.
+  - 4 animated KPI metrics with `AnimatedNumber` tickers.
+  - Live recent orders table with `@formkit/auto-animate` for interactive dispatch simulations.
+  - Urgent operations alert queue and terminal sync telemetry cards.
+- Added comprehensive unit test suite in `apps/web/lib/__tests__/dashboard-shell.test.tsx` (all 36 web tests + 44 API tests passing).
+
+### Decisions
+
+- **Motion-Signals-State-Change Rule (Guardrail against over-animating)**: Motion is strictly reserved to draw attention to STATE CHANGES (active link shift, number count-up on load, row addition/removal in tables, drawer slide, route enter/exit). Motion MUST NEVER decorate static content or loop continuously without purpose.
+- **Direct Ref Number Animation**: Numeric tickers mutate the DOM node directly during tweening to deliver 60fps animations without thrashing React component trees or triggering ESLint state cascading warnings.
+- **Single PageHeader Standard**: Every page across all phases consumes `PageHeader` (directly or via templates) to enforce typographic consistency, breadcrumb navigation, and responsive action placement.
+
+### Key values for future steps
+
+- Page Header: `apps/web/components/PageHeader.tsx`
+- Animated Number: `apps/web/components/motion/AnimatedNumber.tsx`
+- Topbar: `apps/web/components/Topbar.tsx`
+- Sidebar: `apps/web/components/Sidebar.tsx`
+- App Layout: `apps/web/components/AppLayout.tsx`
+
+### Files Created
+
+- `apps/web/components/PageHeader.tsx`
+- `apps/web/components/Topbar.tsx`
+- `apps/web/components/motion/AnimatedNumber.tsx`
+- `apps/web/lib/__tests__/dashboard-shell.test.tsx`
+
+### Files Modified
+
+- `apps/web/components/Sidebar.tsx`
+- `apps/web/components/AppLayout.tsx`
+- `apps/web/components/templates/DashboardTemplate.tsx`
+- `apps/web/app/dashboard/page.tsx`
+- `apps/api/tests/test_staff_and_roles.py`
+- `codebase_audit.md`
