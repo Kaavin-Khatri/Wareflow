@@ -1,8 +1,7 @@
-"""FastAPI endpoints for Multi-Warehouse Stock & Batch Visibility."""
-
+from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, status
 
 from app.core.security import CurrentUser, get_current_user
 from app.schemas.stock import (
@@ -10,6 +9,11 @@ from app.schemas.stock import (
     StockBatchResponse,
     StockOverviewResponse,
     WarehouseSummary,
+)
+from app.schemas.stock_adjustments import (
+    StockAdjustmentCreateRequest,
+    StockAdjustmentResponse,
+    StockMovementListResponse,
 )
 from app.services.stock_service import StockService
 
@@ -79,3 +83,53 @@ def get_product_stock(
 ) -> ProductStockResponse:
     """Retrieve detailed multi-warehouse stock breakdown and batch list for a single product."""
     return service.get_product_stock(product_id=product_id, warehouse_id=warehouse_id)
+
+
+@router.post(
+    "/stock/adjustments",
+    response_model=StockAdjustmentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def adjust_stock(
+    payload: StockAdjustmentCreateRequest,
+    service: Annotated[StockService, Depends(get_stock_service)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> StockAdjustmentResponse:
+    """
+    Record a manual stock adjustment with mandatory reason and non-negative batch guarantee.
+    'recount' reason strictly requires the 'stock.recount' permission.
+    """
+    return service.adjust_stock(payload=payload, current_user=current_user)
+
+
+@router.get("/stock/movements", response_model=StockMovementListResponse)
+def list_stock_movements(
+    service: Annotated[StockService, Depends(get_stock_service)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    page: Annotated[int, Query(ge=1, description="Page number")] = 1,
+    page_size: Annotated[int, Query(ge=1, le=200, description="Items per page")] = 50,
+    product_id: Annotated[str | None, Query(description="Filter by product ID")] = None,
+    warehouse_id: Annotated[str | None, Query(description="Filter by warehouse ID")] = None,
+    type: Annotated[
+        str | None, Query(description="Filter by movement type ('in', 'out', 'adjustment', 'return_in', 'return_out')")
+    ] = None,
+    start_date: Annotated[datetime | None, Query(description="Start date filter")] = None,
+    end_date: Annotated[datetime | None, Query(description="End date filter")] = None,
+    search: Annotated[
+        str | None, Query(description="Search query (product name, SKU, reference)")
+    ] = None,
+) -> StockMovementListResponse:
+    """
+    Fetch paginated, filterable stock movements ledger joined with contextual human labels.
+    """
+    return service.list_movements(
+        page=page,
+        page_size=page_size,
+        product_id=product_id,
+        warehouse_id=warehouse_id,
+        movement_type=type,
+        start_date=start_date,
+        end_date=end_date,
+        search=search,
+    )
+

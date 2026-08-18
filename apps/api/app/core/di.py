@@ -235,9 +235,11 @@ def get_stock_repository(db: Session = Depends(get_db_session)) -> StockReposito
 def get_stock_service(
     stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
     uom_repo: UomRepositoryInterface = Depends(get_uom_repository),
+    audit_repo: AuditRepository = Depends(get_audit_repository),
 ) -> StockService:
-    """Factory for StockService with UoM converter."""
-    return StockService(stock_repo=stock_repo, uom_repo=uom_repo)
+    """Factory for StockService with UoM converter and audit repository."""
+    return StockService(stock_repo=stock_repo, uom_repo=uom_repo, audit_repo=audit_repo)
+
 
 
 def get_stock_analytics_repository(

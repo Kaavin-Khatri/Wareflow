@@ -1,12 +1,15 @@
-"""Stock domain service for multi-warehouse batch visibility and inventory health."""
-
+import math
 from datetime import date
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from fastapi import HTTPException, status
 
+if TYPE_CHECKING:
+    from app.core.security import CurrentUser
+
 from app.models.catalog import Product
 from app.models.warehouse import StockBatch
+from app.repositories.interfaces.audit_repository import AuditRepository
 from app.repositories.interfaces.stock_repository import StockRepositoryInterface
 from app.repositories.interfaces.uom_repository import UomRepositoryInterface
 from app.schemas.stock import (
@@ -16,6 +19,13 @@ from app.schemas.stock import (
     StockOverviewResponse,
     WarehouseStockBreakdown,
     WarehouseSummary,
+)
+from app.schemas.stock_adjustments import (
+    AdjustmentReasonEnum,
+    StockAdjustmentCreateRequest,
+    StockAdjustmentResponse,
+    StockMovementListItemResponse,
+    StockMovementListResponse,
 )
 from app.services.uom_service import UomService
 
@@ -28,10 +38,13 @@ class StockService:
         stock_repo: StockRepositoryInterface,
         uom_repo: UomRepositoryInterface | None = None,
         uom_service: UomService | None = None,
+        audit_repo: AuditRepository | None = None,
     ):
         self.stock_repo = stock_repo
         self.uom_repo = uom_repo
         self.uom_service = uom_service or (UomService(uom_repo=uom_repo) if uom_repo else None)
+        self.audit_repo = audit_repo
+
 
     @staticmethod
     def calculate_stock_status(
@@ -312,3 +325,174 @@ class StockService:
         )
 
         return batch, movement
+
+    def adjust_stock(
+        self, payload: StockAdjustmentCreateRequest, current_user: CurrentUser
+    ) -> StockAdjustmentResponse:
+        """
+        Record a manual stock adjustment with validation and permission guards:
+        - Reason is required (damage, loss, recount, other)
+        - 'recount' reason strictly requires stock.recount / stock:recount permission or Owner role
+        - Delta cannot be zero
+        - Resulting batch quantity cannot be negative
+        - Emits immutable stock_movements(type=adjustment) record and audit log
+        """
+        if payload.delta == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Adjustment delta cannot be zero.",
+            )
+
+        # Recount permission gate
+        if payload.reason == AdjustmentReasonEnum.RECOUNT:
+            has_recount_perm = (
+                "stock:recount" in current_user.permissions
+                or "stock.recount" in current_user.permissions
+                or current_user.role.lower() == "owner"
+            )
+            if not has_recount_perm:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Missing required permission for recount: stock.recount",
+                )
+
+        try:
+            batch, movement, prev_qty, new_qty = self.stock_repo.record_stock_adjustment(
+                product_id=payload.product_id,
+                warehouse_id=payload.warehouse_id,
+                batch_id=payload.batch_id,
+                delta=payload.delta,
+                reason=payload.reason.value,
+                notes=payload.notes,
+                created_by=current_user.email or current_user.id,
+            )
+        except ValueError as e:
+            err_msg = str(e)
+            if "not found" in err_msg.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=err_msg,
+                ) from e
+            if "negative" in err_msg.lower():
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=err_msg,
+                ) from e
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=err_msg,
+            ) from e
+
+        # Structured audit log
+        if self.audit_repo:
+            self.audit_repo.create_log(
+                actor_id=current_user.id if hasattr(current_user, "id") else None,
+                action="stock_adjusted",
+                entity_type="stock_batch",
+                entity_id=payload.batch_id,
+                before_value={"quantity": prev_qty},
+                after_value={
+                    "quantity": new_qty,
+                    "delta": payload.delta,
+                    "reason": payload.reason.value,
+                    "notes": payload.notes,
+                },
+            )
+
+
+        return StockAdjustmentResponse(
+            movement_id=movement.id,
+            product_id=payload.product_id,
+            warehouse_id=payload.warehouse_id,
+            batch_id=payload.batch_id,
+            previous_quantity=prev_qty,
+            new_quantity=new_qty,
+            delta=payload.delta,
+            reason=payload.reason,
+            notes=payload.notes,
+            created_at=movement.created_at,
+            created_by=movement.created_by,
+        )
+
+    def list_movements(
+        self,
+        page: int = 1,
+        page_size: int = 50,
+        product_id: str | None = None,
+        warehouse_id: str | None = None,
+        movement_type: str | None = None,
+        start_date: Any | None = None,
+        end_date: Any | None = None,
+        search: str | None = None,
+    ) -> StockMovementListResponse:
+        """
+        Fetch paginated stock movements with contextual human-readable labels.
+        """
+        raw_items, total = self.stock_repo.list_movements(
+            page=page,
+            page_size=page_size,
+            product_id=product_id,
+            warehouse_id=warehouse_id,
+            movement_type=movement_type,
+            start_date=start_date,
+            end_date=end_date,
+            search=search,
+        )
+
+        formatted_items: list[StockMovementListItemResponse] = []
+        for item in raw_items:
+            ref_type = item.get("reference_type")
+            ref_id = item.get("reference_id")
+            m_type = item.get("type", "").lower()
+
+            human_label = f"{m_type.upper()}"
+            if ref_type == "purchase_order":
+                human_label = f"PO #{ref_id or '—'} (Goods Receipt)"
+            elif ref_type == "sales_order":
+                human_label = f"SO #{ref_id or '—'} (Fulfillment Dispatch)"
+            elif ref_type == "sales_order_cancellation":
+                human_label = f"SO #{ref_id or '—'} (Order Cancellation)"
+            elif ref_type == "purchase_return":
+                human_label = f"PR #{ref_id or '—'} (Supplier Return)"
+            elif ref_type == "sales_return":
+                human_label = f"RMA #{ref_id or '—'} (Retailer Return)"
+            elif ref_type == "manual_adjustment":
+                if ref_id and ":" in str(ref_id):
+                    reason, notes = str(ref_id).split(":", 1)
+                    human_label = f"Adjustment: {reason.capitalize()} ({notes})"
+                elif ref_id:
+                    human_label = f"Adjustment: {str(ref_id).capitalize()}"
+                else:
+                    human_label = "Manual Stock Adjustment"
+            elif ref_id:
+                human_label = f"{ref_type or m_type}: #{ref_id}"
+
+            formatted_items.append(
+                StockMovementListItemResponse(
+                    id=item["id"],
+                    product_id=item["product_id"],
+                    product_name=item.get("product_name", "Unknown Product"),
+                    product_sku=item.get("product_sku", ""),
+                    warehouse_id=item["warehouse_id"],
+                    warehouse_name=item.get("warehouse_name", "Unknown Warehouse"),
+                    batch_id=item.get("batch_id"),
+                    batch_no=item.get("batch_no"),
+                    type=item["type"],
+                    quantity=item["quantity"],
+                    reference_type=ref_type,
+                    reference_id=ref_id,
+                    human_label=human_label,
+                    created_by=item.get("created_by"),
+                    created_at=item["created_at"],
+                )
+            )
+
+        pages = max(1, math.ceil(total / page_size)) if page_size > 0 else 1
+        return StockMovementListResponse(
+            items=formatted_items,
+            total=total,
+            page=page,
+            page_size=page_size,
+            pages=pages,
+        )
+

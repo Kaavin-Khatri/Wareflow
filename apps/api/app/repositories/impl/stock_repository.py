@@ -403,8 +403,120 @@ class SqlAlchemyStockRepository(StockRepositoryInterface):
 
         return batch, movement
 
+    def record_stock_adjustment(
+        self,
+        product_id: str,
+        warehouse_id: str,
+        batch_id: str,
+        delta: float,
+        reason: str,
+        notes: str | None = None,
+        created_by: str | None = None,
+    ) -> tuple[StockBatch, StockMovement, float, float]:
+        batch = self.session.get(StockBatch, batch_id)
+        if not batch:
+            raise ValueError(f"Stock batch '{batch_id}' not found.")
+        if batch.product_id != product_id:
+            raise ValueError(f"Batch '{batch_id}' does not belong to product '{product_id}'.")
+        if batch.warehouse_id != warehouse_id:
+            raise ValueError(f"Batch '{batch_id}' does not belong to warehouse '{warehouse_id}'.")
+
+        prev_qty = float(batch.quantity)
+        new_qty = round(prev_qty + delta, 2)
+        if new_qty < 0:
+            raise ValueError(
+                f"Adjustment delta {delta} would result in negative stock quantity ({new_qty})."
+            )
+
+        batch.quantity = new_qty
+        self.session.flush()
+
+        ref_id = f"{reason}:{notes}" if notes else reason
+        movement = StockMovement(
+            id=str(uuid.uuid4()),
+            product_id=product_id,
+            warehouse_id=warehouse_id,
+            batch_id=batch_id,
+            type=StockMovementTypeEnum.ADJUSTMENT,
+            quantity=round(delta, 2),
+            reference_type="manual_adjustment",
+            reference_id=ref_id,
+            created_by=created_by,
+        )
+        self.session.add(movement)
+        self.session.flush()
+
+        return batch, movement, prev_qty, new_qty
+
+    def list_movements(
+        self,
+        page: int = 1,
+        page_size: int = 50,
+        product_id: str | None = None,
+        warehouse_id: str | None = None,
+        movement_type: str | None = None,
+        start_date: Any | None = None,
+        end_date: Any | None = None,
+        search: str | None = None,
+    ) -> tuple[list[dict[str, Any]], int]:
+        stmt = (
+            select(StockMovement)
+            .options(
+                joinedload(StockMovement.product),
+                joinedload(StockMovement.warehouse),
+                joinedload(StockMovement.batch),
+            )
+        )
+        if product_id:
+            stmt = stmt.where(StockMovement.product_id == product_id)
+        if warehouse_id:
+            stmt = stmt.where(StockMovement.warehouse_id == warehouse_id)
+        if movement_type:
+            stmt = stmt.where(StockMovement.type == movement_type)
+        if start_date:
+            stmt = stmt.where(StockMovement.created_at >= start_date)
+        if end_date:
+            stmt = stmt.where(StockMovement.created_at <= end_date)
+        if search:
+            s = f"%{search.strip()}%"
+            stmt = stmt.join(StockMovement.product).where(
+                or_(
+                    Product.name.ilike(s),
+                    Product.sku.ilike(s),
+                    StockMovement.reference_id.ilike(s),
+                )
+            )
+
+        count_stmt = select(func.count()).select_from(stmt.subquery())
+        total = self.session.execute(count_stmt).scalar() or 0
+
+        stmt = stmt.order_by(StockMovement.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+        movements = list(self.session.execute(stmt).scalars().all())
+
+        results = []
+        for m in movements:
+            results.append({
+                "id": m.id,
+                "product_id": m.product_id,
+                "product_name": m.product.name if m.product else "Unknown Product",
+                "product_sku": m.product.sku if m.product else "",
+                "warehouse_id": m.warehouse_id,
+                "warehouse_name": m.warehouse.name if m.warehouse else "Unknown Warehouse",
+                "batch_id": m.batch_id,
+                "batch_no": m.batch.batch_no if m.batch else None,
+                "type": m.type.value if hasattr(m.type, "value") else str(m.type),
+                "quantity": float(m.quantity),
+                "reference_type": m.reference_type,
+                "reference_id": m.reference_id,
+                "created_by": m.created_by,
+                "created_at": m.created_at,
+            })
+
+        return results, total
+
 
 class InMemoryStockRepository(StockRepositoryInterface):
+
 
     """In-Memory implementation of StockRepositoryInterface for isolated unit tests."""
 
@@ -902,4 +1014,129 @@ class InMemoryStockRepository(StockRepositoryInterface):
             )
 
         return ret_batch, movement
+
+    def record_stock_adjustment(
+        self,
+        product_id: str,
+        warehouse_id: str,
+        batch_id: str,
+        delta: float,
+        reason: str,
+        notes: str | None = None,
+        created_by: str | None = None,
+    ) -> tuple[StockBatch, StockMovement, float, float]:
+        if batch_id not in self.batches:
+            raise ValueError(f"Stock batch '{batch_id}' not found.")
+        batch_data = self.batches[batch_id]
+        if batch_data["product_id"] != product_id:
+            raise ValueError(f"Batch '{batch_id}' does not belong to product '{product_id}'.")
+        if batch_data["warehouse_id"] != warehouse_id:
+            raise ValueError(f"Batch '{batch_id}' does not belong to warehouse '{warehouse_id}'.")
+
+        prev_qty = float(batch_data["quantity"])
+        new_qty = round(prev_qty + delta, 2)
+        if new_qty < 0:
+            raise ValueError(
+                f"Adjustment delta {delta} would result in negative stock quantity ({new_qty})."
+            )
+
+        batch_data["quantity"] = new_qty
+        ref_id = f"{reason}:{notes}" if notes else reason
+        movement = StockMovement(
+            id=str(uuid.uuid4()),
+            product_id=product_id,
+            warehouse_id=warehouse_id,
+            batch_id=batch_id,
+            type=StockMovementTypeEnum.ADJUSTMENT,
+            quantity=round(delta, 2),
+            reference_type="manual_adjustment",
+            reference_id=ref_id,
+            created_by=created_by,
+        )
+        movement.created_at = datetime.now(UTC)
+        self.movements.append(
+            {
+                "id": movement.id,
+                "product_id": movement.product_id,
+                "warehouse_id": movement.warehouse_id,
+                "batch_id": movement.batch_id,
+                "type": movement.type,
+                "quantity": movement.quantity,
+                "reference_type": movement.reference_type,
+                "reference_id": movement.reference_id,
+                "created_by": movement.created_by,
+                "created_at": movement.created_at,
+            }
+        )
+        ret_batch = self._to_batch_model(batch_data)
+        return ret_batch, movement, prev_qty, new_qty
+
+    def list_movements(
+        self,
+        page: int = 1,
+        page_size: int = 50,
+        product_id: str | None = None,
+        warehouse_id: str | None = None,
+        movement_type: str | None = None,
+        start_date: Any | None = None,
+        end_date: Any | None = None,
+        search: str | None = None,
+    ) -> tuple[list[dict[str, Any]], int]:
+        filtered = list(self.movements)
+        if product_id:
+            filtered = [m for m in filtered if m["product_id"] == product_id]
+        if warehouse_id:
+            filtered = [m for m in filtered if m["warehouse_id"] == warehouse_id]
+        if movement_type:
+            filtered = [
+                m
+                for m in filtered
+                if (m["type"].value if hasattr(m["type"], "value") else str(m["type"]))
+                == movement_type
+            ]
+        if start_date:
+            filtered = [m for m in filtered if m.get("created_at") and m["created_at"] >= start_date]
+        if end_date:
+            filtered = [m for m in filtered if m.get("created_at") and m["created_at"] <= end_date]
+        if search:
+            s = search.lower()
+            filtered = [
+                m
+                for m in filtered
+                if s in self.products.get(m["product_id"], {}).get("name", "").lower()
+                or s in self.products.get(m["product_id"], {}).get("sku", "").lower()
+                or s in str(m.get("reference_id", "")).lower()
+            ]
+
+        filtered.sort(key=lambda m: m.get("created_at", datetime.min.replace(tzinfo=UTC)), reverse=True)
+        total = len(filtered)
+        start_idx = (page - 1) * page_size
+        paged = filtered[start_idx : start_idx + page_size]
+
+        results = []
+        for m in paged:
+            p_data = self.products.get(m["product_id"], {})
+            w_data = self.warehouses.get(m["warehouse_id"], {})
+            b_data = self.batches.get(m["batch_id"], {}) if m.get("batch_id") else {}
+            m_type = m["type"].value if hasattr(m["type"], "value") else str(m["type"])
+            results.append(
+                {
+                    "id": m["id"],
+                    "product_id": m["product_id"],
+                    "product_name": p_data.get("name", "Unknown Product"),
+                    "product_sku": p_data.get("sku", ""),
+                    "warehouse_id": m["warehouse_id"],
+                    "warehouse_name": w_data.get("name", "Unknown Warehouse"),
+                    "batch_id": m.get("batch_id"),
+                    "batch_no": b_data.get("batch_no"),
+                    "type": m_type,
+                    "quantity": float(m["quantity"]),
+                    "reference_type": m.get("reference_type"),
+                    "reference_id": m.get("reference_id"),
+                    "created_by": m.get("created_by"),
+                    "created_at": m.get("created_at", datetime.now(UTC)),
+                }
+            )
+        return results, total
+
 

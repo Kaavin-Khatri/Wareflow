@@ -273,13 +273,15 @@ wareflow/
 │           │       ├── categories.py# Product Category taxonomy (/categories)
 │           │       ├── products.py # Wholesale Products & Pricing (/products)
 │           │       ├── uom.py      # Unit of Measure & Conversions (/uom, /products/{id}/conversions)
-│           │       ├── stock.py    # Multi-Warehouse Stock Overview & Batches (/stock/*, /products/{id}/stock)
+│           │       ├── stock.py    # Multi-Warehouse Stock Overview, Adjustments & Movements Ledger (/stock/*, /stock/adjustments, /stock/movements, /products/{id}/stock)
 │           │       ├── stock_analytics.py # Stock Valuation & Composition Analytics (/analytics/stock/*)
 │           │       ├── suppliers.py# Vendor / Supplier profiles (/suppliers)
 │           │       ├── purchase_orders.py # Purchase Orders & Receiving (/purchase-orders)
 │           │       ├── purchase_returns.py# Supplier Returns (/purchase-returns)
 │           │       ├── retailers.py# Retailer accounts & credit limits (/retailers)
+│           │       ├── customers.py# Direct end-customers & walk-in buyers (/customers)
 │           │       └── sales_orders.py# Sales Orders & FIFO Fulfillment (/sales-orders)
+
 │           ├── db/
 │           │   ├── base.py         # SQLAlchemy DeclarativeBase
 │           │   └── session.py      # Engine (NullPool) + get_db_session dependency
@@ -546,6 +548,10 @@ wareflow/
 | Condition-Based Return Restocking       | `SalesReturnService` enforces that resellable items restock batches with `RETURN_IN` movements, while damaged items are tracked for loss/credit without altering sellable inventory batches |
 | CustomerRepository Protocol (DIP)       | `CustomerService` depends exclusively on `CustomerRepositoryInterface` Protocol, guaranteeing complete database abstraction and zero ORM coupling in unit tests |
 | Shared Sales Order Pipeline for Buyers  | Direct customers reuse the exact same order pipeline (`buyer_type=customer`), bypassing credit checks (assumed cash/UPI immediate settlement) while honoring standard pricing and FIFO stock deductions |
+| Single Legitimate Manual Stock Path     | Manual stock adjustments (`POST /stock/adjustments`) require mandatory reason taxonomy (`damage`, `loss`, `recount`, `other`) and are the sole direct stock modification write path |
+| Recount Permission Role Gate (RBAC)     | The `recount` adjustment reason strictly enforces `stock.recount` permission code or `Owner` role, preventing unauthorized floor staff from adding arbitrary inventory balances |
+| Human Label Ledger Synthesis            | `StockService.list_movements` enriches append-only movements with contextual activity labels (PO receipt, SO dispatch, return, recount, damage note) directly in the API |
+
 
 
 

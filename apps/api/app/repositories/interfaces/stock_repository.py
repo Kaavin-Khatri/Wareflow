@@ -134,3 +134,40 @@ class StockRepositoryInterface(Protocol):
         """
         ...
 
+    def record_stock_adjustment(
+        self,
+        product_id: str,
+        warehouse_id: str,
+        batch_id: str,
+        delta: float,
+        reason: str,
+        notes: str | None = None,
+        created_by: str | None = None,
+    ) -> tuple[StockBatch, Any, float, float]:
+        """
+        Record a manual stock adjustment:
+        - Verify batch exists and belongs to product/warehouse
+        - Update batch.quantity = batch.quantity + delta
+        - Insert StockMovement(type=adjustment, quantity=delta, reference_type='manual_adjustment', reference_id=reason)
+        - Return (batch, movement, previous_qty, new_qty)
+        """
+        ...
+
+    def list_movements(
+        self,
+        page: int = 1,
+        page_size: int = 50,
+        product_id: str | None = None,
+        warehouse_id: str | None = None,
+        movement_type: str | None = None,
+        start_date: Any | None = None,
+        end_date: Any | None = None,
+        search: str | None = None,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """
+        Fetch paginated stock movement ledger entries joined with product, warehouse, and batch details.
+        Returns (list_of_movement_dicts, total_count).
+        """
+        ...
+
+

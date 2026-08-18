@@ -2232,6 +2232,78 @@
 - `codebase_audit.md`
 - `memory.md`
 
+---
+
+## Step 9.1 — Movement Ledger UI & Manual Adjustments
+
+**Timestamp:** 2026-08-18T16:00:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Stock Adjustment & Movement Schemas (`apps/api/app/schemas/stock_adjustments.py`)**:
+   - Created `AdjustmentReasonEnum` (`damage`, `loss`, `recount`, `other`).
+   - Created `StockAdjustmentCreateRequest` (`product_id`, `warehouse_id`, `batch_id`, `delta`, `reason`, `notes`).
+   - Created `StockAdjustmentResponse` with previous and updated batch quantities.
+   - Created `StockMovementListItemResponse` and `StockMovementListResponse` with human-readable labels and pagination metadata.
+2. **Stock Repositories (`apps/api/app/repositories/interfaces/stock_repository.py`, `apps/api/app/repositories/impl/stock_repository.py`)**:
+   - Added `record_stock_adjustment` and `list_movements` methods to `StockRepositoryInterface`.
+   - Implemented `SqlAlchemyStockRepository` and `InMemoryStockRepository` with non-negative batch quantity validation, atomic `stock_movements(type=adjustment)` persistence, and multi-filter ledger queries with contextual labels.
+3. **Domain Service & Permission Enforcement (`apps/api/app/services/stock_service.py`)**:
+   - Extended `StockService` with `adjust_stock` and `list_movements`.
+   - Recount permission gate: `reason=recount` strictly requires `stock.recount` / `stock:recount` permission or `Owner` role (raises `403 Forbidden` if unauthorized).
+   - Negative batch balance guard: Raises `422 Unprocessable Content` if `batch.quantity + delta < 0`.
+   - Zero-delta guard: Raises `400 Bad Request` if `delta == 0`.
+   - Emits structured audit log to `AdminAuditLog` via `AuditRepository.create_log()`.
+   - Formatted human labels for all movement references (`purchase_order`, `sales_order`, `sales_order_cancellation`, `purchase_return`, `sales_return`, `manual_adjustment`).
+4. **FastAPI Endpoints (`apps/api/app/api/routers/stock.py`, `apps/api/app/core/di.py`)**:
+   - `POST /stock/adjustments`: Creates manual stock adjustment with validation and audit logging.
+   - `GET /stock/movements`: Returns paginated, filterable movement ledger with human labels.
+   - Updated `get_stock_service` dependency factory in `di.py` to inject `AuditRepository`.
+5. **Frontend Liquid Glass Movement Ledger & Adjustment Pages (`apps/web/app/admin/stock/ledger/page.tsx`, `apps/web/app/admin/stock/adjust/page.tsx`, `apps/web/lib/nav.ts`)**:
+   - Built `/admin/stock/ledger` with 4 KPI cards (Movement Records, Total Inbound, Total Outbound, Net Adjustments Variance), type filter pills (`All`, `Inbound Receipts`, `Outbound Dispatches`, `Adjustments`, `Returns RMA In`, `Supplier Returns`), search bar, and `DataTable` with colored deltas and activity context.
+   - Built `/admin/stock/adjust` with product, warehouse, and batch selectors, real-time projected batch balance preview, reason picker with disabled recount locked badge for non-owners/managers, notes textarea, and confirmation state.
+   - Added `Movement Ledger` and `Stock Adjustments` navigation links in `nav.ts`.
+6. **Automated Testing & QA Verification**:
+   - Backend `apps/api/tests/test_stock_adjustments.py` (5 tests covering damage/loss deductions, negative batch rejection 422, recount permission guard 403 vs 200, human label synthesis across PO/SO/RMA/adjustment, and HTTP API endpoints).
+   - Frontend `apps/web/lib/__tests__/stock-movements.test.tsx` (3 tests covering KPI rendering, search filtering, batch selection, and manual adjustment submission).
+   - Full test suites: 128/128 Pytest tests passing (100% green); 103/103 Vitest tests passing across 23 test files (100% green).
+   - Zero lint errors/warnings on Ruff and ESLint; Next.js production build cleanly compiled with 32 routes.
+
+### Decisions
+
+- **Single Legitimate Manual Write Path**: Manual adjustment with mandatory reason (`damage`, `loss`, `recount`, `other`) is the sole direct stock modification path, preserving the immutable append-only ledger invariant.
+- **Recount Permission Gate**: The `recount` adjustment reason requires the explicit `stock.recount` permission code or `Owner` role, preventing unauthorized floor staff from adding arbitrary inventory balances.
+- **Human Label Synthesis**: Enriched ledger items with human context (`PO #... (Goods Receipt)`, `SO #... (Fulfillment Dispatch)`, `Adjustment: Damage (...)`) directly in the API layer, giving complete transparency without requiring multiple N+1 client joins.
+
+### Key values for future steps
+
+- Adjustments API: `POST /stock/adjustments`
+- Movements Ledger API: `GET /stock/movements`
+- Web Routes: `/admin/stock/ledger`, `/admin/stock/adjust`
+- Permission Code: `stock.recount` / `stock:recount`
+
+### Files Created
+
+- `apps/api/app/schemas/stock_adjustments.py`
+- `apps/api/tests/test_stock_adjustments.py`
+- `apps/web/app/admin/stock/ledger/page.tsx`
+- `apps/web/app/admin/stock/adjust/page.tsx`
+- `apps/web/lib/__tests__/stock-movements.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/repositories/interfaces/stock_repository.py`
+- `apps/api/app/repositories/impl/stock_repository.py`
+- `apps/api/app/repositories/impl/audit_repository.py`
+- `apps/api/app/services/stock_service.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/api/routers/stock.py`
+- `apps/web/lib/nav.ts`
+- `codebase_audit.md`
+- `memory.md`
+
+
 
 
 

@@ -52,7 +52,20 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         requiredPermission: "inventory:view",
       },
       {
+        name: "Movement Ledger",
+        href: "/admin/stock/ledger",
+        icon: "History",
+        requiredPermission: "inventory:view",
+      },
+      {
+        name: "Stock Adjustments",
+        href: "/admin/stock/adjust",
+        icon: "SlidersHorizontal",
+        requiredPermission: "inventory:manage",
+      },
+      {
         name: "Suppliers & Vendors",
+
         href: "/admin/suppliers",
         icon: "Truck",
         requiredPermission: "inventory:view",

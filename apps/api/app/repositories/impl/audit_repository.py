@@ -83,3 +83,58 @@ class SqlAlchemyAuditRepository(AuditRepository):
         )
 
         return items, total
+
+
+class InMemoryAuditRepository(AuditRepository):
+    """In-memory implementation of AuditRepository for unit tests."""
+
+    def __init__(self) -> None:
+        self.logs: list[AdminAuditLog] = []
+
+    def create_log(
+        self,
+        actor_id: str | None,
+        action: str,
+        entity_type: str,
+        entity_id: str,
+        before_value: dict[str, Any] | None = None,
+        after_value: dict[str, Any] | None = None,
+    ) -> AdminAuditLog:
+        entry = AdminAuditLog(
+            id=str(uuid.uuid4()),
+            actor_id=actor_id,
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            before_value=before_value,
+            after_value=after_value,
+        )
+        self.logs.append(entry)
+        return entry
+
+    def list_logs(
+        self,
+        skip: int = 0,
+        limit: int = 50,
+        entity_type: str | None = None,
+        actor_id: str | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        action: str | None = None,
+    ) -> tuple[list[AdminAuditLog], int]:
+        filtered = list(self.logs)
+        if entity_type:
+            filtered = [log for log in filtered if log.entity_type == entity_type]
+        if actor_id:
+            filtered = [log for log in filtered if log.actor_id == actor_id]
+        if action:
+            filtered = [log for log in filtered if log.action == action]
+        if start_date:
+            filtered = [log for log in filtered if log.created_at and log.created_at >= start_date]
+        if end_date:
+            filtered = [log for log in filtered if log.created_at and log.created_at <= end_date]
+
+        total = len(filtered)
+        paged = filtered[skip : skip + limit]
+        return paged, total
+
