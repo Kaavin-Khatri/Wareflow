@@ -1,5 +1,4 @@
-"""Stock repository implementations: SQLAlchemy and In-Memory."""
-
+import uuid
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
@@ -7,6 +6,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.catalog import Product
+from app.models.inventory import StockMovement, StockMovementTypeEnum
 from app.models.warehouse import StockBatch, Warehouse
 from app.repositories.interfaces.stock_repository import StockRepositoryInterface
 
@@ -160,6 +160,59 @@ class SqlAlchemyStockRepository(StockRepositoryInterface):
             )
 
         return overview_rows
+
+    def record_stock_receipt(
+        self,
+        product_id: str,
+        warehouse_id: str,
+        batch_no: str,
+        quantity: float,
+        expiry_date: Any | None = None,
+        reference_id: str | None = None,
+        created_by: str | None = None,
+    ) -> tuple[StockBatch, StockMovement]:
+        clean_batch_no = batch_no.strip().upper()
+        # 1. Find existing batch with matching identity
+        stmt = select(StockBatch).where(
+            StockBatch.product_id == product_id,
+            StockBatch.warehouse_id == warehouse_id,
+            StockBatch.batch_no == clean_batch_no,
+        )
+        batch = self.session.execute(stmt).scalar_one_or_none()
+
+        if batch:
+            batch.quantity = round(float(batch.quantity) + float(quantity), 2)
+            if expiry_date and not batch.expiry_date:
+                batch.expiry_date = expiry_date
+        else:
+            batch = StockBatch(
+                id=str(uuid.uuid4()),
+                product_id=product_id,
+                warehouse_id=warehouse_id,
+                batch_no=clean_batch_no,
+                quantity=round(float(quantity), 2),
+                expiry_date=expiry_date,
+            )
+            self.session.add(batch)
+
+        self.session.flush()
+
+        # 2. Insert immutable StockMovement(type=in) ledger row
+        movement = StockMovement(
+            id=str(uuid.uuid4()),
+            product_id=product_id,
+            warehouse_id=warehouse_id,
+            batch_id=batch.id,
+            type=StockMovementTypeEnum.IN,
+            quantity=round(float(quantity), 2),
+            reference_type="purchase_order",
+            reference_id=reference_id,
+            created_by=created_by,
+        )
+        self.session.add(movement)
+        self.session.flush()
+
+        return batch, movement
 
 
 class InMemoryStockRepository(StockRepositoryInterface):
@@ -360,3 +413,58 @@ class InMemoryStockRepository(StockRepositoryInterface):
             )
 
         return overview_rows
+
+    def record_stock_receipt(
+        self,
+        product_id: str,
+        warehouse_id: str,
+        batch_no: str,
+        quantity: float,
+        expiry_date: Any | None = None,
+        reference_id: str | None = None,
+        created_by: str | None = None,
+    ) -> tuple[StockBatch, StockMovement]:
+        clean_batch_no = batch_no.strip().upper()
+        matching_batch_id: str | None = None
+
+        for bid, b in self.batches.items():
+            if (
+                b["product_id"] == product_id
+                and b["warehouse_id"] == warehouse_id
+                and b["batch_no"] == clean_batch_no
+            ):
+                matching_batch_id = bid
+                break
+
+        if matching_batch_id:
+            batch_data = self.batches[matching_batch_id]
+            batch_data["quantity"] = round(float(batch_data["quantity"]) + float(quantity), 2)
+            if expiry_date and not batch_data.get("expiry_date"):
+                batch_data["expiry_date"] = expiry_date
+        else:
+            matching_batch_id = str(uuid.uuid4())
+            batch_data = {
+                "id": matching_batch_id,
+                "product_id": product_id,
+                "warehouse_id": warehouse_id,
+                "batch_no": clean_batch_no,
+                "quantity": round(float(quantity), 2),
+                "expiry_date": expiry_date,
+                "received_at": datetime.now(UTC),
+            }
+            self.batches[matching_batch_id] = batch_data
+
+        batch_model = self._to_batch_model(batch_data)
+
+        movement = StockMovement(
+            id=str(uuid.uuid4()),
+            product_id=product_id,
+            warehouse_id=warehouse_id,
+            batch_id=batch_model.id,
+            type=StockMovementTypeEnum.IN,
+            quantity=round(float(quantity), 2),
+            reference_type="purchase_order",
+            reference_id=reference_id,
+            created_by=created_by,
+        )
+        return batch_model, movement

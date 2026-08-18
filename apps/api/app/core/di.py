@@ -20,6 +20,10 @@ from app.repositories.impl.product_repository import (
     SqlAlchemyProductRepository,
 )
 from app.repositories.impl.profile_repository import SqlAlchemyProfileRepository
+from app.repositories.impl.purchase_order_repository import (
+    InMemoryPurchaseOrderRepository,
+    SqlAlchemyPurchaseOrderRepository,
+)
 from app.repositories.impl.retailer_repository import SqlAlchemyRetailerRepository
 from app.repositories.impl.stock_analytics_repository import (
     SqlAlchemyStockAnalyticsRepository,
@@ -37,6 +41,9 @@ from app.repositories.impl.uom_repository import (
 from app.repositories.interfaces.audit_repository import AuditRepository
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
 from app.repositories.interfaces.profile_repository import ProfileRepository
+from app.repositories.interfaces.purchase_order_repository import (
+    PurchaseOrderRepositoryInterface,
+)
 from app.repositories.interfaces.retailer_repository import RetailerRepository
 from app.repositories.interfaces.stock_analytics_repository import (
     StockAnalyticsRepositoryInterface,
@@ -47,6 +54,7 @@ from app.repositories.interfaces.uom_repository import UomRepositoryInterface
 from app.services.audit_service import AuditService
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
+from app.services.purchase_order_service import PurchaseOrderService
 from app.services.retailer_service import RetailerService
 from app.services.staff_service import StaffService
 from app.services.stock_analytics_service import StockAnalyticsService
@@ -203,3 +211,33 @@ def get_supplier_service(
 ) -> SupplierService:
     """Factory for SupplierService with audit logging."""
     return SupplierService(repository=repo, audit_service=audit_service)
+
+
+@lru_cache
+def get_purchase_order_repository() -> PurchaseOrderRepositoryInterface:
+    """Factory for in-memory PurchaseOrderRepositoryInterface."""
+    return InMemoryPurchaseOrderRepository()
+
+
+def get_db_purchase_order_repository(
+    db: Session = Depends(get_db_session),
+) -> PurchaseOrderRepositoryInterface:
+    """Factory for database-backed PurchaseOrderRepositoryInterface."""
+    return SqlAlchemyPurchaseOrderRepository(session=db)
+
+
+def get_purchase_order_service(
+    po_repo: PurchaseOrderRepositoryInterface = Depends(get_db_purchase_order_repository),
+    supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    stock_service: StockService = Depends(get_stock_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> PurchaseOrderService:
+    """Factory for PurchaseOrderService with DIP dependencies."""
+    return PurchaseOrderService(
+        po_repo=po_repo,
+        supplier_repo=supplier_repo,
+        product_repo=product_repo,
+        stock_service=stock_service,
+        audit_service=audit_service,
+    )

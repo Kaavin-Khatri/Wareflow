@@ -23,15 +23,40 @@ class InMemoryProductRepository(ProductRepositoryInterface):
 
     def __init__(
         self,
-        seed_products: list[dict[str, Any]] | None = None,
-        seed_categories: list[dict[str, Any]] | None = None,
-        seed_data: list[dict[str, Any]] | None = None,
+        seed_products: list[Any] | None = None,
+        seed_categories: list[Any] | None = None,
+        seed_data: list[Any] | None = None,
     ) -> None:
         initial = seed_products or seed_data or []
-        self._products: dict[str, dict[str, Any]] = {item["id"]: dict(item) for item in initial}
-        self._categories: dict[str, dict[str, Any]] = {
-            item["id"]: dict(item) for item in (seed_categories or [])
-        }
+        self._products: dict[str, dict[str, Any]] = {}
+        for item in initial:
+            if isinstance(item, Product):
+                self._products[item.id] = {
+                    "id": item.id,
+                    "sku": item.sku,
+                    "name": item.name,
+                    "barcode": item.barcode,
+                    "category_id": item.category_id,
+                    "base_uom_id": item.base_uom_id,
+                    "reorder_point": item.reorder_point,
+                    "reorder_qty": item.reorder_qty,
+                    "cost_price": float(item.cost_price or 0.0),
+                    "wholesale_price": float(item.wholesale_price or 0.0),
+                    "unit": item.unit,
+                    "is_active": getattr(item, "is_active", True),
+                }
+            else:
+                self._products[item["id"]] = dict(item)
+
+        self._categories: dict[str, dict[str, Any]] = {}
+        for item in seed_categories or []:
+            if hasattr(item, "id"):
+                self._categories[item.id] = {
+                    "id": item.id,
+                    "name": getattr(item, "name", ""),
+                }
+            else:
+                self._categories[item["id"]] = dict(item)
         self._open_orders: set[str] = set()
 
     def list_all(self, skip: int = 0, limit: int = 100) -> list[Any]:

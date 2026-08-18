@@ -1700,3 +1700,79 @@
 - `memory.md`
 - `codebase_audit.md`
 
+---
+
+### Step 7.2 — Purchase Orders & Goods Receiving
+
+**Timestamp:** 2026-08-18T16:30:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- **Schemas & Data Models (`apps/api/app/schemas/purchase_orders.py`)**:
+  - Defined Pydantic v2 schemas: `POItemCreateRequest`, `POCreateRequest`, `POItemUpdateRequest`, `POUpdateRequest`, `POReceiveItemRequest`, `POReceiveRequest`, `POItemResponse`, `PurchaseOrderResponse`, `PurchaseOrderListResponse`.
+- **Purchase Order Repository & Stock Receipt Extensions**:
+  - Created `PurchaseOrderRepositoryInterface` protocol in [`apps/api/app/repositories/interfaces/purchase_order_repository.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/repositories/interfaces/purchase_order_repository.py).
+  - Created `SqlAlchemyPurchaseOrderRepository` with eager relationship loading and `InMemoryPurchaseOrderRepository` in [`apps/api/app/repositories/impl/purchase_order_repository.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/repositories/impl/purchase_order_repository.py).
+  - Extended `StockRepositoryInterface` and implementations with `record_stock_receipt(...)` for atomic batch upsert and `stock_movements(type=in)` ledger generation.
+- **Stock Service & Purchase Order Service (`apps/api/app/services/`)**:
+  - Extended `StockService` with `receive_stock(...)` integrating 5.2's `UomService.convert_to_base_uom(...)` converter.
+  - Built `PurchaseOrderService` in [`apps/api/app/services/purchase_order_service.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/services/purchase_order_service.py):
+    - `create_draft_po`: Validates active supplier and positive line items, computes total amounts, generates unique PO numbers (`PO-YYYYMM-XXXX`).
+    - `update_draft_po`: Strict draft status guard protecting against post-order modifications.
+    - `transition_to_ordered`: Moves PO from `DRAFT` to `ORDERED`.
+    - `receive_goods`: Single-door goods receiving pipeline that validates pending item balances, converts incoming units to base UoM, records inbound stock movement and batch entry, updates line item received quantities, and auto-derives `PARTIALLY_RECEIVED` vs `RECEIVED` status.
+    - Integrated administrative audit logging for `purchase_order_created`, `purchase_order_updated`, `purchase_order_ordered`, and `purchase_order_goods_received`.
+- **Dependency Injection & Routing**:
+  - Wired `get_purchase_order_repository`, `get_db_purchase_order_repository`, and `get_purchase_order_service` in [`apps/api/app/core/di.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/core/di.py).
+  - Created [`apps/api/app/api/routers/purchase_orders.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/api/routers/purchase_orders.py) (`GET/POST /purchase-orders`, `GET/PATCH /purchase-orders/{id}`, `POST /purchase-orders/{id}/order`, `POST /purchase-orders/{id}/receive`).
+  - Registered `purchase_orders.router` in [`apps/api/app/main.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/main.py).
+- **Frontend Liquid Glass Admin UI (`apps/web/app/admin/purchase-orders/page.tsx`)**:
+  - Built `/admin/purchase-orders` with `ListViewTemplate`, `DataTable`, status tabs (`All`, `Draft`, `Ordered`, `Partially Received`, `Received`), and live vendor/PO search.
+  - Added KPI summary cards: Total Orders, Total Purchasing Spend (₹), Awaiting Delivery, and Fully Received.
+  - Added Create Draft PO Modal with dynamic line item row addition/removal, cost calculation, and UoM dropdown.
+  - Added Authoritative Goods Receiving Drawer/Modal with per-line batch number, expiry date picker, destination warehouse selector, and real-time pending balance validation.
+  - Added "Purchase Orders" navigation link under Wholesale Operations in [`apps/web/lib/nav.ts`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/lib/nav.ts).
+- **Testing & Verification**:
+  - Added 5 Pytest unit and integration tests in `apps/api/tests/test_purchase_orders.py` (82/82 Pytest tests passing across 16 test suites).
+  - Added 4 Vitest frontend unit tests in `apps/web/lib/__tests__/purchase-orders.test.tsx` (63/63 Vitest tests passing across 16 test suites).
+  - 0 Ruff lint warnings, 0 ESLint errors, 100% Prettier formatted.
+  - Next.js production build (`next build`) succeeded with 24 routes.
+
+### Decisions
+
+- **Single Door Rule for Inbound Stock**: Receiving a Purchase Order (`POST /purchase-orders/{id}/receive`) is the sole path through which new inventory is introduced into stock batches and logged in the immutable `stock_movements(type=in)` ledger.
+- **Base UoM Normalization at Receipt**: All received goods quantities are converted to base UoM via `UomService.convert_to_base_uom` before touching `StockBatch` or `StockMovement`, ensuring consistent stock valuations across warehouses.
+- **Auto-Derived Order State**: PO status is derived directly from the ratio of line item received quantities to ordered quantities (`PARTIALLY_RECEIVED` vs `RECEIVED`).
+
+### Key values for future steps
+
+- PO List Endpoint: `GET /purchase-orders`
+- PO Creation Endpoint: `POST /purchase-orders`
+- PO Detail Endpoint: `GET /purchase-orders/{id}`
+- PO Update Endpoint: `PATCH /purchase-orders/{id}`
+- PO Order Transition Endpoint: `POST /purchase-orders/{id}/order`
+- PO Goods Receiving Endpoint: `POST /purchase-orders/{id}/receive`
+- Web Admin URL: `/admin/purchase-orders`
+
+### Files Created
+
+- `apps/api/app/schemas/purchase_orders.py`
+- `apps/api/app/repositories/interfaces/purchase_order_repository.py`
+- `apps/api/app/repositories/impl/purchase_order_repository.py`
+- `apps/api/app/services/purchase_order_service.py`
+- `apps/api/app/api/routers/purchase_orders.py`
+- `apps/api/tests/test_purchase_orders.py`
+- `apps/web/app/admin/purchase-orders/page.tsx`
+- `apps/web/lib/__tests__/purchase-orders.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/repositories/interfaces/stock_repository.py`
+- `apps/api/app/repositories/impl/stock_repository.py`
+- `apps/api/app/services/stock_service.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/web/lib/nav.ts`
+- `memory.md`
+- `codebase_audit.md`

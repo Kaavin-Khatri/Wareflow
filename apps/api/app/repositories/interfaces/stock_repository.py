@@ -48,3 +48,20 @@ class StockRepositoryInterface(Protocol):
     def get_product_with_base_uom(self, product_id: str) -> Product | None:
         """Fetch product record eagerly joined with base UoM details."""
         ...
+
+    def record_stock_receipt(
+        self,
+        product_id: str,
+        warehouse_id: str,
+        batch_no: str,
+        quantity: float,
+        expiry_date: Any | None = None,
+        reference_id: str | None = None,
+        created_by: str | None = None,
+    ) -> tuple[StockBatch, Any]:
+        """
+        Record inbound stock receipt atomically:
+        - Upsert matching StockBatch row (FIFO/batch identity)
+        - Insert an immutable StockMovement(type=in) ledger entry
+        """
+        ...

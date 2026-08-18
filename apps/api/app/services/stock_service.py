@@ -17,6 +17,7 @@ from app.schemas.stock import (
     WarehouseStockBreakdown,
     WarehouseSummary,
 )
+from app.services.uom_service import UomService
 
 
 class StockService:
@@ -26,9 +27,11 @@ class StockService:
         self,
         stock_repo: StockRepositoryInterface,
         uom_repo: UomRepositoryInterface | None = None,
+        uom_service: UomService | None = None,
     ):
         self.stock_repo = stock_repo
         self.uom_repo = uom_repo
+        self.uom_service = uom_service or (UomService(uom_repo=uom_repo) if uom_repo else None)
 
     @staticmethod
     def calculate_stock_status(
@@ -254,3 +257,58 @@ class StockService:
             )
             for w in warehouses
         ]
+
+    def receive_stock(
+        self,
+        product_id: str,
+        warehouse_id: str,
+        batch_no: str,
+        quantity: float,
+        uom_id: str | None = None,
+        expiry_date: date | None = None,
+        reference_id: str | None = None,
+        actor_id: str | None = None,
+    ) -> tuple[StockBatch, Any]:
+        """
+        Receive inbound stock for a product:
+        - Converts received quantity from specified UoM to product's base UoM via UomService
+        - Atomically writes StockBatch upsert and StockMovement(type=in) record
+        """
+        if quantity <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Received stock quantity must be greater than zero.",
+            )
+
+        if not batch_no or not batch_no.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Batch number is required for receiving stock.",
+            )
+
+        wh = self.stock_repo.get_warehouse_by_id(warehouse_id)
+        if not wh:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Warehouse '{warehouse_id}' not found.",
+            )
+
+        base_qty = float(quantity)
+        if self.uom_service:
+            base_qty = self.uom_service.convert_to_base_uom(
+                product_id=product_id,
+                qty=quantity,
+                uom_id=uom_id,
+            )
+
+        batch, movement = self.stock_repo.record_stock_receipt(
+            product_id=product_id,
+            warehouse_id=warehouse_id,
+            batch_no=batch_no,
+            quantity=base_qty,
+            expiry_date=expiry_date,
+            reference_id=reference_id,
+            created_by=actor_id,
+        )
+
+        return batch, movement

@@ -132,9 +132,9 @@ class InMemoryUomRepository(UomRepositoryInterface):
 
     def __init__(
         self,
-        seed_uoms: list[dict[str, Any]] | None = None,
-        seed_conversions: list[dict[str, Any]] | None = None,
-        seed_products: list[dict[str, Any]] | None = None,
+        seed_uoms: list[Any] | None = None,
+        seed_conversions: list[Any] | None = None,
+        seed_products: list[Any] | None = None,
     ) -> None:
         self.uoms: dict[str, dict[str, Any]] = {}
         self.conversions: dict[str, dict[str, Any]] = {}
@@ -142,30 +142,54 @@ class InMemoryUomRepository(UomRepositoryInterface):
 
         if seed_uoms:
             for u in seed_uoms:
-                self.uoms[u["id"]] = {
-                    "id": u["id"],
-                    "name": u["name"],
-                    "abbreviation": u["abbreviation"],
-                    "created_at": datetime.now(UTC),
-                }
+                if isinstance(u, UnitOfMeasure):
+                    self.uoms[u.id] = {
+                        "id": u.id,
+                        "name": u.name,
+                        "abbreviation": u.abbreviation,
+                        "created_at": getattr(u, "created_at", None) or datetime.now(UTC),
+                    }
+                else:
+                    self.uoms[u["id"]] = {
+                        "id": u["id"],
+                        "name": u["name"],
+                        "abbreviation": u["abbreviation"],
+                        "created_at": datetime.now(UTC),
+                    }
 
         if seed_conversions:
             for c in seed_conversions:
-                self.conversions[c["id"]] = {
-                    "id": c["id"],
-                    "product_id": c["product_id"],
-                    "from_uom_id": c["from_uom_id"],
-                    "to_uom_id": c["to_uom_id"],
-                    "factor": float(c["factor"]),
-                    "created_at": datetime.now(UTC),
-                }
+                if isinstance(c, ProductUOMConversion):
+                    self.conversions[c.id] = {
+                        "id": c.id,
+                        "product_id": c.product_id,
+                        "from_uom_id": c.from_uom_id,
+                        "to_uom_id": c.to_uom_id,
+                        "factor": float(c.factor),
+                        "created_at": getattr(c, "created_at", None) or datetime.now(UTC),
+                    }
+                else:
+                    self.conversions[c["id"]] = {
+                        "id": c["id"],
+                        "product_id": c["product_id"],
+                        "from_uom_id": c["from_uom_id"],
+                        "to_uom_id": c["to_uom_id"],
+                        "factor": float(c["factor"]),
+                        "created_at": datetime.now(UTC),
+                    }
 
         if seed_products:
             for p in seed_products:
-                self.products[p["id"]] = {
-                    "id": p["id"],
-                    "base_uom_id": p.get("base_uom_id"),
-                }
+                if isinstance(p, Product):
+                    self.products[p.id] = {
+                        "id": p.id,
+                        "base_uom_id": p.base_uom_id,
+                    }
+                else:
+                    self.products[p["id"]] = {
+                        "id": p["id"],
+                        "base_uom_id": p.get("base_uom_id"),
+                    }
 
     def _to_uom_model(self, data: dict[str, Any]) -> UnitOfMeasure:
         uom = UnitOfMeasure(

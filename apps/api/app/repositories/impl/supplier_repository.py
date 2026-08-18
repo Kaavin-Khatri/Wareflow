@@ -19,10 +19,24 @@ from app.repositories.interfaces.supplier_repository import SupplierRepositoryIn
 class InMemorySupplierRepository(SupplierRepositoryInterface):
     """In-memory implementation of SupplierRepositoryInterface for testing and DIP."""
 
-    def __init__(self, seed_suppliers: list[dict[str, Any]] | None = None) -> None:
-        self._suppliers: dict[str, dict[str, Any]] = {
-            item["id"]: dict(item) for item in (seed_suppliers or [])
-        }
+    def __init__(self, seed_suppliers: list[Any] | None = None) -> None:
+        self._suppliers: dict[str, dict[str, Any]] = {}
+        for item in seed_suppliers or []:
+            if isinstance(item, Supplier):
+                self._suppliers[item.id] = {
+                    "id": item.id,
+                    "name": item.name,
+                    "contact_person": getattr(item, "contact_person", None),
+                    "email": getattr(item, "email", None),
+                    "phone": getattr(item, "phone", None),
+                    "gstin": getattr(item, "gstin", None),
+                    "address": getattr(item, "address", None),
+                    "fssai_license_no": getattr(item, "fssai_license_no", None),
+                    "fssai_expiry_date": getattr(item, "fssai_expiry_date", None),
+                    "is_active": getattr(item, "is_active", True),
+                }
+            else:
+                self._suppliers[item["id"]] = dict(item)
 
     def get_by_id(self, supplier_id: str) -> Any:
         item = self._suppliers.get(supplier_id)
