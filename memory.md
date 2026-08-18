@@ -1566,3 +1566,66 @@
 - `memory.md`
 - `codebase_audit.md`
 
+---
+
+## Step 6.2 — Purchasing Spend & Trend Charts
+
+**Timestamp:** 2026-08-18T10:00:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- **Backend Schemas (`apps/api/app/schemas/stock_analytics.py`)**:
+  - Added `MonthlySpendItem`, `SpendTrendResponse`, `SupplierSpendItem`, `SupplierSpendResponse`, `CategorySpendItem`, `CategorySpendResponse`, `ProductCostPoint`, `ProductCostTrendItem`, and `AvgCostTrendResponse`.
+- **Repository Layer (`StockAnalyticsRepositoryInterface`)**:
+  - Added query methods: `get_spend_trend_data`, `get_spend_by_supplier_data`, `get_spend_by_category_data`, `get_product_cost_history_data` in [`stock_analytics_repository.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/repositories/interfaces/stock_analytics_repository.py).
+  - Implemented SQL joins across `purchase_orders`, `purchase_order_items`, `suppliers`, and `categories` with float coercions in `SqlAlchemyStockAnalyticsRepository` and full in-memory support in `InMemoryStockAnalyticsRepository`.
+- **Service Layer (`StockAnalyticsService`)**:
+  - Implemented `get_spend_trend` (12-month calendar bucketing with zeros for empty history, total spend, and monthly average).
+  - Implemented `get_spend_by_supplier` and `get_spend_by_category` with percentage shares of total procurement capital.
+  - Implemented `get_avg_cost_trend` with baseline catalog cost price integration, and price creep percentage calculation (+25%, 0% flat line for single-point history).
+- **FastAPI Endpoints (`apps/api/app/api/routers/stock_analytics.py`)**:
+  - `GET /analytics/stock/spend-trend`
+  - `GET /analytics/stock/spend-by-supplier`
+  - `GET /analytics/stock/spend-by-category`
+  - `GET /analytics/stock/avg-cost-trend`
+- **Frontend Spend Intelligence View (`apps/web/app/admin/analytics/stock/page.tsx`)**:
+  - Section 2: "Purchasing Spend & Cost Trend Intelligence" added below valuation composition.
+  - 12-Month Spend Trend Area Chart using `recharts` `<AreaChart>` with gradient purple fill.
+  - Spend by Supplier Horizontal Bar Chart with vendor allocation percentages.
+  - Spend by Category Donut Chart with custom palette cells.
+  - Product Cost Price Evolution & Price Creep Tracker with interactive SKU inspector dropdown and line chart.
+  - Custom `EmptySpendState` components for all spend widgets displaying a clear, friendly placeholder (_"No purchase data yet — this fills in automatically once you start receiving stock in Phase 6."_).
+  - Interactive time horizon selector (6M, 12M, 24M) dynamically requesting backend window sizes.
+- **Testing & Verification**:
+  - Added 5 new Pytest unit tests in `apps/api/tests/test_analytics_stock.py` (empty pre-Phase 6 verification, populated PO calculation, single-cost flat line guarantee, price creep calculation, REST API endpoints).
+  - All 71 Pytest backend tests passing (100% green).
+  - Added frontend test cases in `apps/web/lib/__tests__/stock-analytics.test.tsx` verifying clean empty states and populated spend charts (56 tests passing across 14 test suites).
+  - Next.js production build (`next build`) succeeded with 22 routes.
+  - 0 Ruff lint warnings, 0 ESLint errors, 100% Prettier formatting compliant.
+
+### Decisions
+
+- **Forward-Built Pre-Phase 6 Spend Infrastructure**: Spend analytics endpoints return valid empty structures (0 total spend, 0 orders, zero-filled monthly slots) and frontend charts render polished `EmptySpendState` cards without division-by-zero, NaN, or console errors.
+- **Flat Line for Single Cost Point**: If a product has only 1 recorded cost point (its baseline catalog cost price), the cost trend plots a stable flat line with `pct_change = 0.0` rather than throwing an error.
+
+### Key values for future steps
+
+- Spend Trend Endpoint: `GET /analytics/stock/spend-trend`
+- Spend by Supplier Endpoint: `GET /analytics/stock/spend-by-supplier`
+- Spend by Category Endpoint: `GET /analytics/stock/spend-by-category`
+- Avg Cost Trend Endpoint: `GET /analytics/stock/avg-cost-trend`
+- Empty State Rule: Pre-Phase 6 forward-built charts stay in clean empty state until purchase order line items are created and received in Phase 6.
+
+### Files Modified
+
+- `apps/api/app/schemas/stock_analytics.py`
+- `apps/api/app/repositories/interfaces/stock_analytics_repository.py`
+- `apps/api/app/repositories/impl/stock_analytics_repository.py`
+- `apps/api/app/services/stock_analytics_service.py`
+- `apps/api/app/api/routers/stock_analytics.py`
+- `apps/api/tests/test_analytics_stock.py`
+- `apps/web/app/admin/analytics/stock/page.tsx`
+- `apps/web/lib/__tests__/stock-analytics.test.tsx`
+- `memory.md`
+- `codebase_audit.md`

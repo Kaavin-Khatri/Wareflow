@@ -147,6 +147,76 @@ const mockExpiryTimeline = {
   total_expiring_soon_value: 14000,
 };
 
+const mockSpendTrend = {
+  monthly_trend: [
+    {
+      month: "2026-07",
+      label: "Jul 2026",
+      total_spend: 40000,
+      order_count: 2,
+      received_units: 120,
+    },
+    {
+      month: "2026-08",
+      label: "Aug 2026",
+      total_spend: 60000,
+      order_count: 3,
+      received_units: 180,
+    },
+  ],
+  total_period_spend: 100000,
+  avg_monthly_spend: 50000,
+};
+
+const mockSupplierSpend = {
+  suppliers: [
+    {
+      supplier_id: "sup-1",
+      supplier_name: "Apex Agro Suppliers",
+      total_spend: 70000,
+      order_count: 3,
+      percentage: 70.0,
+    },
+    {
+      supplier_id: "sup-2",
+      supplier_name: "Global Pack Corp",
+      total_spend: 30000,
+      order_count: 2,
+      percentage: 30.0,
+    },
+  ],
+  total_spend: 100000,
+};
+
+const mockCategorySpend = {
+  categories: [
+    {
+      category_id: "cat-1",
+      category_name: "Grains & Pulses",
+      total_spend: 70000,
+      received_units: 200,
+      percentage: 70.0,
+    },
+  ],
+  total_spend: 100000,
+};
+
+const mockAvgCostTrend = {
+  products: [
+    {
+      product_id: "p1",
+      sku: "BASMATI-PREM-5K",
+      name: "Royal Basmati Rice 5kg",
+      current_cost_price: 350,
+      cost_history: [
+        { recorded_at: "2026-06-01T00:00:00", cost_price: 300, source: "Base" },
+        { recorded_at: "2026-08-01T00:00:00", cost_price: 350, source: "PO" },
+      ],
+      pct_change: 16.7,
+    },
+  ],
+};
+
 describe("Stock Analytics Dashboard View", () => {
   beforeEach(() => {
     window.matchMedia = vi.fn().mockImplementation((query) => ({
@@ -173,6 +243,18 @@ describe("Stock Analytics Dashboard View", () => {
       if (url.includes("/analytics/stock/expiry-timeline")) {
         return Promise.resolve(mockExpiryTimeline);
       }
+      if (url.includes("/analytics/stock/spend-trend")) {
+        return Promise.resolve(mockSpendTrend);
+      }
+      if (url.includes("/analytics/stock/spend-by-supplier")) {
+        return Promise.resolve(mockSupplierSpend);
+      }
+      if (url.includes("/analytics/stock/spend-by-category")) {
+        return Promise.resolve(mockCategorySpend);
+      }
+      if (url.includes("/analytics/stock/avg-cost-trend")) {
+        return Promise.resolve(mockAvgCostTrend);
+      }
       if (url === "/me" || url === "/profiles/me") {
         return Promise.resolve({
           id: "u-1",
@@ -194,7 +276,7 @@ describe("Stock Analytics Dashboard View", () => {
     );
 
     // Assert header
-    expect(screen.getByText("Stock Valuation & Composition Analytics")).toBeDefined();
+    expect(screen.getByText("Stock Valuation & Purchasing Intelligence")).toBeDefined();
 
     // Wait for data load
     await waitFor(() => {
@@ -208,5 +290,52 @@ describe("Stock Analytics Dashboard View", () => {
     // Check health band items
     expect(screen.getAllByText("Above reorder threshold").length).toBeGreaterThan(0);
     expect(screen.getAllByText("0 units available").length).toBeGreaterThan(0);
+
+    // Check Step 6.2 spend intelligence items
+    expect(screen.getAllByText("Apex Agro Suppliers").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("BASMATI-PREM-5K").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("+16.7%").length).toBeGreaterThan(0);
+  });
+
+  it("should render clean empty states when no spend data exists (pre-Phase 6)", async () => {
+    vi.mocked(apiClient.get).mockImplementation((url: string) => {
+      if (url.includes("/analytics/stock/value-summary")) {
+        return Promise.resolve(mockValueSummary);
+      }
+      if (url.includes("/analytics/stock/health-distribution")) {
+        return Promise.resolve(mockHealthDist);
+      }
+      if (url.includes("/analytics/stock/top-value-products")) {
+        return Promise.resolve(mockTopProducts);
+      }
+      if (url.includes("/analytics/stock/expiry-timeline")) {
+        return Promise.resolve(mockExpiryTimeline);
+      }
+      if (url.includes("/analytics/stock/spend-trend")) {
+        return Promise.resolve({ monthly_trend: [], total_period_spend: 0, avg_monthly_spend: 0 });
+      }
+      if (url.includes("/analytics/stock/spend-by-supplier")) {
+        return Promise.resolve({ suppliers: [], total_spend: 0 });
+      }
+      if (url.includes("/analytics/stock/spend-by-category")) {
+        return Promise.resolve({ categories: [], total_spend: 0 });
+      }
+      if (url.includes("/analytics/stock/avg-cost-trend")) {
+        return Promise.resolve({ products: [] });
+      }
+      return Promise.resolve({});
+    });
+
+    render(
+      <ThemeProvider>
+        <StockAnalyticsPage />
+      </ThemeProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("No Purchase Order Spend Data Yet")).toBeDefined();
+      expect(screen.getByText("No Supplier Procurement Records")).toBeDefined();
+      expect(screen.getByText("No Category Spend Breakdown")).toBeDefined();
+    });
   });
 });

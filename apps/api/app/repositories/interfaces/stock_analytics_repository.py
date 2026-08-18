@@ -21,3 +21,24 @@ class StockAnalyticsRepositoryInterface(Protocol):
     def get_batch_expiry_data(self) -> list[dict[str, Any]]:
         """Fetch all stock batches with quantity > 0, expiry_date, and associated product cost_price."""
         ...
+
+    # --- Step 6.2: Purchasing Spend Contracts ---
+
+    def get_spend_trend_data(self, months: int = 12) -> list[dict[str, Any]]:
+        """Fetch received purchase order line items aggregated over the last N months."""
+        ...
+
+    def get_spend_by_supplier_data(self, months: int = 12) -> list[dict[str, Any]]:
+        """Fetch procurement spend grouped by supplier over the last N months."""
+        ...
+
+    def get_spend_by_category_data(self, months: int = 12) -> list[dict[str, Any]]:
+        """Fetch procurement spend grouped by product category over the last N months."""
+        ...
+
+    def get_product_cost_history_data(
+        self, product_ids: list[str] | None = None
+    ) -> list[dict[str, Any]]:
+        """Fetch historical purchase order unit costs and baseline costs per product."""
+        ...
+

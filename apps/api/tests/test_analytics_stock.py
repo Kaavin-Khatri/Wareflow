@@ -1,6 +1,6 @@
 """Automated unit and integration tests for Stock Analytics & Composition Dashboard (Step 6.1)."""
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import pytest
 from fastapi import FastAPI, status
@@ -14,6 +14,7 @@ from app.api.routers import stock_analytics as stock_analytics_router
 from app.core.security import CurrentUser, get_current_user
 from app.db.base import Base
 from app.models.catalog import Category, Product
+from app.models.supplier import POStatusEnum, PurchaseOrder, PurchaseOrderItem, Supplier
 from app.models.uom import UnitOfMeasure
 from app.models.warehouse import StockBatch, Warehouse
 from app.repositories.impl.stock_analytics_repository import (
@@ -324,3 +325,230 @@ def test_stock_analytics_rest_endpoints(analytics_db, mock_user):
     res4 = client.get("/analytics/stock/expiry-timeline")
     assert res4.status_code == status.HTTP_200_OK
     assert len(res4.json()["windows"]) == 6
+
+
+# --- Step 6.2: Purchasing Spend Analytics Tests ---
+
+
+def test_spend_analytics_empty_pre_phase6(analytics_db):
+    """
+    QA Checklist item:
+    With no purchase order data yet (current state, pre-Phase 6), every spend endpoint
+    shows its clean empty structure — no NaN, no division-by-zero, no 500 error.
+    """
+    repo = SqlAlchemyStockAnalyticsRepository(session=analytics_db)
+    service = StockAnalyticsService(analytics_repo=repo)
+
+    # 1. Spend Trend
+    trend = service.get_spend_trend(months=12)
+    assert trend.total_period_spend == 0.0
+    assert trend.avg_monthly_spend == 0.0
+    assert len(trend.monthly_trend) == 12
+    assert all(m.total_spend == 0.0 for m in trend.monthly_trend)
+
+    # 2. Spend by Supplier
+    sup_spend = service.get_spend_by_supplier(months=12)
+    assert sup_spend.total_spend == 0.0
+    assert len(sup_spend.suppliers) == 0
+
+    # 3. Spend by Category
+    cat_spend = service.get_spend_by_category(months=12)
+    assert cat_spend.total_spend == 0.0
+    assert len(cat_spend.categories) == 0
+
+
+def test_spend_analytics_with_po_data(analytics_db):
+    """
+    QA Checklist item:
+    Once PO data is received, spend aggregates compute accurately.
+    """
+    sup1 = Supplier(name="Organic Harvest Co")
+    sup2 = Supplier(name="Apex Packaging")
+    analytics_db.add_all([sup1, sup2])
+    analytics_db.commit()
+
+    cat1 = Category(name="Grains")
+    cat2 = Category(name="Packaging")
+    analytics_db.add_all([cat1, cat2])
+    analytics_db.commit()
+
+    p1 = Product(sku="GRAIN-1", name="Wheat", category_id=cat1.id, cost_price=40.0)
+    p2 = Product(sku="BOX-1", name="Carton Box", category_id=cat2.id, cost_price=10.0)
+    analytics_db.add_all([p1, p2])
+    analytics_db.commit()
+
+    # PO 1: Received from Sup1, 100 units of Wheat @ 40 = 4,000
+    po1 = PurchaseOrder(
+        po_number="PO-1001",
+        supplier_id=sup1.id,
+        status=POStatusEnum.RECEIVED,
+        order_date=datetime(2026, 7, 15),
+        total_amount=4000.0,
+    )
+    analytics_db.add(po1)
+    analytics_db.commit()
+    item1 = PurchaseOrderItem(
+        po_id=po1.id,
+        product_id=p1.id,
+        qty_ordered=100.0,
+        qty_received=100.0,
+        unit_cost=40.0,
+    )
+
+    # PO 2: Received from Sup2, 200 units of Box @ 10 = 2,000
+    po2 = PurchaseOrder(
+        po_number="PO-1002",
+        supplier_id=sup2.id,
+        status=POStatusEnum.RECEIVED,
+        order_date=datetime(2026, 8, 10),
+        total_amount=2000.0,
+    )
+    analytics_db.add(po2)
+    analytics_db.commit()
+    item2 = PurchaseOrderItem(
+        po_id=po2.id,
+        product_id=p2.id,
+        qty_ordered=200.0,
+        qty_received=200.0,
+        unit_cost=10.0,
+    )
+
+    analytics_db.add_all([item1, item2])
+    analytics_db.commit()
+
+    repo = SqlAlchemyStockAnalyticsRepository(session=analytics_db)
+    service = StockAnalyticsService(analytics_repo=repo)
+
+    # Spend Trend
+    trend = service.get_spend_trend(months=12)
+    assert trend.total_period_spend == 6000.0
+
+    # Spend by Supplier
+    sup_res = service.get_spend_by_supplier(months=12)
+    assert sup_res.total_spend == 6000.0
+    assert len(sup_res.suppliers) == 2
+    # Sup 1: 4000 / 6000 = 66.7%
+    assert sup_res.suppliers[0].supplier_name == "Organic Harvest Co"
+    assert sup_res.suppliers[0].total_spend == 4000.0
+    assert sup_res.suppliers[0].percentage == 66.7
+    # Sup 2: 2000 / 6000 = 33.3%
+    assert sup_res.suppliers[1].supplier_name == "Apex Packaging"
+    assert sup_res.suppliers[1].total_spend == 2000.0
+    assert sup_res.suppliers[1].percentage == 33.3
+
+    # Spend by Category
+    cat_res = service.get_spend_by_category(months=12)
+    assert cat_res.total_spend == 6000.0
+    assert len(cat_res.categories) == 2
+    assert cat_res.categories[0].category_name == "Grains"
+    assert cat_res.categories[0].total_spend == 4000.0
+    assert cat_res.categories[0].percentage == 66.7
+
+
+def test_product_cost_trend_flat_line_on_single_cost(analytics_db):
+    """
+    QA Checklist item:
+    Avg-cost-trend chart correctly shows a flat line (pct_change = 0.0) for a product
+    with only one recorded cost, not an error or NaN.
+    """
+    prod = Product(sku="SOLO-1", name="Solo Cost Item", cost_price=150.0)
+    analytics_db.add(prod)
+    analytics_db.commit()
+
+    repo = SqlAlchemyStockAnalyticsRepository(session=analytics_db)
+    service = StockAnalyticsService(analytics_repo=repo)
+
+    trends = service.get_avg_cost_trend(product_ids=[prod.id])
+    assert len(trends.products) == 1
+    p_trend = trends.products[0]
+    assert p_trend.sku == "SOLO-1"
+    assert p_trend.current_cost_price == 150.0
+    assert len(p_trend.cost_history) == 1
+    assert p_trend.cost_history[0].cost_price == 150.0
+    assert p_trend.pct_change == 0.0
+
+
+def test_product_cost_trend_price_creep(analytics_db):
+    """Verify price creep percentage calculation across multiple PO costs over time."""
+    sup = Supplier(name="Spices Ltd")
+    analytics_db.add(sup)
+    analytics_db.commit()
+
+    prod = Product(sku="PEPPER-1", name="Black Pepper", cost_price=200.0)
+    analytics_db.add(prod)
+    analytics_db.commit()
+
+    # PO 1: Initial cost = 200
+    po1 = PurchaseOrder(
+        po_number="PO-201",
+        supplier_id=sup.id,
+        status=POStatusEnum.RECEIVED,
+        order_date=datetime(2026, 1, 10),
+    )
+    analytics_db.add(po1)
+    analytics_db.commit()
+    item1 = PurchaseOrderItem(po_id=po1.id, product_id=prod.id, qty_ordered=50, qty_received=50, unit_cost=200.0)
+
+    # PO 2: Crept cost = 250 (+25%)
+    po2 = PurchaseOrder(
+        po_number="PO-202",
+        supplier_id=sup.id,
+        status=POStatusEnum.RECEIVED,
+        order_date=datetime(2026, 5, 20),
+    )
+    analytics_db.add(po2)
+    analytics_db.commit()
+    item2 = PurchaseOrderItem(po_id=po2.id, product_id=prod.id, qty_ordered=50, qty_received=50, unit_cost=250.0)
+
+    analytics_db.add_all([item1, item2])
+    analytics_db.commit()
+
+    repo = SqlAlchemyStockAnalyticsRepository(session=analytics_db)
+    service = StockAnalyticsService(analytics_repo=repo)
+
+    trends = service.get_avg_cost_trend(product_ids=[prod.id])
+    assert len(trends.products) == 1
+    p_trend = trends.products[0]
+    assert len(p_trend.cost_history) == 2
+    assert p_trend.cost_history[0].cost_price == 200.0
+    assert p_trend.cost_history[1].cost_price == 250.0
+    assert p_trend.pct_change == 25.0
+
+
+def test_spend_analytics_rest_endpoints(analytics_db, mock_user):
+    """Integration test verifying all 4 FastAPI spend analytics endpoints."""
+    test_app = FastAPI()
+    test_app.include_router(stock_analytics_router.router)
+
+    def override_get_current_user():
+        return mock_user
+
+    def override_get_service():
+        repo = SqlAlchemyStockAnalyticsRepository(session=analytics_db)
+        return StockAnalyticsService(analytics_repo=repo)
+
+    test_app.dependency_overrides[get_current_user] = override_get_current_user
+    test_app.dependency_overrides[stock_analytics_router.get_stock_analytics_service] = override_get_service
+
+    client = TestClient(test_app)
+
+    # 1. GET /analytics/stock/spend-trend
+    r1 = client.get("/analytics/stock/spend-trend?months=12")
+    assert r1.status_code == status.HTTP_200_OK
+    assert "monthly_trend" in r1.json()
+
+    # 2. GET /analytics/stock/spend-by-supplier
+    r2 = client.get("/analytics/stock/spend-by-supplier?months=12")
+    assert r2.status_code == status.HTTP_200_OK
+    assert "suppliers" in r2.json()
+
+    # 3. GET /analytics/stock/spend-by-category
+    r3 = client.get("/analytics/stock/spend-by-category?months=12")
+    assert r3.status_code == status.HTTP_200_OK
+    assert "categories" in r3.json()
+
+    # 4. GET /analytics/stock/avg-cost-trend
+    r4 = client.get("/analytics/stock/avg-cost-trend")
+    assert r4.status_code == status.HTTP_200_OK
+    assert "products" in r4.json()
+

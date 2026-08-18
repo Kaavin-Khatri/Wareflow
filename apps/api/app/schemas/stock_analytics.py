@@ -92,3 +92,84 @@ class ExpiryTimelineResponse(BaseModel):
     windows: list[ExpiryWindowItem]
     total_expiring_soon_count: int
     total_expiring_soon_value: float
+
+
+# --- Step 6.2: Purchasing Spend & Trend Schemas ---
+
+
+class MonthlySpendItem(BaseModel):
+    """Monthly spend record on received inventory."""
+
+    month: str = Field(..., description="Month key (e.g. 2026-08)")
+    label: str = Field(..., description="Human readable month (e.g. Aug 2026)")
+    total_spend: float = Field(..., description="Total money spent on received stock")
+    order_count: int = Field(..., description="Number of purchase orders in month")
+    received_units: float = Field(..., description="Total units received in month")
+
+
+class SpendTrendResponse(BaseModel):
+    """12-month purchasing spend trend."""
+
+    monthly_trend: list[MonthlySpendItem]
+    total_period_spend: float
+    avg_monthly_spend: float
+
+
+class SupplierSpendItem(BaseModel):
+    """Procurement spend aggregated by vendor/supplier."""
+
+    supplier_id: str
+    supplier_name: str
+    total_spend: float
+    order_count: int
+    percentage: float
+
+
+class SupplierSpendResponse(BaseModel):
+    """Spend breakdown by supplier."""
+
+    suppliers: list[SupplierSpendItem]
+    total_spend: float
+
+
+class CategorySpendItem(BaseModel):
+    """Procurement spend aggregated by product category."""
+
+    category_id: str | None = None
+    category_name: str
+    total_spend: float
+    received_units: float
+    percentage: float
+
+
+class CategorySpendResponse(BaseModel):
+    """Spend breakdown by product category."""
+
+    categories: list[CategorySpendItem]
+    total_spend: float
+
+
+class ProductCostPoint(BaseModel):
+    """Historical cost point for a product."""
+
+    recorded_at: str = Field(..., description="Timestamp or date string")
+    cost_price: float = Field(..., description="Unit cost price at this point")
+    source: str = Field(..., description="Source of price point (e.g. PO, Base)")
+
+
+class ProductCostTrendItem(BaseModel):
+    """Cost price evolution for a single product."""
+
+    product_id: str
+    sku: str
+    name: str
+    current_cost_price: float
+    cost_history: list[ProductCostPoint]
+    pct_change: float = Field(..., description="Percentage price creep from baseline")
+
+
+class AvgCostTrendResponse(BaseModel):
+    """Average cost trends across products."""
+
+    products: list[ProductCostTrendItem]
+

@@ -1,18 +1,25 @@
-"""Stock Analytics domain service for valuation, composition, and health distribution."""
-
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from app.repositories.interfaces.stock_analytics_repository import (
     StockAnalyticsRepositoryInterface,
 )
 from app.schemas.stock_analytics import (
+    AvgCostTrendResponse,
+    CategorySpendItem,
+    CategorySpendResponse,
     CategoryValueItem,
     ExpiryTimelineResponse,
     ExpiryWindowItem,
     HealthBandItem,
+    MonthlySpendItem,
+    ProductCostPoint,
+    ProductCostTrendItem,
+    SpendTrendResponse,
     StockHealthDistributionResponse,
     StockValueSummaryResponse,
+    SupplierSpendItem,
+    SupplierSpendResponse,
     TopProductItem,
     TopProductsResponse,
     WarehouseValueItem,
@@ -229,3 +236,186 @@ class StockAnalyticsService:
         if exp <= d90:
             return "next_3_months"
         return "later"
+
+    # --- Step 6.2: Purchasing Spend Service Methods ---
+
+    def get_spend_trend(self, months: int = 12) -> SpendTrendResponse:
+        """Calculate 12-month purchasing spend trend."""
+        raw_rows = self.repo.get_spend_trend_data(months)
+        buckets: dict[str, dict[str, Any]] = {}
+
+        # Pre-seed last N months
+        now = datetime.now()
+        for i in range(months - 1, -1, -1):
+            # Calculate month approx
+            y = now.year
+            m = now.month - i
+            while m <= 0:
+                m += 12
+                y -= 1
+            key = f"{y:04d}-{m:02d}"
+            label = datetime(y, m, 1).strftime("%b %Y")
+            buckets[key] = {
+                "month": key,
+                "label": label,
+                "spend": 0.0,
+                "orders": set(),
+                "units": 0.0,
+            }
+
+        # Aggregate raw rows
+        for r in raw_rows:
+            od = r.get("order_date") or now
+            m_key = od.strftime("%Y-%m") if hasattr(od, "strftime") else str(od)[:7]
+
+            if m_key not in buckets:
+                try:
+                    dt = datetime.strptime(m_key, "%Y-%m")
+                    label = dt.strftime("%b %Y")
+                except ValueError:
+                    label = m_key
+                buckets[m_key] = {
+                    "month": m_key,
+                    "label": label,
+                    "spend": 0.0,
+                    "orders": set(),
+                    "units": 0.0,
+                }
+
+            spend = float(r["qty_received"]) * float(r["unit_cost"])
+            buckets[m_key]["spend"] += spend
+            buckets[m_key]["units"] += float(r["qty_received"])
+            if r.get("po_id"):
+                buckets[m_key]["orders"].add(r["po_id"])
+
+        sorted_keys = sorted(buckets.keys())[-months:]
+        trend_items: list[MonthlySpendItem] = []
+        total_spend = 0.0
+
+        for k in sorted_keys:
+            b = buckets[k]
+            sp = round(b["spend"], 2)
+            total_spend += sp
+            trend_items.append(
+                MonthlySpendItem(
+                    month=b["month"],
+                    label=b["label"],
+                    total_spend=sp,
+                    order_count=len(b["orders"]),
+                    received_units=round(b["units"], 2),
+                )
+            )
+
+        avg_spend = round(total_spend / max(len(trend_items), 1), 2)
+        return SpendTrendResponse(
+            monthly_trend=trend_items,
+            total_period_spend=round(total_spend, 2),
+            avg_monthly_spend=avg_spend,
+        )
+
+    def get_spend_by_supplier(self, months: int = 12) -> SupplierSpendResponse:
+        """Calculate spend breakdown by supplier."""
+        raw_rows = self.repo.get_spend_by_supplier_data(months)
+        sup_map: dict[str, dict[str, Any]] = {}
+        total_spend = 0.0
+
+        for r in raw_rows:
+            sid = str(r.get("supplier_id") or "unknown")
+            sname = str(r.get("supplier_name") or "Unknown Supplier")
+            spend = float(r["qty_received"]) * float(r["unit_cost"])
+            total_spend += spend
+
+            if sid not in sup_map:
+                sup_map[sid] = {"name": sname, "spend": 0.0, "orders": set()}
+            sup_map[sid]["spend"] += spend
+            if r.get("po_id"):
+                sup_map[sid]["orders"].add(r["po_id"])
+
+        items: list[SupplierSpendItem] = []
+        for sid, data in sup_map.items():
+            pct = (data["spend"] / total_spend * 100.0) if total_spend > 0 else 0.0
+            items.append(
+                SupplierSpendItem(
+                    supplier_id=sid,
+                    supplier_name=data["name"],
+                    total_spend=round(data["spend"], 2),
+                    order_count=len(data["orders"]),
+                    percentage=round(pct, 1),
+                )
+            )
+        items.sort(key=lambda x: x.total_spend, reverse=True)
+        return SupplierSpendResponse(
+            suppliers=items,
+            total_spend=round(total_spend, 2),
+        )
+
+    def get_spend_by_category(self, months: int = 12) -> CategorySpendResponse:
+        """Calculate spend breakdown by product category."""
+        raw_rows = self.repo.get_spend_by_category_data(months)
+        cat_map: dict[str, dict[str, Any]] = {}
+        total_spend = 0.0
+
+        for r in raw_rows:
+            cid = str(r.get("category_id") or "uncategorized")
+            cname = str(r.get("category_name") or "Uncategorized")
+            spend = float(r["qty_received"]) * float(r["unit_cost"])
+            qty = float(r["qty_received"])
+            total_spend += spend
+
+            if cid not in cat_map:
+                cat_map[cid] = {"name": cname, "spend": 0.0, "units": 0.0}
+            cat_map[cid]["spend"] += spend
+            cat_map[cid]["units"] += qty
+
+        items: list[CategorySpendItem] = []
+        for cid, data in cat_map.items():
+            pct = (data["spend"] / total_spend * 100.0) if total_spend > 0 else 0.0
+            items.append(
+                CategorySpendItem(
+                    category_id=None if cid == "uncategorized" else cid,
+                    category_name=data["name"],
+                    total_spend=round(data["spend"], 2),
+                    received_units=round(data["units"], 2),
+                    percentage=round(pct, 1),
+                )
+            )
+        items.sort(key=lambda x: x.total_spend, reverse=True)
+        return CategorySpendResponse(
+            categories=items,
+            total_spend=round(total_spend, 2),
+        )
+
+    def get_avg_cost_trend(
+        self, product_ids: list[str] | None = None
+    ) -> AvgCostTrendResponse:
+        """Calculate cost price movement and percentage price creep."""
+        raw_rows = self.repo.get_product_cost_history_data(product_ids)
+        items: list[ProductCostTrendItem] = []
+
+        for r in raw_rows:
+            cost_pts = [ProductCostPoint(**pt) for pt in r.get("cost_points", [])]
+            base_cost = float(r.get("current_cost_price", 0.0))
+
+            if len(cost_pts) <= 1:
+                pct_change = 0.0
+            else:
+                first_cost = cost_pts[0].cost_price
+                last_cost = cost_pts[-1].cost_price
+                pct_change = (
+                    ((last_cost - first_cost) / first_cost * 100.0)
+                    if first_cost > 0
+                    else 0.0
+                )
+
+            items.append(
+                ProductCostTrendItem(
+                    product_id=r["product_id"],
+                    sku=r["sku"],
+                    name=r["name"],
+                    current_cost_price=base_cost,
+                    cost_history=cost_pts,
+                    pct_change=round(pct_change, 1),
+                )
+            )
+
+        return AvgCostTrendResponse(products=items)
