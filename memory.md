@@ -1002,3 +1002,51 @@
 - `apps/web/lib/nav.ts`
 - `codebase_audit.md`
 
+---
+
+## Step 4.4 — Sitemap & Page Template System
+
+**Timestamp:** 2026-08-18T02:25:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- Authored and finalized `docs/SITEMAP.md` documenting every screen across all 19 phases/domains (Auth, Dashboards, Inventory, Purchasing, Sales, Billing, Logistics, Analytics, Leads/Growth, Admin/Settings, External Portals) mapped strictly to one of four locked page templates.
+- Established the locked 12-column responsive layout grid system (`grid grid-cols-12 gap-4 lg:gap-6`) and 4px spacing scale modeled on Linear, Stripe Dashboard, and Notion design benchmarks.
+- Created `ListViewTemplate` with sticky search/filter bar, bulk actions, GlassCard table wrapper, and pagination controls.
+- Created `DetailViewTemplate` with status badge, back link, and responsive 8-column main content + 4-column sticky side panel layout.
+- Created `FormTemplate` & `FormSection` with grouped sectioned cards, inline validation hints, and a sticky bottom action bar (`Save Changes`, `Discard`, status indicator, `⌘S` shortcut) that never scrolls out of reach.
+- Created `DashboardTemplate` with top KPI metric row (4-6 GlassCards with trend metrics and spark indicators) + 8/4 responsive chart and urgent alert grid.
+- Wired `animejs` as the fifth and final motion library strictly scoped to SVG path morphing/draw-in and micro-button/icon press interactions (`AnimeCheckIcon`, `AnimeMorphIcon`, `AnimeMicroPress` in `@/components/motion/AnimeMicro`).
+- Updated `docs/ANIMATION_GUIDE.md` with anime.js ownership row and updated `/styleguide` with interactive previews for all 4 templates and motion engines.
+- Added comprehensive unit tests in `apps/web/lib/__tests__/templates.test.tsx` (all 67 monorepo tests passing: 23 web + 44 API).
+
+### Decisions
+
+- **Template Conformance Rule**: Every future feature phase screen must strictly map to one of the four locked templates (`ListViewTemplate`, `DetailViewTemplate`, `FormTemplate`, `DashboardTemplate`). No feature phase may invent an uncoordinated page structure from scratch.
+- **12-Column Responsive Grid + 4px Base Spacing**: All layout geometry derives from the standard 12-column grid and 4px Tailwind spacing scale, guaranteeing proportional rhythm across viewports.
+- **Narrowly Scoped anime.js Ownership**: `anime.js` is strictly isolated to SVG path animations and button micro-morphs, avoiding any functional overlap with `motion`, `gsap`, `@react-spring/web`, or `@formkit/auto-animate`.
+
+### Key values for future steps
+
+- Master Sitemap: `docs/SITEMAP.md`
+- Templates: `@/components/templates` (`ListViewTemplate`, `DetailViewTemplate`, `FormTemplate`, `FormSection`, `DashboardTemplate`)
+- Micro-Motion: `@/components/motion/AnimeMicro` (`AnimeCheckIcon`, `AnimeMorphIcon`, `AnimeMicroPress`)
+
+### Files Created
+
+- `docs/SITEMAP.md`
+- `apps/web/components/motion/AnimeMicro.tsx`
+- `apps/web/components/templates/ListViewTemplate.tsx`
+- `apps/web/components/templates/DetailViewTemplate.tsx`
+- `apps/web/components/templates/FormTemplate.tsx`
+- `apps/web/components/templates/DashboardTemplate.tsx`
+- `apps/web/components/templates/index.ts`
+- `apps/web/lib/__tests__/templates.test.tsx`
+
+### Files Modified
+
+- `apps/web/package.json`
+- `docs/ANIMATION_GUIDE.md`
+- `apps/web/app/styleguide/page.tsx`
+- `codebase_audit.md`

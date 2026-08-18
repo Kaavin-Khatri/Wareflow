@@ -8,12 +8,13 @@
 
 WareFlow utilizes a layered motion stack. Every motion job has ONE designated owner library to avoid conflicts, bundle bloat, and frame drops:
 
-| Motion Domain                     | Designated Library       | When to Use                                                                             | Rationale & Presets                                                                                                |
-| :-------------------------------- | :----------------------- | :-------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------- |
-| **React UI State Transitions**    | `motion` (Framer Motion) | Page/route enter/exit, modal & drawer entrance, dropdown popovers, list enter/leave     | Seamless declarative lifecycle hooks (`<AnimatePresence>`), layout animations (`layoutId`), shared spring presets. |
-| **Marketing & Complex Timelines** | `gsap` (+ ScrollTrigger) | Landing page hero animations, scroll-linked multi-stage reveal sequences                | Unrivaled timeline control, precision scrubbing, zero React render overhead for complex canvas/SVG choreographies. |
-| **List/Grid Mutations**           | `@formkit/auto-animate`  | Dynamic table row insertion/deletion, cart item lists, inventory filter grid reflows    | Zero-config DOM mutation animations with 1 line of code: `const [parent] = useAutoAnimate()`.                      |
-| **Physics Micro-Interactions**    | `@react-spring/web`      | Gesture-driven drag cards, fluid magnetic cursor interactions, springy draggable panels | Direct imperative spring solver without triggering React re-renders during high-frequency pointer movement.        |
+| Motion Domain                     | Designated Library       | When to Use                                                                             | Rationale & Presets                                                                                                 |
+| :-------------------------------- | :----------------------- | :-------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------ |
+| **React UI State Transitions**    | `motion` (Framer Motion) | Page/route enter/exit, modal & drawer entrance, dropdown popovers, list enter/leave     | Seamless declarative lifecycle hooks (`<AnimatePresence>`), layout animations (`layoutId`), shared spring presets.  |
+| **Marketing & Complex Timelines** | `gsap` (+ ScrollTrigger) | Landing page hero animations, scroll-linked multi-stage reveal sequences                | Unrivaled timeline control, precision scrubbing, zero React render overhead for complex canvas/SVG choreographies.  |
+| **List/Grid Mutations**           | `@formkit/auto-animate`  | Dynamic table row insertion/deletion, cart item lists, inventory filter grid reflows    | Zero-config DOM mutation animations with 1 line of code: `const [parent] = useAutoAnimate()`.                       |
+| **Physics Micro-Interactions**    | `@react-spring/web`      | Gesture-driven drag cards, fluid magnetic cursor interactions, springy draggable panels | Direct imperative spring solver without triggering React re-renders during high-frequency pointer movement.         |
+| **SVG Morphing & Icon Micro-FX**  | `animejs`                | SVG path morphing/draw-in, checkbox check-draw, snappy icon state morphs, button pulse  | Ultra-lightweight path drawing (`strokeDashoffset`), numeric property interpolation, and non-React SVG micro-loops. |
 
 ---
 
