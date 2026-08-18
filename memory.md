@@ -1858,3 +1858,79 @@
 - `apps/web/lib/nav.ts`
 - `memory.md`
 - `codebase_audit.md`
+
+---
+
+### Step 7.4 — FSSAI License Compliance Tracking
+
+**Timestamp:** 2026-08-18T19:20:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Domain Schemas & Models (`apps/api/app/schemas/business_settings.py`, `apps/api/app/schemas/alerts.py`)**:
+   - `BusinessSettingsResponse`, `BusinessSettingsUpdate`, and `FssaiComplianceStatusResponse` schemas with automatic days-to-expiry calculation and status enum (`valid`, `expiring_soon`, `expired`, `missing`).
+   - `AlertItemResponse` and `AlertEngineSummaryResponse` schemas supporting tiered severity levels (`critical`, `warning`, `info`), channels (`in_app`, `whatsapp`, `email`), and escalation flags.
+2. **Business Settings Repository Protocol (DIP) & Implementations (`apps/api/app/repositories/interfaces/business_settings_repository.py`, `apps/api/app/repositories/impl/business_settings_repository.py`)**:
+   - `BusinessSettingsRepositoryInterface` defining `get_settings()` and `upsert_settings()`.
+   - `SqlAlchemyBusinessSettingsRepository` utilizing PostgreSQL `business_settings` table.
+   - `InMemoryBusinessSettingsRepository` enabling fast, zero-DB mock isolation for tests.
+3. **Domain Services (`apps/api/app/services/business_settings_service.py`, `apps/api/app/services/alert_engine_service.py`)**:
+   - `BusinessSettingsService`: Single responsibility for business legal profile, FSSAI compliance calculation, and audit trail logging.
+   - `AlertEngineService` & `ExpiringLicenseRule` (OCP): Pluggable alert evaluation strategy pattern calculating 30-day early warnings, 7-day escalated alerts, and expired status for both distributor and suppliers.
+4. **FastAPI Endpoints & DI (`apps/api/app/core/di.py`, `apps/api/app/api/routers/business_settings.py`, `apps/api/app/api/routers/alerts.py`, `apps/api/app/main.py`)**:
+   - Dependency injection factories `get_business_settings_service` and `get_alert_engine_service`.
+   - `GET /settings/business`: Fetches business settings + computed FSSAI status and days remaining.
+   - `PUT /settings/business`: Updates legal name, GSTIN, FSSAI license, address, and contact details with `settings:manage` permission guard and audit logging.
+   - `GET /alerts`: Returns evaluated alerts across the organization.
+   - `GET /alerts/summary`: Aggregate counts of critical, warning, and total active compliance alerts.
+5. **Frontend Business Settings & Supplier Badges (`apps/web/app/admin/settings/business/page.tsx`, `apps/web/app/admin/suppliers/page.tsx`)**:
+   - Liquid Glass UI for Distributor Profile & FSSAI Compliance management at `/admin/settings/business` with real-time status banner.
+   - Enhanced Supplier table with FSSAI expiry status badges (`Valid`, `Expiring Soon`, `Expired`, `No FSSAI`) and days remaining counters matching stock status badge visual language.
+6. **PO Creation Guard & Soft Confirmation Dialog (`apps/web/app/admin/purchase-orders/page.tsx`)**:
+   - Supplier dropdown with FSSAI expiry checks.
+   - In-form warning banner when an expired supplier is selected.
+   - Hard confirmation modal requiring explicit acknowledgment of regulatory risk before placing a Purchase Order with an expired supplier.
+7. **Comprehensive Test Suite**:
+   - Backend `apps/api/tests/test_fssai_compliance.py`: 5 tests covering business settings CRUD, 30-day warning triggers, 7-day escalation, expired supplier detection, OCP alert extensibility, and FastAPI TestClient endpoints.
+   - Frontend `apps/web/lib/__tests__/fssai-compliance.test.tsx`: 14 unit tests covering `computeFssaiStatus`, `getFssaiBannerConfig`, and PO compliance gates.
+   - Full suite verification: 92/92 Pytest passed, 82/82 Vitest passed, ESLint passing with 0 errors/0 warnings, and Next.js build succeeding with 26 static routes.
+
+### SOLID Principles Applied
+
+- **Single Responsibility Principle (SRP):** `BusinessSettingsService` manages business profile and status calculation; `AlertEngineService` orchestrates alert strategies; `ExpiringLicenseRule` encapsulates license expiry logic.
+- **Open/Closed Principle (OCP):** Alert engine consumes `AlertRule` strategies; new alert types (e.g. low stock, payment overdue) can be added without modifying `AlertEngineService`.
+- **Liskov Substitution Principle (LSP):** `InMemoryBusinessSettingsRepository` and `SqlAlchemyBusinessSettingsRepository` strictly honor `BusinessSettingsRepositoryInterface`.
+- **Interface Segregation Principle (ISP):** Small, focused interfaces for `BusinessSettingsRepositoryInterface` and `AlertRule`.
+- **Dependency Inversion Principle (DIP):** Routers and services depend on repository interfaces injected via `di.py`.
+
+### Key values for future steps
+
+- Business Settings API: `GET /settings/business`, `PUT /settings/business`
+- Alerts API: `GET /alerts`, `GET /alerts/summary`
+- Web Route: `/admin/settings/business`
+- Alert Evaluation Rules: Pluggable into `AlertEngineService`
+
+### Files Created
+
+- `apps/api/app/schemas/business_settings.py`
+- `apps/api/app/schemas/alerts.py`
+- `apps/api/app/repositories/interfaces/business_settings_repository.py`
+- `apps/api/app/repositories/impl/business_settings_repository.py`
+- `apps/api/app/services/business_settings_service.py`
+- `apps/api/app/services/alert_engine_service.py`
+- `apps/api/app/api/routers/business_settings.py`
+- `apps/api/app/api/routers/alerts.py`
+- `apps/api/tests/test_fssai_compliance.py`
+- `apps/web/app/admin/settings/business/page.tsx`
+- `apps/web/lib/__tests__/fssai-compliance.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/web/app/admin/suppliers/page.tsx`
+- `apps/web/app/admin/purchase-orders/page.tsx`
+- `memory.md`
+- `codebase_audit.md`
+

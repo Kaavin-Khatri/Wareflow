@@ -21,7 +21,37 @@ import {
   Building2,
   CheckCircle2,
   AlertCircle,
+  CalendarClock,
 } from "lucide-react";
+
+/**
+ * Compute FSSAI license compliance status for a supplier.
+ * Returns an object with status label, badge variant, and days remaining.
+ */
+function computeFssaiStatus(expiryDate: string | null): {
+  label: string;
+  variant: "success" | "warning" | "error" | "neutral";
+  daysRemaining: number | null;
+} {
+  if (!expiryDate) {
+    return { label: "No FSSAI", variant: "neutral", daysRemaining: null };
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const expiry = new Date(expiryDate);
+  expiry.setHours(0, 0, 0, 0);
+  const diffMs = expiry.getTime() - today.getTime();
+  const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (days < 0) {
+    return { label: "Expired", variant: "error", daysRemaining: days };
+  }
+  if (days <= 30) {
+    return { label: "Expiring Soon", variant: "warning", daysRemaining: days };
+  }
+  return { label: "Valid", variant: "success", daysRemaining: days };
+}
+
 
 export interface SupplierItem {
   id: string;
@@ -255,27 +285,43 @@ export default function SuppliersAdminPage() {
     {
       key: "gstin",
       header: "Tax & Compliance",
-      render: (row) => (
-        <div className="flex flex-wrap gap-1.5">
-          {row.gstin ? (
-            <span className="px-2 py-0.5 rounded-lg text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-              <FileCheck className="w-2.5 h-2.5" />
-              GSTIN: {row.gstin}
-            </span>
-          ) : (
-            <span className="px-2 py-0.5 rounded-lg text-[10px] bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
-              No GSTIN
-            </span>
-          )}
-          {row.fssai_license_no && (
-            <span className="px-2 py-0.5 rounded-lg text-[10px] font-mono font-medium bg-purple-500/10 text-purple-300 border border-purple-500/20 flex items-center gap-1">
-              <ShieldCheck className="w-2.5 h-2.5" />
-              FSSAI: {row.fssai_license_no}
-            </span>
-          )}
-        </div>
-      ),
+      render: (row) => {
+        const fssai = computeFssaiStatus(row.fssai_expiry_date);
+        return (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
+              {row.gstin ? (
+                <span className="px-2 py-0.5 rounded-lg text-[10px] font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                  <FileCheck className="w-2.5 h-2.5" />
+                  GSTIN: {row.gstin}
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 rounded-lg text-[10px] bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
+                  No GSTIN
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <GlassBadge variant={fssai.variant} className="text-[10px] px-2 py-0.5">
+                <ShieldCheck className="w-2.5 h-2.5 mr-0.5" />
+                {row.fssai_license_no
+                  ? `FSSAI: ${fssai.label}`
+                  : fssai.label}
+              </GlassBadge>
+              {fssai.daysRemaining !== null && (
+                <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-0.5">
+                  <CalendarClock className="w-2.5 h-2.5" />
+                  {fssai.daysRemaining < 0
+                    ? `${Math.abs(fssai.daysRemaining)}d overdue`
+                    : `${fssai.daysRemaining}d left`}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      },
     },
+
     {
       key: "is_active",
       header: "Status",

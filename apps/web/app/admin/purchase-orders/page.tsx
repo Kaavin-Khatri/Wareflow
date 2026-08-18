@@ -26,6 +26,7 @@ import {
   Send,
   Trash2,
   Undo2,
+  ShieldAlert,
 } from "lucide-react";
 
 export type POStatus =
@@ -64,6 +65,8 @@ interface SupplierOption {
   id: string;
   name: string;
   is_active: boolean;
+  fssai_license_no?: string | null;
+  fssai_expiry_date?: string | null;
 }
 
 interface ProductOption {
@@ -117,6 +120,10 @@ export default function PurchaseOrdersPage() {
     { product_id: string; qty_ordered: number; unit_cost: number; uom_id: string }[]
   >([{ product_id: "", qty_ordered: 1, unit_cost: 0, uom_id: "" }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // FSSAI Compliance Confirmation for Expired Supplier Licenses
+  const [fssaiConfirmOpen, setFssaiConfirmOpen] = useState(false);
+  const [fssaiAcknowledged, setFssaiAcknowledged] = useState(false);
 
   // Goods Receive Form State
   const [receiveLines, setReceiveLines] = useState<
@@ -322,6 +329,26 @@ export default function PurchaseOrdersPage() {
     );
   }, [draftLines]);
 
+  /**
+   * Check if the selected supplier's FSSAI license is expired.
+   * Returns true if expired and user has NOT yet acknowledged the risk.
+   */
+  const isSelectedSupplierFssaiExpired = useMemo(() => {
+    if (!draftSupplierId) return false;
+    const supplier = suppliers.find((s) => s.id === draftSupplierId);
+    if (!supplier?.fssai_expiry_date) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expiry = new Date(supplier.fssai_expiry_date);
+    expiry.setHours(0, 0, 0, 0);
+    return expiry < today;
+  }, [draftSupplierId, suppliers]);
+
+  const selectedSupplierForCompliance = useMemo(
+    () => suppliers.find((s) => s.id === draftSupplierId) || null,
+    [draftSupplierId, suppliers],
+  );
+
   const handleCreateDraftPOSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!draftSupplierId) {
@@ -333,6 +360,23 @@ export default function PurchaseOrdersPage() {
       return;
     }
 
+    // FSSAI compliance gate: if supplier license expired, require explicit acknowledgment
+    if (isSelectedSupplierFssaiExpired && !fssaiAcknowledged) {
+      setFssaiConfirmOpen(true);
+      return;
+    }
+
+
+    await executeCreateDraftPO();
+  };
+
+  const handleFssaiConfirmProceed = async () => {
+    setFssaiAcknowledged(true);
+    setFssaiConfirmOpen(false);
+    await executeCreateDraftPO();
+  };
+
+  const executeCreateDraftPO = async () => {
     try {
       setIsSubmitting(true);
       setError(null);
@@ -351,6 +395,7 @@ export default function PurchaseOrdersPage() {
       await apiClient.post("/purchase-orders", payload);
       setSuccess("Draft purchase order created successfully!");
       setCreateModalOpen(false);
+      setFssaiAcknowledged(false);
       await fetchData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to create purchase order.";
@@ -737,7 +782,10 @@ export default function PurchaseOrdersPage() {
                 </label>
                 <select
                   value={draftSupplierId}
-                  onChange={(e) => setDraftSupplierId(e.target.value)}
+                  onChange={(e) => {
+                    setDraftSupplierId(e.target.value);
+                    setFssaiAcknowledged(false);
+                  }}
                   required
                   className="w-full bg-slate-900/90 border border-white/10 text-sm text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500"
                 >
@@ -748,6 +796,23 @@ export default function PurchaseOrdersPage() {
                     </option>
                   ))}
                 </select>
+                {/* FSSAI Expired Supplier Warning Banner */}
+                {isSelectedSupplierFssaiExpired && selectedSupplierForCompliance && (
+                  <div className="mt-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-start gap-2">
+                    <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                    <div>
+                      <div className="font-semibold">⚠️ FSSAI License Expired</div>
+                      <div className="mt-0.5 text-[var(--text-muted)]">
+                        {selectedSupplierForCompliance.name}&apos;s FSSAI license
+                        {selectedSupplierForCompliance.fssai_license_no && (
+                          <span className="font-mono"> ({selectedSupplierForCompliance.fssai_license_no})</span>
+                        )}
+                        {" "}expired on {selectedSupplierForCompliance.fssai_expiry_date}.
+                        Placing a PO requires explicit compliance acknowledgment.
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -1130,6 +1195,83 @@ export default function PurchaseOrdersPage() {
             </div>
           )}
         </GlassModal>
+
+        {/* FSSAI EXPIRED SUPPLIER CONFIRMATION DIALOG */}
+        <GlassModal
+          isOpen={fssaiConfirmOpen}
+          onClose={() => {
+            setFssaiConfirmOpen(false);
+          }}
+          title="⚠️ Supplier FSSAI License Expired"
+          description="Proceeding with a non-compliant supplier carries regulatory risk."
+        >
+          <div className="space-y-4 pt-2">
+            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-sm">
+              <div className="flex items-start gap-3">
+                <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-semibold text-rose-400">
+                    Compliance Risk Warning
+                  </div>
+                  <p className="text-xs text-[var(--text-muted)] mt-1">
+                    <strong className="text-rose-300">
+                      {selectedSupplierForCompliance?.name}
+                    </strong>
+                    &apos;s FSSAI license
+                    {selectedSupplierForCompliance?.fssai_license_no && (
+                      <span className="font-mono">
+                        {" "}({selectedSupplierForCompliance.fssai_license_no})
+                      </span>
+                    )}
+                    {" "}expired on{" "}
+                    <strong className="text-rose-300">
+                      {selectedSupplierForCompliance?.fssai_expiry_date}
+                    </strong>.
+                    Procuring from non-compliant suppliers carries regulatory risk under
+                    FSSAI Food Safety regulations.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <label className="flex items-start gap-3 cursor-pointer p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 hover:bg-amber-500/10 transition-colors">
+              <input
+                type="checkbox"
+                checked={fssaiAcknowledged}
+                onChange={(e) => setFssaiAcknowledged(e.target.checked)}
+                className="rounded border-[var(--border)] text-amber-500 focus:ring-amber-500/40 bg-[var(--surface)] mt-0.5"
+              />
+              <span className="text-xs text-[var(--text)]">
+                I acknowledge the compliance risk and wish to proceed with this purchase order.
+                This is a human decision — the supplier&apos;s FSSAI renewal will be followed up separately.
+              </span>
+            </label>
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-[var(--glass-border)]">
+              <GlassButton
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setFssaiConfirmOpen(false);
+                  setFssaiAcknowledged(false);
+                }}
+              >
+                Cancel
+              </GlassButton>
+              <GlassButton
+                type="button"
+                variant="primary"
+                disabled={!fssaiAcknowledged}
+                onClick={handleFssaiConfirmProceed}
+                className="bg-rose-600 hover:bg-rose-500 border-rose-500/40"
+              >
+                <ShieldAlert className="w-4 h-4 mr-1.5" />
+                Proceed Anyway
+              </GlassButton>
+            </div>
+          </div>
+        </GlassModal>
+
       </ListViewTemplate>
     </AppLayout>
   );

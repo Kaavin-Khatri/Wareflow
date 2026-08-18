@@ -502,6 +502,9 @@ wareflow/
 | Vendor Credit Note Settlement           | Transitioning a supplier return to `credited` requires `credit_note_ref` to link physical outbound RMA goods to vendor financial credits                                                          |
 | PurchaseReturnRepository Protocol (DIP) | `PurchaseReturnService` depends exclusively on `PurchaseReturnRepositoryInterface` Protocol, guaranteeing zero DB coupling                                                                        |
 | Open Orders Deactivation Guard          | Products linked to open Purchase Orders or Sales Orders cannot be deactivated to prevent broken fulfillment pipelines                                                                             |
+| Business Settings Protocol (DIP)        | `BusinessSettingsService` depends exclusively on `BusinessSettingsRepositoryInterface` Protocol, guaranteeing complete database abstraction                                                         |
+| Open/Closed Alert Engine (OCP)          | `AlertEngineService` consumes extensible `AlertRule` strategies (such as `ExpiringLicenseRule`), allowing new compliance rules without modifying core engine logic                                |
+| Human Decision Guard for Expired FSSAI  | Expired supplier licenses trigger a non-blocking confirmation dialog requiring explicit user risk acknowledgment before PO creation, balancing regulatory safety with practical operations        |
 
 | Cloud Storage Validation & Upload | Supabase Storage `product-images` bucket handles catalog media with strict <=5MB and JPEG/PNG/WebP validation |
 | Universal DataTable Rule | All future list and ledger screens must use `DataTable`; responsive mobile card-view is automatic below 768px |
@@ -563,6 +566,7 @@ wareflow/
 ## Security & Audit Log Coverage
 
 - **Audited Operations**:
+  - `business_settings_updated`: Legal business entity details, GSTIN, or FSSAI license updates (`PUT /settings/business`)
   - `product_price_updated`: Product wholesale and cost price alterations (`PATCH /products/{id}/price`)
   - `retailer_credit_limit_updated`: Retailer authorized credit limit adjustments (`PATCH /retailers/{id}/credit-limit`)
   - `role_permissions_updated`: Permission matrix role-to-permission mapping updates (`PATCH /roles/{id}/permissions`)
@@ -570,6 +574,19 @@ wareflow/
   - `staff_status_updated`: Staff member activation / suspension toggles (`PATCH /staff/{id}/status`)
   - `product_deleted`: Product catalog item removals (`DELETE /products/{id}`)
 - Firebase ID tokens and session cookies verified server-side by FastAPI via Firebase Admin SDK
+- RFC 6238 TOTP two-factor authentication mandatory for financial and administrative roles (`Owner`, `Manager`, `Accountant`)
+- TOTP secrets and backup codes encrypted at rest with Fernet symmetric cryptography
+- Single-use recovery backup codes permanently deleted from database record on use
+- Database permissions loaded live per request for `CurrentUser` from `role_permissions`
+- `require_permission(code)` raises 403 naming the specific missing permission code
+- `require_2fa_if_enrolled` enforces 2FA challenge completion before sensitive operations
+- Tokens never trusted from client alone
+- .env files git-ignored forever (Secrets Rule #1)
+- .env.example updated with placeholders for every new var (Secrets Rule #2)
+- CORS restricted to allowed origins loaded dynamically from `ALLOWED_ORIGINS` settings
+- PostgreSQL connection passwords percent-encoded (`%40` for `@`) in connection strings
+- Server-side `httpOnly` session cookies protect Next.js routes with `sameSite: lax`
+
 - RFC 6238 TOTP two-factor authentication mandatory for financial and administrative roles (`Owner`, `Manager`, `Accountant`)
 - TOTP secrets and backup codes encrypted at rest with Fernet symmetric cryptography
 - Single-use recovery backup codes permanently deleted from database record on use

@@ -15,6 +15,10 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings, get_settings
 from app.db.session import get_db_session
 from app.repositories.impl.audit_repository import SqlAlchemyAuditRepository
+from app.repositories.impl.business_settings_repository import (
+    InMemoryBusinessSettingsRepository,
+    SqlAlchemyBusinessSettingsRepository,
+)
 from app.repositories.impl.product_repository import (
     InMemoryProductRepository,
     SqlAlchemyProductRepository,
@@ -43,6 +47,9 @@ from app.repositories.impl.uom_repository import (
     SqlAlchemyUomRepository,
 )
 from app.repositories.interfaces.audit_repository import AuditRepository
+from app.repositories.interfaces.business_settings_repository import (
+    BusinessSettingsRepositoryInterface,
+)
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
 from app.repositories.interfaces.profile_repository import ProfileRepository
 from app.repositories.interfaces.purchase_order_repository import (
@@ -58,7 +65,9 @@ from app.repositories.interfaces.stock_analytics_repository import (
 from app.repositories.interfaces.stock_repository import StockRepositoryInterface
 from app.repositories.interfaces.supplier_repository import SupplierRepositoryInterface
 from app.repositories.interfaces.uom_repository import UomRepositoryInterface
+from app.services.alert_engine_service import AlertEngineService, ExpiringLicenseRule
 from app.services.audit_service import AuditService
+from app.services.business_settings_service import BusinessSettingsService
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
 from app.services.purchase_order_service import PurchaseOrderService
@@ -282,6 +291,52 @@ def get_purchase_return_service(
         stock_repo=stock_repo,
         audit_service=audit_service,
     )
+
+
+@lru_cache
+def get_business_settings_repository() -> BusinessSettingsRepositoryInterface:
+    """Factory for in-memory BusinessSettingsRepositoryInterface."""
+    return InMemoryBusinessSettingsRepository()
+
+
+def get_db_business_settings_repository(
+    db: Session = Depends(get_db_session),
+) -> BusinessSettingsRepositoryInterface:
+    """Factory for database-backed BusinessSettingsRepositoryInterface."""
+    return SqlAlchemyBusinessSettingsRepository(session=db)
+
+
+def get_business_settings_service(
+    settings_repo: BusinessSettingsRepositoryInterface = Depends(
+        get_db_business_settings_repository
+    ),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> BusinessSettingsService:
+    """Factory for BusinessSettingsService with DIP dependencies."""
+    return BusinessSettingsService(
+        repository=settings_repo,
+        audit_service=audit_service,
+    )
+
+
+def get_alert_engine_service(
+    business_repo: BusinessSettingsRepositoryInterface = Depends(
+        get_db_business_settings_repository
+    ),
+    supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
+) -> AlertEngineService:
+    """Factory for AlertEngineService registering standard compliance and operational rules."""
+    license_rule = ExpiringLicenseRule(
+        business_repo=business_repo,
+        supplier_repo=supplier_repo,
+    )
+    engine = AlertEngineService(
+        rules=[license_rule],
+        business_repo=business_repo,
+        supplier_repo=supplier_repo,
+    )
+    return engine
+
 
 
 

@@ -12,7 +12,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routers import (
+    alerts,
     audit,
+    business_settings,
     categories,
     health,
     me,
@@ -66,9 +68,11 @@ def create_app() -> FastAPI:
     application.include_router(suppliers.router)
     application.include_router(purchase_orders.router)
     application.include_router(purchase_returns.router)
-
+    application.include_router(business_settings.router)
+    application.include_router(alerts.router)
 
     return application
+
 
 
 app = create_app()
