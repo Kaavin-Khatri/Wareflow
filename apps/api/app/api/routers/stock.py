@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
 
@@ -14,6 +14,11 @@ from app.schemas.stock_adjustments import (
     StockAdjustmentCreateRequest,
     StockAdjustmentResponse,
     StockMovementListResponse,
+)
+from app.schemas.stock_transfers import (
+    StockTransferCreateRequest,
+    StockTransferListResponse,
+    StockTransferResponse,
 )
 from app.services.stock_service import StockService
 
@@ -132,4 +137,58 @@ def list_stock_movements(
         end_date=end_date,
         search=search,
     )
+
+
+def get_transfer_service():
+    from app.core.di import get_transfer_service as di_get_transfer_service
+
+    return di_get_transfer_service()
+
+
+@router.post(
+    "/stock/transfers",
+    response_model=StockTransferResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_stock_transfer(
+    payload: StockTransferCreateRequest,
+    service: Annotated[Any, Depends(get_transfer_service)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> StockTransferResponse:
+    """
+    Execute an atomic inter-warehouse stock transfer:
+    - Decrements source batch and creates OUT movement
+    - Creates or increments destination batch and creates IN movement
+    - Blocked if source batch stock is insufficient (422)
+    """
+    return service.execute_transfer(payload=payload, current_user=current_user)
+
+
+@router.get("/stock/transfers", response_model=StockTransferListResponse)
+def list_stock_transfers(
+    service: Annotated[Any, Depends(get_transfer_service)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    page: Annotated[int, Query(ge=1, description="Page number")] = 1,
+    page_size: Annotated[int, Query(ge=1, le=200, description="Items per page")] = 50,
+    product_id: Annotated[str | None, Query(description="Filter by product ID")] = None,
+    from_warehouse_id: Annotated[str | None, Query(description="Filter by source warehouse")] = None,
+    to_warehouse_id: Annotated[str | None, Query(description="Filter by destination warehouse")] = None,
+    start_date: Annotated[datetime | None, Query(description="Start date filter")] = None,
+    end_date: Annotated[datetime | None, Query(description="End date filter")] = None,
+    search: Annotated[str | None, Query(description="Search query")] = None,
+) -> StockTransferListResponse:
+    """
+    Fetch paginated, filterable historical inter-warehouse transfers.
+    """
+    return service.list_transfers(
+        page=page,
+        page_size=page_size,
+        product_id=product_id,
+        from_warehouse_id=from_warehouse_id,
+        to_warehouse_id=to_warehouse_id,
+        start_date=start_date,
+        end_date=end_date,
+        search=search,
+    )
+
 

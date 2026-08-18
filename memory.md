@@ -2303,6 +2303,71 @@
 - `codebase_audit.md`
 - `memory.md`
 
+---
+
+## Step 9.2 — Inter-Warehouse Transfers
+
+**Timestamp:** 2026-08-18T16:20:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Transfer Schemas (`apps/api/app/schemas/stock_transfers.py`)**:
+   - Built Pydantic V2 schemas: `StockTransferCreateRequest`, `StockTransferResponse`, `StockTransferListItemResponse`, and `StockTransferListResponse`.
+2. **Transfer Repositories (`apps/api/app/repositories/interfaces/transfer_repository.py`, `apps/api/app/repositories/impl/transfer_repository.py`)**:
+   - Created `TransferRepositoryInterface(Protocol)` defining `execute_transfer` and `list_transfers`.
+   - Built `SqlAlchemyTransferRepository`:
+     - Wraps source batch decrement, destination batch lookup/creation with matching `batch_no` and `expiry_date`, and paired `StockMovement(type=OUT, quantity=-qty)` at source and `StockMovement(type=IN, quantity=+qty)` at destination inside a single atomic database transaction.
+     - On any exception or shortfall, automatically rolls back leaving zero half-applied changes.
+   - Built `InMemoryTransferRepository` with rollback simulation for test suites.
+3. **Transfer Domain Service (`apps/api/app/services/transfer_service.py`)**:
+   - Built `TransferService` providing transfer orchestration, validation (positive quantity, distinct warehouses `400`, insufficient source stock `422`), structured audit logging via `AdminAuditLog` (`action="stock_transferred"`), and paginated historical query retrieval.
+4. **FastAPI Endpoints & DI Wiring (`apps/api/app/api/routers/stock.py`, `apps/api/app/core/di.py`)**:
+   - Registered endpoints: `POST /stock/transfers` (201 Created) and `GET /stock/transfers` (200 OK, paginated and filterable).
+   - Wired `get_transfer_repository` and `get_transfer_service` in `di.py`.
+5. **Frontend Liquid Glass View (`apps/web/app/admin/stock/transfer/page.tsx`, `apps/web/lib/nav.ts`)**:
+   - Built `/admin/stock/transfer` with product, source warehouse, batch, and destination warehouse selectors.
+   - Built Dual-Warehouse Live On-Hand Impact Preview displaying current and projected balances at both source and destination facilities with real-time over-stock warning badges.
+   - Added recent transfers history `DataTable` with route visualization (`From → To`).
+   - Added `Warehouse Transfers` link in sidebar navigation.
+6. **Automated Testing & QA Verification**:
+   - Backend `apps/api/tests/test_stock_transfers.py` (5 tests covering insufficient source stock rejection 422, same-warehouse rejection 400, atomic paired quantities and movements, destination top-up, and HTTP endpoints).
+   - Frontend `apps/web/lib/__tests__/stock-transfers.test.tsx` (2 tests covering form rendering, live preview updates, and transfer execution).
+   - All 133 backend Pytest tests passing (100% green).
+   - All 105 frontend Vitest tests passing across 24 test files (100% green).
+   - 0 errors / 0 warnings on Ruff and ESLint; Next.js production build cleanly compiled with 33 routes.
+
+### Decisions
+
+- **Transfer-As-Atomic-Pair Rule**: Inter-warehouse transfer is strictly executed as a single atomic operation writing a paired `OUT` movement at source and `IN` movement at destination with matching `reference_type="warehouse_transfer"` and `reference_id=transfer_id`. Stock can never exist in an indeterminate or half-transferred state.
+- **Batch Identity Preservation**: The destination warehouse batch preserves the source batch's `batch_no` and `expiry_date` (topping up existing batch if already present in destination, or creating a new batch entry if absent).
+- **Dual Live Preview UI**: The frontend immediately computes and visualizes the projected inventory levels for both the source facility (reduction) and destination facility (replenishment) before the user commits the transfer.
+
+### Key values for future steps
+
+- Transfers API: `POST /stock/transfers`, `GET /stock/transfers`
+- Web Route: `/admin/stock/transfer`
+- Ledger Reference Type: `reference_type="warehouse_transfer"` with `reference_id="<transfer_id>:<notes>"`
+
+### Files Created
+
+- `apps/api/app/schemas/stock_transfers.py`
+- `apps/api/app/repositories/interfaces/transfer_repository.py`
+- `apps/api/app/repositories/impl/transfer_repository.py`
+- `apps/api/app/services/transfer_service.py`
+- `apps/api/tests/test_stock_transfers.py`
+- `apps/web/app/admin/stock/transfer/page.tsx`
+- `apps/web/lib/__tests__/stock-transfers.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/core/di.py`
+- `apps/api/app/api/routers/stock.py`
+- `apps/web/lib/nav.ts`
+- `codebase_audit.md`
+- `memory.md`
+
+
 
 
 

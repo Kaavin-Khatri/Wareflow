@@ -273,7 +273,7 @@ wareflow/
 │           │       ├── categories.py# Product Category taxonomy (/categories)
 │           │       ├── products.py # Wholesale Products & Pricing (/products)
 │           │       ├── uom.py      # Unit of Measure & Conversions (/uom, /products/{id}/conversions)
-│           │       ├── stock.py    # Multi-Warehouse Stock Overview, Adjustments & Movements Ledger (/stock/*, /stock/adjustments, /stock/movements, /products/{id}/stock)
+│           │       ├── stock.py    # Multi-Warehouse Stock Overview, Adjustments, Ledger & Transfers (/stock/*, /stock/adjustments, /stock/movements, /stock/transfers, /products/{id}/stock)
 │           │       ├── stock_analytics.py # Stock Valuation & Composition Analytics (/analytics/stock/*)
 │           │       ├── suppliers.py# Vendor / Supplier profiles (/suppliers)
 │           │       ├── purchase_orders.py # Purchase Orders & Receiving (/purchase-orders)
@@ -281,7 +281,6 @@ wareflow/
 │           │       ├── retailers.py# Retailer accounts & credit limits (/retailers)
 │           │       ├── customers.py# Direct end-customers & walk-in buyers (/customers)
 │           │       └── sales_orders.py# Sales Orders & FIFO Fulfillment (/sales-orders)
-
 │           ├── db/
 │           │   ├── base.py         # SQLAlchemy DeclarativeBase
 │           │   └── session.py      # Engine (NullPool) + get_db_session dependency
@@ -306,6 +305,7 @@ wareflow/
 │           │   ├── alert_engine_service.py
 │           │   ├── audit_service.py
 │           │   ├── business_settings_service.py
+│           │   ├── customer_service.py
 │           │   ├── pricing_strategy.py
 │           │   ├── product_service.py
 │           │   ├── profile_service.py
@@ -313,11 +313,13 @@ wareflow/
 │           │   ├── purchase_return_service.py
 │           │   ├── retailer_service.py
 │           │   ├── sales_order_service.py
+│           │   ├── sales_return_service.py
 │           │   ├── staff_service.py
 │           │   ├── stock_service.py
 │           │   ├── stock_analytics_service.py
 │           │   ├── storage_service.py
 │           │   ├── supplier_service.py
+│           │   ├── transfer_service.py
 │           │   ├── two_factor_service.py
 │           │   └── uom_service.py
 │           ├── repositories/
@@ -325,13 +327,20 @@ wareflow/
 │           │   │   ├── alert_repository.py
 │           │   │   ├── audit_repository.py
 │           │   │   ├── business_settings_repository.py
+│           │   │   ├── customer_repository.py
 │           │   │   ├── product_repository.py
 │           │   │   ├── profile_repository.py
 │           │   │   ├── purchase_order_repository.py
 │           │   │   ├── purchase_return_repository.py
 │           │   │   ├── retailer_repository.py
 │           │   │   ├── sales_order_repository.py
+│           │   │   ├── sales_return_repository.py
+│           │   │   ├── stock_analytics_repository.py
 │           │   │   ├── stock_repository.py
+│           │   │   ├── supplier_repository.py
+│           │   │   ├── transfer_repository.py
+│           │   │   └── uom_repository.py
+
 
 │           │   │   ├── stock_analytics_repository.py
 │           │   │   ├── supplier_repository.py
@@ -551,6 +560,8 @@ wareflow/
 | Single Legitimate Manual Stock Path     | Manual stock adjustments (`POST /stock/adjustments`) require mandatory reason taxonomy (`damage`, `loss`, `recount`, `other`) and are the sole direct stock modification write path |
 | Recount Permission Role Gate (RBAC)     | The `recount` adjustment reason strictly enforces `stock.recount` permission code or `Owner` role, preventing unauthorized floor staff from adding arbitrary inventory balances |
 | Human Label Ledger Synthesis            | `StockService.list_movements` enriches append-only movements with contextual activity labels (PO receipt, SO dispatch, return, recount, damage note) directly in the API |
+| Atomic Paired-Movement Transfers        | `TransferService` executes inter-warehouse stock relocation as a single atomic transaction: source `StockMovement(type=out)` paired with destination `StockMovement(type=in)`, preserving batch identity and rollback safety |
+
 
 
 

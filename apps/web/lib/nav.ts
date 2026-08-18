@@ -64,6 +64,13 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         requiredPermission: "inventory:manage",
       },
       {
+        name: "Warehouse Transfers",
+        href: "/admin/stock/transfer",
+        icon: "ArrowLeftRight",
+        requiredPermission: "inventory:manage",
+      },
+
+      {
         name: "Suppliers & Vendors",
 
         href: "/admin/suppliers",

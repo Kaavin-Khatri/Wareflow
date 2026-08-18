@@ -58,6 +58,9 @@ from app.repositories.impl.supplier_repository import (
     InMemorySupplierRepository,
     SqlAlchemySupplierRepository,
 )
+from app.repositories.impl.transfer_repository import (
+    SqlAlchemyTransferRepository,
+)
 from app.repositories.impl.uom_repository import (
     SqlAlchemyUomRepository,
 )
@@ -88,6 +91,7 @@ from app.repositories.interfaces.stock_analytics_repository import (
 )
 from app.repositories.interfaces.stock_repository import StockRepositoryInterface
 from app.repositories.interfaces.supplier_repository import SupplierRepositoryInterface
+from app.repositories.interfaces.transfer_repository import TransferRepositoryInterface
 from app.repositories.interfaces.uom_repository import UomRepositoryInterface
 from app.services.alert_engine_service import AlertEngineService, ExpiringLicenseRule
 from app.services.audit_service import AuditService
@@ -106,6 +110,7 @@ from app.services.stock_analytics_service import StockAnalyticsService
 from app.services.stock_service import StockService
 from app.services.storage_service import StorageServiceInterface, SupabaseStorageService
 from app.services.supplier_service import SupplierService
+from app.services.transfer_service import TransferService
 from app.services.two_factor_service import TwoFactorService
 from app.services.uom_service import UomService
 
@@ -239,6 +244,20 @@ def get_stock_service(
 ) -> StockService:
     """Factory for StockService with UoM converter and audit repository."""
     return StockService(stock_repo=stock_repo, uom_repo=uom_repo, audit_repo=audit_repo)
+
+
+def get_transfer_repository(db: Session = Depends(get_db_session)) -> TransferRepositoryInterface:
+    """Factory for database-backed TransferRepositoryInterface."""
+    return SqlAlchemyTransferRepository(session=db)
+
+
+def get_transfer_service(
+    transfer_repo: TransferRepositoryInterface = Depends(get_transfer_repository),
+    audit_repo: AuditRepository = Depends(get_audit_repository),
+) -> TransferService:
+    """Factory for TransferService with atomic transfer repository and audit logging."""
+    return TransferService(transfer_repo=transfer_repo, audit_repo=audit_repo)
+
 
 
 
