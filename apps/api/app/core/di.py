@@ -24,6 +24,10 @@ from app.repositories.impl.purchase_order_repository import (
     InMemoryPurchaseOrderRepository,
     SqlAlchemyPurchaseOrderRepository,
 )
+from app.repositories.impl.purchase_return_repository import (
+    InMemoryPurchaseReturnRepository,
+    SqlAlchemyPurchaseReturnRepository,
+)
 from app.repositories.impl.retailer_repository import SqlAlchemyRetailerRepository
 from app.repositories.impl.stock_analytics_repository import (
     SqlAlchemyStockAnalyticsRepository,
@@ -44,6 +48,9 @@ from app.repositories.interfaces.profile_repository import ProfileRepository
 from app.repositories.interfaces.purchase_order_repository import (
     PurchaseOrderRepositoryInterface,
 )
+from app.repositories.interfaces.purchase_return_repository import (
+    PurchaseReturnRepositoryInterface,
+)
 from app.repositories.interfaces.retailer_repository import RetailerRepository
 from app.repositories.interfaces.stock_analytics_repository import (
     StockAnalyticsRepositoryInterface,
@@ -55,6 +62,7 @@ from app.services.audit_service import AuditService
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
 from app.services.purchase_order_service import PurchaseOrderService
+from app.services.purchase_return_service import PurchaseReturnService
 from app.services.retailer_service import RetailerService
 from app.services.staff_service import StaffService
 from app.services.stock_analytics_service import StockAnalyticsService
@@ -241,3 +249,39 @@ def get_purchase_order_service(
         stock_service=stock_service,
         audit_service=audit_service,
     )
+
+
+@lru_cache
+def get_purchase_return_repository() -> PurchaseReturnRepositoryInterface:
+
+    """Factory for in-memory PurchaseReturnRepositoryInterface."""
+    return InMemoryPurchaseReturnRepository()
+
+
+def get_db_purchase_return_repository(
+    db: Session = Depends(get_db_session),
+) -> PurchaseReturnRepositoryInterface:
+    """Factory for database-backed PurchaseReturnRepositoryInterface."""
+    return SqlAlchemyPurchaseReturnRepository(session=db)
+
+
+def get_purchase_return_service(
+    return_repo: PurchaseReturnRepositoryInterface = Depends(get_db_purchase_return_repository),
+    po_repo: PurchaseOrderRepositoryInterface = Depends(get_db_purchase_order_repository),
+    supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> PurchaseReturnService:
+    """Factory for PurchaseReturnService with DIP dependencies."""
+    return PurchaseReturnService(
+        purchase_return_repo=return_repo,
+        purchase_order_repo=po_repo,
+        supplier_repo=supplier_repo,
+        product_repo=product_repo,
+        stock_repo=stock_repo,
+        audit_service=audit_service,
+    )
+
+
+

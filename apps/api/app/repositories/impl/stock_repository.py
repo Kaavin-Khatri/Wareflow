@@ -214,6 +214,56 @@ class SqlAlchemyStockRepository(StockRepositoryInterface):
 
         return batch, movement
 
+    def get_batch_by_id(self, batch_id: str) -> StockBatch | None:
+        stmt = (
+            select(StockBatch)
+            .options(
+                joinedload(StockBatch.warehouse),
+                joinedload(StockBatch.product).joinedload(Product.base_uom),
+            )
+            .where(StockBatch.id == batch_id)
+        )
+        return self.session.execute(stmt).scalar_one_or_none()
+
+    def record_stock_return(
+        self,
+        batch_id: str,
+        product_id: str,
+        warehouse_id: str,
+        quantity: float,
+        reference_id: str | None = None,
+        created_by: str | None = None,
+    ) -> tuple[StockBatch, StockMovement]:
+        stmt = select(StockBatch).where(StockBatch.id == batch_id)
+        batch = self.session.execute(stmt).scalar_one_or_none()
+        if not batch:
+            raise ValueError(f"Stock batch {batch_id} not found.")
+
+        current_qty = float(batch.quantity)
+        if current_qty < float(quantity):
+            raise ValueError(
+                f"Cannot return {quantity} units: batch {batch.batch_no} only has {current_qty} on hand."
+            )
+
+        batch.quantity = round(current_qty - float(quantity), 2)
+        self.session.flush()
+
+        movement = StockMovement(
+            id=str(uuid.uuid4()),
+            product_id=product_id or batch.product_id,
+            warehouse_id=warehouse_id or batch.warehouse_id,
+            batch_id=batch.id,
+            type=StockMovementTypeEnum.RETURN_OUT,
+            quantity=round(float(quantity), 2),
+            reference_type="purchase_return",
+            reference_id=reference_id,
+            created_by=created_by,
+        )
+        self.session.add(movement)
+        self.session.flush()
+
+        return batch, movement
+
 
 class InMemoryStockRepository(StockRepositoryInterface):
     """In-Memory implementation of StockRepositoryInterface for isolated unit tests."""
@@ -468,3 +518,45 @@ class InMemoryStockRepository(StockRepositoryInterface):
             created_by=created_by,
         )
         return batch_model, movement
+
+    def get_batch_by_id(self, batch_id: str) -> StockBatch | None:
+        data = self.batches.get(batch_id)
+        if not data:
+            return None
+        return self._to_batch_model(data)
+
+    def record_stock_return(
+        self,
+        batch_id: str,
+        product_id: str,
+        warehouse_id: str,
+        quantity: float,
+        reference_id: str | None = None,
+        created_by: str | None = None,
+    ) -> tuple[StockBatch, StockMovement]:
+        data = self.batches.get(batch_id)
+        if not data:
+            raise ValueError(f"Stock batch {batch_id} not found.")
+
+        current_qty = float(data["quantity"])
+        if current_qty < float(quantity):
+            raise ValueError(
+                f"Cannot return {quantity} units: batch {data.get('batch_no')} only has {current_qty} on hand."
+            )
+
+        data["quantity"] = round(current_qty - float(quantity), 2)
+        batch_model = self._to_batch_model(data)
+
+        movement = StockMovement(
+            id=str(uuid.uuid4()),
+            product_id=product_id or data["product_id"],
+            warehouse_id=warehouse_id or data["warehouse_id"],
+            batch_id=batch_model.id,
+            type=StockMovementTypeEnum.RETURN_OUT,
+            quantity=round(float(quantity), 2),
+            reference_type="purchase_return",
+            reference_id=reference_id,
+            created_by=created_by,
+        )
+        return batch_model, movement
+

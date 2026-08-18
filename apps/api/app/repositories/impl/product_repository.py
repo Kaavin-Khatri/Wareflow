@@ -26,8 +26,10 @@ class InMemoryProductRepository(ProductRepositoryInterface):
         seed_products: list[Any] | None = None,
         seed_categories: list[Any] | None = None,
         seed_data: list[Any] | None = None,
+        initial_products: list[Any] | None = None,
     ) -> None:
-        initial = seed_products or seed_data or []
+        initial = seed_products or seed_data or initial_products or []
+
         self._products: dict[str, dict[str, Any]] = {}
         for item in initial:
             if isinstance(item, Product):

@@ -174,8 +174,38 @@ class SqlAlchemyPurchaseOrderRepository(PurchaseOrderRepositoryInterface):
 class InMemoryPurchaseOrderRepository(PurchaseOrderRepositoryInterface):
     """In-memory mock implementation for high-speed unit testing."""
 
-    def __init__(self, pos: list[PurchaseOrder] | None = None) -> None:
-        self.pos: dict[str, PurchaseOrder] = {po.id: po for po in (pos or [])}
+    def __init__(
+        self, pos: list[Any] | None = None, initial_orders: list[Any] | None = None
+    ) -> None:
+        raw_list = pos or initial_orders or []
+        self.pos: dict[str, Any] = {}
+        for item in raw_list:
+            if isinstance(item, dict):
+                po_id = item["id"]
+                po_model = PurchaseOrder(
+                    id=po_id,
+                    po_number=item.get("po_number", "PO-AUTO"),
+                    supplier_id=item["supplier_id"],
+                    status=item.get("status", POStatusEnum.DRAFT),
+                    total_amount=float(item.get("total_amount", 0.0)),
+                )
+                items_models = []
+                for itm in item.get("items", []):
+                    itm_model = PurchaseOrderItem(
+                        id=itm.get("id") or str(uuid.uuid4()),
+                        po_id=po_id,
+                        product_id=itm["product_id"],
+                        qty_ordered=float(itm["qty_ordered"]),
+                        qty_received=float(itm.get("qty_received", 0.0)),
+                        unit_cost=float(itm.get("unit_cost", 0.0)),
+                        uom_id=itm.get("uom_id"),
+                    )
+                    items_models.append(itm_model)
+                po_model.items = items_models
+                self.pos[po_id] = po_model
+            else:
+                self.pos[item.id] = item
+
 
     def get_by_id(self, po_id: str) -> PurchaseOrder | None:
         return self.pos.get(po_id)

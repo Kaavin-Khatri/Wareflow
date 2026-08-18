@@ -63,6 +63,12 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         icon: "FileSpreadsheet",
         requiredPermission: "inventory:view",
       },
+      {
+        name: "Supplier Returns",
+        href: "/admin/purchase-returns",
+        icon: "Undo2",
+        requiredPermission: "inventory:view",
+      },
 
       {
         name: "Stock Analytics",

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+
 import AppLayout from "@/components/AppLayout";
 import { ListViewTemplate } from "@/components/templates/ListViewTemplate";
 import { DataTable, DataTableColumn } from "@/components/DataTable";
@@ -23,6 +25,7 @@ import {
   Eye,
   Send,
   Trash2,
+  Undo2,
 } from "lucide-react";
 
 export type POStatus =
@@ -87,7 +90,9 @@ interface UomOption {
 }
 
 export default function PurchaseOrdersPage() {
+  const router = useRouter();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderItemType[]>([]);
+
   const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseOption[]>([]);
@@ -544,6 +549,19 @@ export default function PurchaseOrdersPage() {
             >
               <Boxes className="w-3.5 h-3.5" />
               Receive Goods
+            </GlassButton>
+          )}
+
+          {(po.status === "partially_received" || po.status === "received") && (
+            <GlassButton
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/admin/purchase-returns?po_id=${po.id}`)}
+              className="text-xs py-1 px-2.5 h-8 gap-1 border-amber-500/30 text-amber-300 hover:bg-amber-500/20"
+              title="Return goods to supplier"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+              Return
             </GlassButton>
           )}
 
@@ -1088,7 +1106,23 @@ export default function PurchaseOrdersPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-3">
+              <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                {activePO.status !== "draft" && activePO.status !== "cancelled" ? (
+                  <GlassButton
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setDetailModalOpen(false);
+                      router.push(`/admin/purchase-returns?po_id=${activePO.id}`);
+                    }}
+                    className="gap-1.5 text-xs text-amber-300 hover:text-amber-200 border-amber-500/30"
+                  >
+                    <Undo2 className="w-3.5 h-3.5" />
+                    Return Goods to Supplier (RMA)
+                  </GlassButton>
+                ) : (
+                  <div />
+                )}
                 <GlassButton variant="ghost" onClick={() => setDetailModalOpen(false)}>
                   Close
                 </GlassButton>

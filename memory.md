@@ -1776,3 +1776,85 @@
 - `apps/web/lib/nav.ts`
 - `memory.md`
 - `codebase_audit.md`
+
+---
+
+## [2026-08-18] — Step 7.3: Supplier Returns (RMA Out)
+
+- **Phase:** Phase 7 — Suppliers & Purchase Orders
+- **Step:** 7.3 — Supplier Returns (RMA Out)
+- **Status:** Complete
+
+### What was built
+
+1. **Database Model & Migrations Enhancement (`apps/api/app/models/returns.py`)**:
+   - Added `credit_note_ref: Mapped[str | None]` to `PurchaseReturn` model to capture supplier credit note identifiers upon settlement.
+2. **Pydantic Schemas (`apps/api/app/schemas/purchase_returns.py`)**:
+   - `PurchaseReturnItemCreateRequest`, `PurchaseReturnCreateRequest`, `PurchaseReturnStatusUpdateRequest`, `PurchaseReturnItemResponse`, `PurchaseReturnResponse`.
+3. **Repository Interface & Implementations (`apps/api/app/repositories/`)**:
+   - `PurchaseReturnRepositoryInterface` defining `create_return`, `update_status`, `get_by_id`, and `list_returns` (with supplier and status filters).
+   - `SqlAlchemyPurchaseReturnRepository` with eager `joinedload` on items and unique result mapping.
+   - `InMemoryPurchaseReturnRepository` for unit tests and testing environments.
+   - Added `get_batch_by_id` and `record_stock_return` to `StockRepositoryInterface`, `SqlAlchemyStockRepository`, and `InMemoryStockRepository`.
+4. **Domain Service (`apps/api/app/services/purchase_return_service.py`)**:
+   - Immediate stock deduction on return request (`StockMovementTypeEnum.RETURN_OUT`) as physical goods leave the warehouse.
+   - Guard against over-returns: validating returned batch quantities against current on-hand batch balances.
+   - Strict status transition lifecycle enforcement: `requested` $\rightarrow$ `shipped` $\rightarrow$ `credited`.
+   - Credit note validation: requires `credit_note_ref` string when transitioning to `credited`.
+   - Structured audit logging via `AuditService`.
+5. **FastAPI DI & Routing (`apps/api/app/core/di.py`, `apps/api/app/api/routers/purchase_returns.py`)**:
+   - Factory `get_purchase_return_service` wired with clean dependency injection.
+   - `POST /purchase-returns`, `GET /purchase-returns` (with `supplier_id` & `status` query filters), `GET /purchase-returns/{id}`, and `PATCH /purchase-returns/{id}/status`.
+6. **Frontend Admin UI (`apps/web/app/admin/purchase-returns/page.tsx`)**:
+   - Liquid Glass UI styled table with KPI cards (Total Returns, Units Returned, Shipped in Transit, Vendor Credited).
+   - "Request Return (RMA)" modal with live batch stock lookup, pre-populating matching batches from selected purchase orders.
+   - "Ship RMA" and "Credit Note" status transition dialogs.
+   - Quick-action "Return to Supplier" buttons integrated on `/admin/purchase-orders` table row actions and detail modal footer with URL parameter prefill (`/admin/purchase-returns?po_id=...`).
+   - Added `Supplier Returns` to navigation sidebar (`apps/web/lib/nav.ts`).
+7. **Testing & Quality Assurance**:
+   - Comprehensive backend test suite in `apps/api/tests/test_purchase_returns.py` (5 tests covering creation, stock movement validation, over-return bounds, status state machine, SQLite DB persistence, and FastAPI TestClient).
+   - Frontend Vitest suite in `apps/web/lib/__tests__/purchase-returns.test.tsx` (5 tests covering KPI cards, search, status filters, RMA creation form, and status transition).
+   - Pytest passed: 87 / 87 tests passing.
+   - Vitest passed: 68 / 68 tests across 17 test suites passing.
+   - Ruff linting and Next.js production build (`next build`) passing with 25 routes.
+
+### SOLID Principles Applied
+
+- **Single Responsibility Principle (SRP):** `PurchaseReturnService` strictly manages return lifecycles and stock reduction contracts; stock ledger updates delegated to `StockRepositoryInterface`.
+- **Open/Closed Principle (OCP):** Lifecycle state machines and filtering are structured cleanly without modifying existing purchase order or inventory movement logic.
+- **Liskov Substitution Principle (LSP):** `InMemoryPurchaseReturnRepository` and `SqlAlchemyPurchaseReturnRepository` completely satisfy `PurchaseReturnRepositoryInterface`.
+- **Interface Segregation Principle (ISP):** Segregated `PurchaseReturnRepositoryInterface` and `StockRepositoryInterface` methods with tailored, role-specific operations.
+- **Dependency Inversion Principle (DIP):** `PurchaseReturnService` and router endpoints depend exclusively on repository interfaces injected via `di.py`.
+
+### Key values for future steps
+
+- Return List Endpoint: `GET /purchase-returns`
+- Return Creation Endpoint: `POST /purchase-returns`
+- Return Status Transition Endpoint: `PATCH /purchase-returns/{id}/status`
+- Web Admin URL: `/admin/purchase-returns`
+
+### Files Created
+
+- `apps/api/app/schemas/purchase_returns.py`
+- `apps/api/app/repositories/interfaces/purchase_return_repository.py`
+- `apps/api/app/repositories/impl/purchase_return_repository.py`
+- `apps/api/app/services/purchase_return_service.py`
+- `apps/api/app/api/routers/purchase_returns.py`
+- `apps/api/tests/test_purchase_returns.py`
+- `apps/web/app/admin/purchase-returns/page.tsx`
+- `apps/web/lib/__tests__/purchase-returns.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/models/returns.py`
+- `apps/api/app/repositories/interfaces/stock_repository.py`
+- `apps/api/app/repositories/impl/stock_repository.py`
+- `apps/api/app/repositories/impl/purchase_order_repository.py`
+- `apps/api/app/repositories/impl/supplier_repository.py`
+- `apps/api/app/repositories/impl/product_repository.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/web/app/admin/purchase-orders/page.tsx`
+- `apps/web/lib/nav.ts`
+- `memory.md`
+- `codebase_audit.md`

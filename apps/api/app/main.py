@@ -19,6 +19,7 @@ from app.api.routers import (
     products,
     profiles,
     purchase_orders,
+    purchase_returns,
     retailers,
     roles,
     staff,
@@ -64,6 +65,8 @@ def create_app() -> FastAPI:
     application.include_router(retailers.router)
     application.include_router(suppliers.router)
     application.include_router(purchase_orders.router)
+    application.include_router(purchase_returns.router)
+
 
     return application
 

@@ -19,9 +19,14 @@ from app.repositories.interfaces.supplier_repository import SupplierRepositoryIn
 class InMemorySupplierRepository(SupplierRepositoryInterface):
     """In-memory implementation of SupplierRepositoryInterface for testing and DIP."""
 
-    def __init__(self, seed_suppliers: list[Any] | None = None) -> None:
+    def __init__(
+        self,
+        seed_suppliers: list[Any] | None = None,
+        initial_suppliers: list[Any] | None = None,
+    ) -> None:
         self._suppliers: dict[str, dict[str, Any]] = {}
-        for item in seed_suppliers or []:
+        for item in (seed_suppliers or initial_suppliers or []):
+
             if isinstance(item, Supplier):
                 self._suppliers[item.id] = {
                     "id": item.id,

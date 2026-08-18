@@ -487,18 +487,22 @@ wareflow/
 
 ## Decisions
 
-| Decision                           | Rationale                                                                                                                                                                                         |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Graph BFS Packaging Traversal      | `UomService` resolves multi-level packaging hierarchies (Pallet->Case->Pack->Piece) & inverses using graph traversal                                                                              |
-| Strict Base UoM Stock Ledger       | `stock_movements` and `stock_batches` strictly store quantities in product's `base_uom_id` via `convert_to_base_uom`                                                                              |
-| Graceful 1:1 Base Fallback         | Products with no custom packaging conversion defined trade 1:1 in base unit gracefully without runtime error                                                                                      |
-| Stock Analytics Calculation Engine | `StockAnalyticsService` computes live balance valuations, category allocations, warehouse holdings, and 6-window expiry horizons with full parity between SQLAlchemy and InMemory implementations |
-| UomRepository Protocol (DIP)       | `UomService` depends exclusively on `UomRepositoryInterface` Protocol, allowing seamless in-memory testing                                                                                        |
-| ProductRepository Protocol (DIP)   | `ProductService` depends exclusively on `ProductRepositoryInterface` (Protocol), never importing DB sessions                                                                                      |
-| SupplierRepository Protocol (DIP)  | `SupplierService` depends exclusively on `SupplierRepositoryInterface` Protocol, enforcing unique company names & 15-char Indian GSTIN verification                                               |
-| Natural Key SKU Uniqueness         | Enforced at both database layer and domain service layer with friendly 409 Conflict error details                                                                                                 |
+| Decision                                | Rationale                                                                                                                                                                                         |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Graph BFS Packaging Traversal           | `UomService` resolves multi-level packaging hierarchies (Pallet->Case->Pack->Piece) & inverses using graph traversal                                                                              |
+| Strict Base UoM Stock Ledger            | `stock_movements` and `stock_batches` strictly store quantities in product's `base_uom_id` via `convert_to_base_uom`                                                                              |
+| Graceful 1:1 Base Fallback              | Products with no custom packaging conversion defined trade 1:1 in base unit gracefully without runtime error                                                                                      |
+| Stock Analytics Calculation Engine      | `StockAnalyticsService` computes live balance valuations, category allocations, warehouse holdings, and 6-window expiry horizons with full parity between SQLAlchemy and InMemory implementations |
+| UomRepository Protocol (DIP)            | `UomService` depends exclusively on `UomRepositoryInterface` Protocol, allowing seamless in-memory testing                                                                                        |
+| ProductRepository Protocol (DIP)        | `ProductService` depends exclusively on `ProductRepositoryInterface` (Protocol), never importing DB sessions                                                                                      |
+| SupplierRepository Protocol (DIP)       | `SupplierService` depends exclusively on `SupplierRepositoryInterface` Protocol, enforcing unique company names & 15-char Indian GSTIN verification                                               |
+| Natural Key SKU Uniqueness              | Enforced at both database layer and domain service layer with friendly 409 Conflict error details                                                                                                 |
+| Single Door Rule for Inbound Stock      | Receiving a Purchase Order (`POST /purchase-orders/{id}/receive`) is the sole entry point for new batch stock and `stock_movements(type=in)` ledger entries                                       |
+| Immediate Return Stock Deduction        | Requesting a supplier return (`POST /purchase-returns`) immediately decrements on-hand stock via `stock_movements(type=return_out)` as physical goods depart the warehouse                        |
+| Vendor Credit Note Settlement           | Transitioning a supplier return to `credited` requires `credit_note_ref` to link physical outbound RMA goods to vendor financial credits                                                          |
+| PurchaseReturnRepository Protocol (DIP) | `PurchaseReturnService` depends exclusively on `PurchaseReturnRepositoryInterface` Protocol, guaranteeing zero DB coupling                                                                        |
+| Open Orders Deactivation Guard          | Products linked to open Purchase Orders or Sales Orders cannot be deactivated to prevent broken fulfillment pipelines                                                                             |
 
-| Open Orders Deactivation Guard | Products linked to open Purchase Orders or Sales Orders cannot be deactivated to prevent broken fulfillment pipelines |
 | Cloud Storage Validation & Upload | Supabase Storage `product-images` bucket handles catalog media with strict <=5MB and JPEG/PNG/WebP validation |
 | Universal DataTable Rule | All future list and ledger screens must use `DataTable`; responsive mobile card-view is automatic below 768px |
 | Low-Power Glass Degradation | Low memory (<4GB), cores (<=4), or reduced-transparency drops expensive blurs to flat translucency at 60fps |

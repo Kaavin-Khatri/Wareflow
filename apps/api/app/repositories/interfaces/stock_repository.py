@@ -49,6 +49,10 @@ class StockRepositoryInterface(Protocol):
         """Fetch product record eagerly joined with base UoM details."""
         ...
 
+    def get_batch_by_id(self, batch_id: str) -> StockBatch | None:
+        """Fetch stock batch by primary key ID."""
+        ...
+
     def record_stock_receipt(
         self,
         product_id: str,
@@ -65,3 +69,20 @@ class StockRepositoryInterface(Protocol):
         - Insert an immutable StockMovement(type=in) ledger entry
         """
         ...
+
+    def record_stock_return(
+        self,
+        batch_id: str,
+        product_id: str,
+        warehouse_id: str,
+        quantity: float,
+        reference_id: str | None = None,
+        created_by: str | None = None,
+    ) -> tuple[StockBatch, Any]:
+        """
+        Record outbound stock return to supplier atomically:
+        - Deduct quantity from matching StockBatch
+        - Insert an immutable StockMovement(type=return_out) ledger entry
+        """
+        ...
+

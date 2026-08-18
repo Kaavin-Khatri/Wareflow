@@ -115,9 +115,11 @@ class PurchaseReturn(Base):
         default=PurchaseReturnStatusEnum.REQUESTED,
     )
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    credit_note_ref: Mapped[str | None] = mapped_column(String(100), nullable=True)
     requested_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
 
     # Relationships
     purchase_order: Mapped["app.models.supplier.PurchaseOrder"] = relationship(  # noqa: F821
