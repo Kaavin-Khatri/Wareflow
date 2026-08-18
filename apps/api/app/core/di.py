@@ -21,6 +21,9 @@ from app.repositories.impl.product_repository import (
 )
 from app.repositories.impl.profile_repository import SqlAlchemyProfileRepository
 from app.repositories.impl.retailer_repository import SqlAlchemyRetailerRepository
+from app.repositories.impl.stock_repository import (
+    SqlAlchemyStockRepository,
+)
 from app.repositories.impl.uom_repository import (
     SqlAlchemyUomRepository,
 )
@@ -28,12 +31,14 @@ from app.repositories.interfaces.audit_repository import AuditRepository
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
 from app.repositories.interfaces.profile_repository import ProfileRepository
 from app.repositories.interfaces.retailer_repository import RetailerRepository
+from app.repositories.interfaces.stock_repository import StockRepositoryInterface
 from app.repositories.interfaces.uom_repository import UomRepositoryInterface
 from app.services.audit_service import AuditService
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
 from app.services.retailer_service import RetailerService
 from app.services.staff_service import StaffService
+from app.services.stock_service import StockService
 from app.services.storage_service import StorageServiceInterface, SupabaseStorageService
 from app.services.two_factor_service import TwoFactorService
 from app.services.uom_service import UomService
@@ -137,3 +142,16 @@ def get_two_factor_service(
 ) -> TwoFactorService:
     """Factory for TwoFactorService."""
     return TwoFactorService(profile_repo=repo)
+
+
+def get_stock_repository(db: Session = Depends(get_db_session)) -> StockRepositoryInterface:
+    """Factory for database-backed StockRepositoryInterface."""
+    return SqlAlchemyStockRepository(session=db)
+
+
+def get_stock_service(
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    uom_repo: UomRepositoryInterface = Depends(get_uom_repository),
+) -> StockService:
+    """Factory for StockService with UoM converter."""
+    return StockService(stock_repo=stock_repo, uom_repo=uom_repo)

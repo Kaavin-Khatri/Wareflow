@@ -1405,3 +1405,80 @@
 - `apps/web/lib/api-client.ts`
 - `memory.md`
 - `codebase_audit.md`
+
+---
+
+## Step 5.3 — Multi-Warehouse Batch Stock View
+
+**Timestamp:** 2026-08-18T09:33:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- **StockRepository Protocol & Implementations**:
+  - Defined `StockRepositoryInterface` in `apps/api/app/repositories/interfaces/stock_repository.py` specifying: `get_on_hand(product_id, warehouse_id=None)`, `get_batches_by_product(product_id, warehouse_id=None)` (FIFO sorted by `expiry_date.asc()`, `received_at.asc()`), `get_batches_expiring_soon(days=30, warehouse_id=None)`, `get_all_warehouses(active_only=True)`, `get_warehouse_by_id(warehouse_id)`, `get_stock_overview_data(warehouse_id=None, category_id=None, search=None)`, and `get_product_with_base_uom(product_id)`.
+  - Implemented `SqlAlchemyStockRepository` and `InMemoryStockRepository` in `apps/api/app/repositories/impl/stock_repository.py`.
+- **Stock Domain Service**:
+  - Implemented `StockService` in `apps/api/app/services/stock_service.py` with health threshold calculation:
+    - `ok`: `total_on_hand > reorder_point`
+    - `low`: `0.25 * reorder_point < total_on_hand <= reorder_point`
+    - `critical`: `total_on_hand <= 0.25 * reorder_point` (or 0 / negative)
+  - Integrated `UomService` for secondary display conversion (e.g. `120 pcs` $\rightarrow$ `5 Cases`).
+  - Added methods `get_product_stock`, `get_stock_overview`, `get_batches_expiring_soon`, and `list_warehouses`.
+- **FastAPI Endpoints**:
+  - Created router `apps/api/app/api/routers/stock.py` registered in `main.py` and `di.py`:
+    - `GET /stock/overview` (summary counts, list of products with on-hand quantities, warehouse breakdown chips, health badges, filterable by `warehouse_id`, `category_id`, `status`, `search`).
+    - `GET /stock/warehouses` (active warehouse list).
+    - `GET /stock/expiring` (batches expiring within horizon days).
+    - `GET /products/{product_id}/stock` (detailed product stock with warehouse breakdown and active FIFO batch list).
+- **Frontend Inventory View**:
+  - Built `/admin/inventory` page in `apps/web/app/admin/inventory/page.tsx` using `ListViewTemplate` and `DataTable`.
+  - Top summary cards: Stocked SKUs, Healthy Stock, Low Stock Alerts, Critical / Depleted Items.
+  - Interactive filters for Warehouse, Category, Health Status, and dynamic Search.
+  - Per-warehouse distribution chips, reorder threshold indicator, and `StatusBadge`.
+  - Batch detail drawer/modal with expiry horizon badges (Expired, $\le 30$d, $> 30$d).
+  - Updated `apps/web/lib/nav.ts` to route "Inventory & Stock" to `/admin/inventory`.
+  - Updated `StatusBadge` `STATUS_MAP` with `ok`, `low`, and `critical` mappings.
+- **Verification & Testing**:
+  - 60 Pytest tests passing (including 6 new tests in `test_stock.py` covering DIP verification, spot-check SQL sum match, health thresholds, warehouse/category filtering, and API endpoints).
+  - 54 Vitest unit tests passing (including `stock.test.tsx`).
+  - Next.js production build succeeded with 21 valid routes.
+  - 0 Ruff lint warnings and 0 ESLint errors.
+
+### Decisions
+
+- **Stock Health Threshold Location**: Defined directly in `StockService.calculate_stock_status(on_hand, reorder_point)` to ensure consistent evaluation across REST API, reports, and UI.
+- **Expiry Horizon Warning**: Set default horizon to 30 days (`<= 30` days highlighted with amber warning pill, expired items flagged in bold red).
+- **Secondary Display Conversion**: If a product defines packaging UoM conversions (e.g., Case or Box), the stock overview displays the base units (`120 pcs`) alongside the largest packaging unit (`≈ 5 Cases`) for warehouse picking efficiency.
+
+### Key values for future steps
+
+- Stock Repository Interface: `apps/api/app/repositories/interfaces/stock_repository.py`
+- Stock Repository Implementation: `apps/api/app/repositories/impl/stock_repository.py`
+- Stock Domain Service: `apps/api/app/services/stock_service.py`
+- Stock Status Thresholds:
+  - `ok`: `on_hand > reorder_point`
+  - `low`: `0.25 * reorder_point < on_hand <= reorder_point`
+  - `critical`: `on_hand <= 0.25 * reorder_point`
+- Stock Endpoints: `GET /stock/overview`, `GET /stock/warehouses`, `GET /stock/expiring`, `GET /products/{id}/stock`
+- Inventory Web Page: `apps/web/app/admin/inventory/page.tsx`
+
+### Files Created
+
+- `apps/api/app/repositories/interfaces/stock_repository.py`
+- `apps/api/app/repositories/impl/stock_repository.py`
+- `apps/api/app/schemas/stock.py`
+- `apps/api/app/services/stock_service.py`
+- `apps/api/app/api/routers/stock.py`
+- `apps/api/tests/test_stock.py`
+- `apps/web/app/admin/inventory/page.tsx`
+- `apps/web/lib/__tests__/stock.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/web/components/StatusBadge.tsx`
+- `apps/web/lib/nav.ts`
+- `memory.md`
+- `codebase_audit.md`

@@ -47,7 +47,7 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
       },
       {
         name: "Inventory & Stock",
-        href: "/inventory",
+        href: "/admin/inventory",
         icon: "Boxes",
         requiredPermission: "inventory:view",
       },

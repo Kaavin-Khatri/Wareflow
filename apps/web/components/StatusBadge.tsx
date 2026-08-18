@@ -93,8 +93,11 @@ export const STATUS_MAP: Record<string, StatusConfig> = {
   seal_broken: { variant: "warning", label: "Seal Broken" },
 
   // --- Stock Levels & Inventory Movement ---
+  ok: { variant: "success", label: "Healthy", dot: true },
   in_stock: { variant: "success", label: "In Stock", dot: true },
+  low: { variant: "warning", label: "Low Stock", dot: true },
   low_stock: { variant: "warning", label: "Low Stock", dot: true },
+  critical: { variant: "error", label: "Critical", dot: true },
   out_of_stock: { variant: "error", label: "Out of Stock", dot: true },
   overstocked: { variant: "info", label: "Overstocked", dot: true },
   inward: { variant: "success", label: "Inward (+)" },
@@ -104,10 +107,8 @@ export const STATUS_MAP: Record<string, StatusConfig> = {
 
   // --- Recalls & Severity ---
   initiated: { variant: "warning", label: "Initiated", dot: true },
-  low: { variant: "info", label: "Low Severity" },
   medium: { variant: "warning", label: "Medium Severity" },
   high: { variant: "error", label: "High Severity", dot: true },
-  critical: { variant: "error", label: "Critical Hazard", dot: true },
 
   // --- Auth, 2FA & Staff Status ---
   active: { variant: "success", label: "Active", dot: true },

@@ -229,7 +229,7 @@ wareflow/
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
 │       ├── .env.example
-│       ├── tests/                  # Pytest test suite (44 tests, 92% cov)
+│       ├── tests/                  # Pytest test suite (60 tests, 93% cov)
 │       │   ├── test_appearance_preferences.py
 │       │   ├── test_di_and_health.py
 │       │   ├── test_models.py
@@ -239,7 +239,10 @@ wareflow/
 │       │   ├── test_auth_and_guards.py
 │       │   ├── test_staff_and_roles.py
 │       │   ├── test_2fa.py
-│       │   └── test_audit_log.py
+│       │   ├── test_audit_log.py
+│       │   ├── test_products.py
+│       │   ├── test_uom.py
+│       │   └── test_stock.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
@@ -253,6 +256,8 @@ wareflow/
 │           │       ├── audit.py    # Admin Audit Log endpoint (/admin/audit-log)
 │           │       ├── categories.py# Product Category taxonomy (/categories)
 │           │       ├── products.py # Wholesale Products & Pricing (/products)
+│           │       ├── uom.py      # Unit of Measure & Conversions (/uom, /products/{id}/conversions)
+│           │       ├── stock.py    # Multi-Warehouse Stock Overview & Batches (/stock/*, /products/{id}/stock)
 │           │       └── retailers.py# Retailer accounts & credit limits (/retailers)
 │           ├── db/
 │           │   ├── base.py         # SQLAlchemy DeclarativeBase
@@ -280,19 +285,25 @@ wareflow/
 │           │   ├── profile_service.py
 │           │   ├── retailer_service.py
 │           │   ├── staff_service.py
+│           │   ├── stock_service.py
 │           │   ├── storage_service.py
-│           │   └── two_factor_service.py
+│           │   ├── two_factor_service.py
+│           │   └── uom_service.py
 │           ├── repositories/
 │           │   ├── interfaces/     # Protocol/ABC contracts
 │           │   │   ├── audit_repository.py
 │           │   │   ├── product_repository.py
 │           │   │   ├── profile_repository.py
-│           │   │   └── retailer_repository.py
+│           │   │   ├── retailer_repository.py
+│           │   │   ├── stock_repository.py
+│           │   │   └── uom_repository.py
 │           │   └── impl/           # Concrete implementations
 │           │       ├── audit_repository.py
 │           │       ├── product_repository.py
 │           │       ├── profile_repository.py
-│           │       └── retailer_repository.py
+│           │       ├── retailer_repository.py
+│           │       ├── stock_repository.py
+│           │       └── uom_repository.py
 │           ├── schemas/            # Pydantic request/response models
 │           │   ├── audit.py
 │           │   ├── categories.py
@@ -300,7 +311,9 @@ wareflow/
 │           │   ├── profile.py
 │           │   ├── retailers.py
 │           │   ├── staff.py
-│           │   └── two_factor.py
+│           │   ├── stock.py
+│           │   ├── two_factor.py
+│           │   └── uom.py
 │           └── core/
 │               ├── config.py       # pydantic-settings configuration
 │               ├── crypto.py       # Symmetric Fernet secret encryption at rest
@@ -350,43 +363,53 @@ wareflow/
 
 ## API Endpoints
 
-| Method | Path                                | Description                                        | Auth Required                   |
-| ------ | ----------------------------------- | -------------------------------------------------- | ------------------------------- |
-| GET    | `/health`                           | Liveness probe returning status: "ok"              | No                              |
-| GET    | `/health/db`                        | Database probe executing `SELECT 1` via connection | No                              |
-| GET    | `/me`                               | Get caller identity, role, permissions & theme     | Yes (Bearer / Cookie)           |
-| POST   | `/profiles/bootstrap`               | Bootstrap/retrieve authenticated Firebase profile  | Yes (Bearer / Cookie)           |
-| GET    | `/profiles/me`                      | Get current user profile and role permissions      | Yes (Bearer / Cookie)           |
-| PATCH  | `/profiles/preferences`             | Update user theme mode and accent color            | Yes (Bearer / Cookie)           |
-| POST   | `/staff/invite`                     | Invite new staff member with assigned role         | Yes (`staff:manage` / Owner)    |
-| GET    | `/staff`                            | List all staff members and active roles            | Yes (`staff:view`)              |
-| PATCH  | `/staff/{id}/role`                  | Update a staff member's assigned role              | Yes (`staff:manage`)            |
-| PATCH  | `/staff/{id}/status`                | Toggle staff account active/suspended state        | Yes (`staff:manage`)            |
-| GET    | `/roles`                            | List all defined roles with permission codes       | Yes (Authenticated)             |
-| GET    | `/permissions`                      | List all defined system permissions                | Yes (Authenticated)             |
-| PATCH  | `/roles/{id}/permissions`           | Update permission matrix mapping for a role        | Yes (`settings:manage` / Owner) |
-| GET    | `/auth/2fa/status`                  | Get 2FA status, requirement policy, backup count   | Yes (Authenticated)             |
-| POST   | `/auth/2fa/enroll`                  | Generate TOTP secret, QR code, and 10 backup codes | Yes (Authenticated)             |
-| POST   | `/auth/2fa/verify-enrollment`       | Confirm 6-digit TOTP code and activate 2FA         | Yes (Authenticated)             |
-| POST   | `/auth/2fa/verify`                  | Verify 2FA challenge via TOTP or single-use backup | Yes (Authenticated)             |
-| POST   | `/auth/2fa/disable`                 | Disable 2FA after verifying code confirmation      | Yes (Authenticated)             |
-| POST   | `/auth/2fa/regenerate-backup-codes` | Regenerate 10 fresh recovery backup codes          | Yes (Authenticated)             |
-| GET    | `/admin/audit-log`                  | Get paginated admin action audit logs with diffs   | Yes (`audit:view` / Owner)      |
-| GET    | `/categories`                       | List all product categories                        | Yes (Authenticated)             |
-| GET    | `/categories/{id}`                  | Get product category by ID                         | Yes (Authenticated)             |
-| POST   | `/categories`                       | Create new product category                        | Yes (`inventory:manage`)        |
-| PATCH  | `/categories/{id}`                  | Update product category metadata                   | Yes (`inventory:manage`)        |
-| DELETE | `/categories/{id}`                  | Delete product category                            | Yes (`inventory:manage`)        |
-| GET    | `/products`                         | List all wholesale products with pricing & filters | Yes (Authenticated)             |
-| POST   | `/products`                         | Create wholesale product entity (SKU unique)       | Yes (`inventory:manage`)        |
-| GET    | `/products/{id}`                    | Get wholesale product details                      | Yes (Authenticated)             |
-| PATCH  | `/products/{id}`                    | Update product metadata and pricing                | Yes (`inventory:manage`)        |
-| PATCH  | `/products/{id}/price`              | Update product selling/cost prices (audited)       | Yes (`inventory:manage`)        |
-| POST   | `/products/{id}/deactivate`         | Deactivate product (guarded against open orders)   | Yes (`inventory:manage`)        |
-| POST   | `/products/{id}/image`              | Upload product image (JPEG/PNG/WebP <=5MB)         | Yes (`inventory:manage`)        |
-| DELETE | `/products/{id}`                    | Permanently delete product record                  | Yes (`inventory:manage`)        |
-| GET    | `/retailers`                        | List all wholesale retailers                       | Yes (Authenticated)             |
-| PATCH  | `/retailers/{id}/credit-limit`      | Update retailer credit limit (audited)             | Yes (`settings:manage`)         |
+| Method | Path                                | Description                                         | Auth Required                   |
+| ------ | ----------------------------------- | --------------------------------------------------- | ------------------------------- |
+| GET    | `/health`                           | Liveness probe returning status: "ok"               | No                              |
+| GET    | `/health/db`                        | Database probe executing `SELECT 1` via connection  | No                              |
+| GET    | `/me`                               | Get caller identity, role, permissions & theme      | Yes (Bearer / Cookie)           |
+| POST   | `/profiles/bootstrap`               | Bootstrap/retrieve authenticated Firebase profile   | Yes (Bearer / Cookie)           |
+| GET    | `/profiles/me`                      | Get current user profile and role permissions       | Yes (Bearer / Cookie)           |
+| PATCH  | `/profiles/preferences`             | Update user theme mode and accent color             | Yes (Bearer / Cookie)           |
+| POST   | `/staff/invite`                     | Invite new staff member with assigned role          | Yes (`staff:manage` / Owner)    |
+| GET    | `/staff`                            | List all staff members and active roles             | Yes (`staff:view`)              |
+| PATCH  | `/staff/{id}/role`                  | Update a staff member's assigned role               | Yes (`staff:manage`)            |
+| PATCH  | `/staff/{id}/status`                | Toggle staff account active/suspended state         | Yes (`staff:manage`)            |
+| GET    | `/roles`                            | List all defined roles with permission codes        | Yes (Authenticated)             |
+| GET    | `/permissions`                      | List all defined system permissions                 | Yes (Authenticated)             |
+| PATCH  | `/roles/{id}/permissions`           | Update permission matrix mapping for a role         | Yes (`settings:manage` / Owner) |
+| GET    | `/auth/2fa/status`                  | Get 2FA status, requirement policy, backup count    | Yes (Authenticated)             |
+| POST   | `/auth/2fa/enroll`                  | Generate TOTP secret, QR code, and 10 backup codes  | Yes (Authenticated)             |
+| POST   | `/auth/2fa/verify-enrollment`       | Confirm 6-digit TOTP code and activate 2FA          | Yes (Authenticated)             |
+| POST   | `/auth/2fa/verify`                  | Verify 2FA challenge via TOTP or single-use backup  | Yes (Authenticated)             |
+| POST   | `/auth/2fa/disable`                 | Disable 2FA after verifying code confirmation       | Yes (Authenticated)             |
+| POST   | `/auth/2fa/regenerate-backup-codes` | Regenerate 10 fresh recovery backup codes           | Yes (Authenticated)             |
+| GET    | `/admin/audit-log`                  | Get paginated admin action audit logs with diffs    | Yes (`audit:view` / Owner)      |
+| GET    | `/categories`                       | List all product categories                         | Yes (Authenticated)             |
+| GET    | `/categories/{id}`                  | Get product category by ID                          | Yes (Authenticated)             |
+| POST   | `/categories`                       | Create new product category                         | Yes (`inventory:manage`)        |
+| PATCH  | `/categories/{id}`                  | Update product category metadata                    | Yes (`inventory:manage`)        |
+| DELETE | `/categories/{id}`                  | Delete product category                             | Yes (`inventory:manage`)        |
+| GET    | `/products`                         | List all wholesale products with pricing & filters  | Yes (Authenticated)             |
+| POST   | `/products`                         | Create wholesale product entity (SKU unique)        | Yes (`inventory:manage`)        |
+| GET    | `/products/{id}`                    | Get wholesale product details                       | Yes (Authenticated)             |
+| PATCH  | `/products/{id}`                    | Update product metadata and pricing                 | Yes (`inventory:manage`)        |
+| PATCH  | `/products/{id}/price`              | Update product selling/cost prices (audited)        | Yes (`inventory:manage`)        |
+| POST   | `/products/{id}/deactivate`         | Deactivate product (guarded against open orders)    | Yes (`inventory:manage`)        |
+| POST   | `/products/{id}/image`              | Upload product image (JPEG/PNG/WebP <=5MB)          | Yes (`inventory:manage`)        |
+| DELETE | `/products/{id}`                    | Permanently delete product record                   | Yes (`inventory:manage`)        |
+| GET    | `/uom`                              | List all registered units of measure                | Yes (Authenticated)             |
+| POST   | `/uom`                              | Create new unit of measure                          | Yes (`inventory:manage`)        |
+| GET    | `/products/{id}/conversions`        | List packaging conversion ratios for a product      | Yes (Authenticated)             |
+| POST   | `/products/{id}/conversions`        | Create packaging conversion factor                  | Yes (`inventory:manage`)        |
+| DELETE | `/products/{id}/conversions/{cid}`  | Remove packaging conversion factor                  | Yes (`inventory:manage`)        |
+| GET    | `/products/{id}/convert`            | Convert quantity across packaging units             | Yes (Authenticated)             |
+| GET    | `/stock/overview`                   | Multi-warehouse inventory overview & health badges  | Yes (Authenticated)             |
+| GET    | `/stock/warehouses`                 | List active storage facilities & warehouses         | Yes (Authenticated)             |
+| GET    | `/stock/expiring`                   | List batches expiring within specified horizon      | Yes (Authenticated)             |
+| GET    | `/products/{id}/stock`              | Product stock breakdown across warehouses & batches | Yes (Authenticated)             |
+| GET    | `/retailers`                        | List all wholesale retailers                        | Yes (Authenticated)             |
+| PATCH  | `/retailers/{id}/credit-limit`      | Update retailer credit limit (audited)              | Yes (`settings:manage`)         |
 
 ## Architecture Layers
 
