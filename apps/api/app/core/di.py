@@ -178,6 +178,8 @@ from app.repositories.interfaces.forecast_repository import (
 from app.services.forecasting.exponential_smoothing import ExponentialSmoothingForecast
 from app.services.forecasting.moving_average import MovingAverageForecast
 from app.services.forecasting_service import ForecastingService
+from app.services.dead_stock_service import DeadStockService
+from app.services.reorder_suggestion_service import ReorderSuggestionService
 from app.services.payment_service import PaymentService
 from app.services.portal_auth_service import PortalAuthService
 from app.repositories.impl.delivery_repository import (
@@ -1073,5 +1075,73 @@ def get_alert_scheduler() -> AlertScheduler:
             interval_minutes=30,
         )
     return _global_alert_scheduler
+
+
+# --- Step 14.1 & 14.2: AI Smart Analytics & Forecasting Factories ---
+
+
+@lru_cache
+def get_in_memory_forecast_repository() -> ForecastRepositoryInterface:
+    """Factory for in-memory demand forecast cache repository."""
+    return InMemoryForecastRepository()
+
+
+def get_forecast_repository(
+    db: Session = Depends(get_db_session),
+) -> ForecastRepositoryInterface:
+    """Factory for database-backed demand forecast repository."""
+    return SqlAlchemyForecastRepository(session=db)
+
+
+def get_forecasting_service(
+    forecast_repo: ForecastRepositoryInterface = Depends(get_forecast_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+) -> ForecastingService:
+    """Factory for ForecastingService with pluggable strategies (OCP)."""
+    settings = get_settings()
+    moving_avg = MovingAverageForecast()
+    exp_smooth = ExponentialSmoothingForecast()
+    return ForecastingService(
+        forecast_repo=forecast_repo,
+        stock_repo=stock_repo,
+        product_repo=product_repo,
+        strategies=[moving_avg, exp_smooth],
+        default_strategy=settings.forecast_strategy,
+        cache_ttl_hours=settings.forecast_cache_ttl_hours,
+    )
+
+
+def get_reorder_suggestion_service(
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    forecasting_service: ForecastingService = Depends(get_forecasting_service),
+    supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
+    po_repo: PurchaseOrderRepositoryInterface = Depends(get_db_purchase_order_repository),
+    po_service: PurchaseOrderService = Depends(get_purchase_order_service),
+) -> ReorderSuggestionService:
+    """Factory for ReorderSuggestionService coordinating automated replenishments."""
+    return ReorderSuggestionService(
+        product_repo=product_repo,
+        stock_repo=stock_repo,
+        forecasting_service=forecasting_service,
+        supplier_repo=supplier_repo,
+        po_repo=po_repo,
+        po_service=po_service,
+    )
+
+
+def get_dead_stock_service(
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    forecast_repo: ForecastRepositoryInterface = Depends(get_forecast_repository),
+) -> DeadStockService:
+    """Factory for DeadStockService detecting stagnant inventory holding capital."""
+    return DeadStockService(
+        product_repo=product_repo,
+        stock_repo=stock_repo,
+        forecast_repo=forecast_repo,
+    )
+
 
 

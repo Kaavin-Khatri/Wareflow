@@ -166,5 +166,13 @@ class InMemoryForecastRepository:
     def get_all_active_products(self) -> list[dict[str, Any]]:
         return list(self._products)
 
+    def add_movement(self, movement: Any) -> None:
+        """Add a movement record to the in-memory movement log."""
+        self._movements.append(movement)
+
+    def save_movement(self, movement: Any) -> None:
+        """Alias for add_movement."""
+        self._movements.append(movement)
+
     def list_recent_forecasts(self, horizon_days: int = 30) -> list[Forecast]:
         return [f for f in self._forecasts.values() if f.horizon_days == horizon_days]

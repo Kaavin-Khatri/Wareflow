@@ -89,7 +89,13 @@ class PurchaseOrderService:
 
     def _to_response(self, po: PurchaseOrder) -> PurchaseOrderResponse:
         """Transform PurchaseOrder ORM model into PurchaseOrderResponse schema."""
-        supplier_name = po.supplier.name if po.supplier else "Unknown Supplier"
+        supplier_name = po.supplier.name if (po.supplier and hasattr(po.supplier, "name")) else None
+        if not supplier_name and getattr(po, "supplier_id", None) and self.supplier_repo:
+            sup = self.supplier_repo.get_by_id(po.supplier_id)
+            if sup:
+                supplier_name = _get_name(sup, "Unknown Supplier")
+        if not supplier_name:
+            supplier_name = "Unknown Supplier"
         items_resp = [self._to_item_response(item) for item in (po.items or [])]
         magic_token = None
         if self.token_repo:

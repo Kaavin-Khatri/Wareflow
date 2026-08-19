@@ -537,6 +537,9 @@ wareflow/
 | PATCH  | `/notifications/read-all`              | Mark all unread notifications as read               | Yes (Authenticated User)        |
 | GET    | `/products/{id}/forecast`              | Statistical demand forecast for a product (24h cache)| Yes (Authenticated User)       |
 | GET    | `/analytics/forecast-summary`          | Catalog-wide demand forecast summary & top/slow movers| Yes (`inventory:view`)         |
+| GET    | `/analytics/reorder-suggestions`       | Actionable low-stock suggestions with lead time buffer| Yes (Authenticated User)       |
+| POST   | `/analytics/reorder-suggestions/create-po` | Auto-generate pre-filled draft PO from suggestions  | Yes (Authenticated User)       |
+| GET    | `/analytics/dead-stock`                | Stagnant/dead stock detection ranked by tied-up capital| Yes (Authenticated User)       |
 
 ## Architecture Layers
 
@@ -600,7 +603,9 @@ wareflow/
 | Recount Permission Role Gate (RBAC)     | The `recount` adjustment reason strictly enforces `stock.recount` permission code or `Owner` role, preventing unauthorized floor staff from adding arbitrary inventory balances |
 | Human Label Ledger Synthesis            | `StockService.list_movements` enriches append-only movements with contextual activity labels (PO receipt, SO dispatch, return, recount, damage note) directly in the API |
 | Atomic Paired-Movement Transfers        | `TransferService` executes inter-warehouse stock relocation as a single atomic transaction: source `StockMovement(type=out)` paired with destination `StockMovement(type=in)`, preserving batch identity and rollback safety |
-
+| Dynamic Lead-Time Buffered Reordering   | `ReorderSuggestionService` calculates optimal PO batches `max(reorder_qty, ceil(daily_demand * lead_time_days))` integrated with Step 14.1 forecasting and classifies urgency tiers (`critical`, `high`, `medium`) |
+| Pre-filled PO from AI Suggestions       | `POST /analytics/reorder-suggestions/create-po` directly bridges analytics insights to pre-filled draft Purchase Orders with zero manual item re-entry |
+| Dead Stock Capital Prioritization       | `DeadStockService` scans inactive catalog inventory over configurable trailing windows ($N$ days) and ranks stagnant stock descending by locked working capital ($Q \times \text{cost}$) |
 | Recall Outbound Ledger Traceability     | `RecallService` automatically traces every affected sales order and buyer via `stock_movements(type=out, reference_type='sales_order')` references, eliminating separate manual recall tracking logs |
 | Unsellable Recalled Stock Isolation     | Recalled batches are dynamically excluded from FIFO sales deductions without deleting historical batch records, keeping complete compliance auditability intact |
 | Notification Engine Zero-Duplication   | Recall broadcasts reuse the existing notification engine / audit log infrastructure with zero new messaging channel code |

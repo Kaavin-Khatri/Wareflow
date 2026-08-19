@@ -3376,6 +3376,54 @@
 - Cache TTL: 24 hours (`FORECAST_CACHE_TTL_HOURS=24`)
 - Endpoints: `GET /products/{id}/forecast`, `GET /analytics/forecast-summary`
 
+---
+
+## Step 14.2 — Dynamic Reorder Suggestions & Dead Stock Detection
+
+**Timestamp:** 2026-08-19T13:30:00Z
+**Status:** COMPLETE
+
+### What was done
+- **Reorder Suggestion Engine (`ReorderSuggestionService`)**:
+  - Implemented dynamic reorder suggestion generation based on current on-hand stock, product `min_stock_level`, `reorder_quantity`, supplier lead time buffer, and Step 14.1 `ForecastingService` predicted daily demand.
+  - Formula: `suggested_reorder_qty = max(product.reorder_quantity or 1, math.ceil(daily_demand * lead_time_buffer_days))` with fallback to `min_stock_level * 2` when no velocity data exists.
+  - Urgency categorization:
+    - `critical`: current stock == 0 (stockout condition).
+    - `high`: current stock <= `min_stock_level * 0.5`.
+    - `medium`: current stock <= `min_stock_level`.
+  - Filter by `supplier_id` and `urgency` query parameters.
+- **One-Click Pre-filled Draft Purchase Order Creation**:
+  - Added `POST /analytics/reorder-suggestions/create-po` which bundles suggested reorder items for a given supplier and creates a real `PurchaseOrder` in `draft` status with line items pre-populated with suggested quantities and product cost prices.
+- **Dead Stock Detection Service (`DeadStockService`)**:
+  - Scans active product catalog for stagnant stock with positive on-hand inventory but zero outbound movements (`OUT`, `sales_shipment`, `sale`) over a configurable trailing window ($N$ days, default 90).
+  - Calculates `tied_up_capital = current_stock * cost_price`, `days_since_last_sale`, and `total_dead_capital_locked`.
+  - Excludes products with active sales movements within the window.
+  - Ranks products descending by tied-up capital.
+- **Pydantic Schemas & REST Endpoints**:
+  - Created `ReorderSuggestionItem`, `ReorderSuggestionsResponse`, `CreatePOFromSuggestionsRequest`, `CreatePOFromSuggestionsResponse`, `DeadStockItem`, `DeadStockResponse` (`apps/api/app/schemas/analytics.py`).
+  - Added endpoints in `apps/api/app/api/routers/analytics.py`:
+    - `GET /analytics/reorder-suggestions`
+    - `POST /analytics/reorder-suggestions/create-po`
+    - `GET /analytics/dead-stock`
+  - Wired DI factories in `apps/api/app/core/di.py` (`get_reorder_suggestion_service`, `get_dead_stock_service`).
+- **Testing & Verification**:
+  - Created comprehensive test suite in `apps/api/tests/test_reorder_and_dead_stock.py` (4 tests) covering hand-computed mathematical verification of reorder recommendations, lead time buffering, draft PO auto-generation from suggestions, dead stock detection and window exclusion, and HTTP endpoints.
+  - Full test suite: 226/226 backend Pytest tests pass (100% green), 154/154 frontend Vitest tests pass (100% green).
+
+### Decisions
+- **Lead Time Buffered Reorder Formula**: Integrated Step 14.1 demand forecasts directly into reorder logic. If a product sells 5 units/day and supplier lead time is 7 days, the buffer recommends ordering at least 35 units to ensure zero stockouts during transit.
+- **Urgency Classification Model**: Differentiated stockout (`critical`), severe depletion (`high`), and low stock (`medium`) so warehouse operators can triage procurement orders effectively.
+- **Dead Stock Working Capital Ranking**: Sorted dead inventory by `tied_up_capital` rather than just unit quantity, empowering business owners to prioritize liquidation or discounting campaigns where cash is most tied up.
+
+### Key values for future steps
+- Reorder Suggestion Service: `ReorderSuggestionService` (`apps/api/app/services/reorder_suggestion_service.py`)
+- Dead Stock Service: `DeadStockService` (`apps/api/app/services/dead_stock_service.py`)
+- Endpoints:
+  - `GET /analytics/reorder-suggestions`
+  - `POST /analytics/reorder-suggestions/create-po`
+  - `GET /analytics/dead-stock`
+
+
 
 
 
