@@ -48,6 +48,13 @@ class Settings(BaseSettings):
     whatsapp_business_account_id: str = ""
     whatsapp_api_version: str = "v21.0"
 
+    # SMS Fallback Channel (Step 13.6)
+    sms_provider: str = "twilio"
+    sms_provider_api_key: str = ""
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_from_number: str = ""
+
     @field_validator("allowed_origins", mode="after")
     @classmethod
     def parse_allowed_origins(cls, value: str | list[str]) -> list[str]:

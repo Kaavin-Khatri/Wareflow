@@ -157,8 +157,17 @@ from app.services.invoice_service import InvoiceService
 from app.services.ledger_service import LedgerService
 from app.services.notification_channels.email_channel import EmailChannel
 from app.services.notification_channels.in_app_channel import InAppChannel
+from app.services.notification_channels.sms_channel import SmsChannel
 from app.services.notification_channels.whatsapp_channel import WhatsAppChannel
+from app.services.notification_preference_service import NotificationPreferenceService
 from app.services.notification_service import NotificationService
+from app.repositories.impl.notification_preference_repository import (
+    InMemoryNotificationPreferenceRepository,
+    SqlAlchemyNotificationPreferenceRepository,
+)
+from app.repositories.interfaces.notification_preference_repository import (
+    NotificationPreferenceRepositoryInterface,
+)
 from app.services.payment_service import PaymentService
 from app.services.portal_auth_service import PortalAuthService
 from app.repositories.impl.delivery_repository import (
@@ -840,11 +849,37 @@ def get_notification_service(
         phone_number_id=settings.whatsapp_phone_number_id,
         api_version=settings.whatsapp_api_version,
     )
+    sms_ch = SmsChannel(
+        account_sid=settings.twilio_account_sid,
+        auth_token=settings.twilio_auth_token,
+        from_number=settings.twilio_from_number,
+        api_key=settings.sms_provider_api_key,
+    )
     return NotificationService(
         notification_repo=notif_repo,
-        channels=[in_app_ch, email_ch, whatsapp_ch],
+        channels=[in_app_ch, email_ch, whatsapp_ch, sms_ch],
         retailer_user_repo=retailer_user_repo,
     )
+
+
+@lru_cache
+def get_in_memory_notification_preference_repository() -> NotificationPreferenceRepositoryInterface:
+    """Factory for in-memory NotificationPreferenceRepository."""
+    return InMemoryNotificationPreferenceRepository()
+
+
+def get_notification_preference_repository(
+    db: Session = Depends(get_db_session),
+) -> NotificationPreferenceRepositoryInterface:
+    """Factory for database-backed NotificationPreferenceRepository."""
+    return SqlAlchemyNotificationPreferenceRepository(session=db)
+
+
+def get_notification_preference_service(
+    repo: NotificationPreferenceRepositoryInterface = Depends(get_notification_preference_repository),
+) -> NotificationPreferenceService:
+    """Factory for NotificationPreferenceService."""
+    return NotificationPreferenceService(pref_repo=repo)
 
 
 def get_supplier_portal_service(

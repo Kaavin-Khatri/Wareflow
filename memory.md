@@ -3297,11 +3297,41 @@
 - **Single-Use Invalidation**: Once marked ready for dispatch, the token is permanently removed to prevent replay actions.
 - **Multi-Channel Notification Dispatch**: WhatsApp + Email notifications are dispatched to all active staff holding `inventory:manage` permissions (or Owner role) using the `wareflow_goods_ready` template.
 
+---
+
+## Step 13.6 — SMS Notification Channel (Fallback)
+**Timestamp:** 2026-08-19T13:05:00Z
+**Status:** COMPLETE
+
+### What was done
+- **SMS Client & Fallback Channel (`SmsChannel`)**:
+  - Implemented `SmsClient` (`apps/api/app/services/sms_client.py`) supporting Twilio REST API with phone number normalization (defaulting to +91 for 10-digit Indian numbers), single-segment 160-character length truncation (`truncate_sms_text`), and graceful simulation mode when unconfigured (`SMS_PROVIDER_API_KEY` / `TWILIO_ACCOUNT_SID` absent).
+  - Implemented `SmsChannel` (`apps/api/app/services/notification_channels/sms_channel.py`) adhering to the Strategy pattern (`BaseNotificationChannel`), formatting high-priority concise messages for low-stock warnings, order confirmations, and PO dispatch readiness.
+  - Zero modifications required to `NotificationService` (OCP proof).
+- **Per-User / Per-Retailer Opt-In Channel Preferences**:
+  - Created `NotificationPreference` model (`apps/api/app/models/notification.py`) with `notification_preferences` table storing `sms_enabled` (False by default — strict opt-in), `in_app_enabled`, `email_enabled`, `whatsapp_enabled`, `critical_stock_sms`, `order_updates_sms`, and `dispatch_ready_sms`.
+  - Implemented `NotificationPreferenceRepositoryInterface` and implementations (`SqlAlchemyNotificationPreferenceRepository`, `InMemoryNotificationPreferenceRepository`).
+  - Implemented `NotificationPreferenceService` (`apps/api/app/services/notification_preference_service.py`).
+  - Added REST endpoints in `apps/api/app/api/routers/notifications.py`: `GET /notifications/preferences`, `PUT /notifications/preferences`, `GET/PUT /notifications/preferences/{entity_type}/{entity_id}`.
+- **Config & Environment**:
+  - Added `sms_provider`, `sms_provider_api_key`, `twilio_account_sid`, `twilio_auth_token`, and `twilio_from_number` to `Settings` (`apps/api/app/core/config.py`) and `.env.example`.
+- **Tests & Verification**:
+  - Added backend test suite `apps/api/tests/test_sms_channel.py` (6 tests covering phone normalization, 160-char truncation, unconfigured simulation, critical event formatting, OCP `NotificationService` integration, preference opt-in logic, and HTTP endpoints).
+  - Added frontend test suite `apps/web/lib/__tests__/sms-preferences-ui.test.tsx` (2 tests covering opt-in toggles and category checkboxes).
+  - Full suite verification: 216/216 backend Pytest tests pass, 154/154 frontend Vitest tests pass, Next.js build clean.
+
+### Decisions
+- **Strict Opt-In & Length Discipline for SMS**: Because outbound SMS incurs per-segment carrier costs and strict character limits (160 characters), SMS delivery is disabled by default and reserved exclusively for high-priority operational events (critical stock depletion for warehouse owners, confirmed orders for retailers). Rich formatting and marketing messages are strictly avoided.
+- **Graceful Unconfigured Simulation**: In sandbox/dev environments without active Twilio trial credits or API keys, `SmsClient` and `SmsChannel` log simulated delivery and return `True` without breaking the alert engine.
+- **Provider Choice & Trial Limits**: Twilio REST API was selected for its standard E.164 compliance and free trial credits ($15 sandbox credit, ~$0.0079/SMS in US/India). Pay-as-you-go Indian SMS gateways (e.g. Fast2SMS / MSG91) can be swapped seamlessly via the same `SmsClient` abstraction.
+
 ### Key values for future steps
-- Token Repo: `SupplierAccessTokenRepositoryInterface` (`apps/api/app/repositories/interfaces/supplier_access_token_repository.py`)
-- Supplier Portal Service: `SupplierPortalService` (`apps/api/app/services/supplier_portal_service.py`)
-- Endpoints: `GET /supplier-portal/{token}`, `POST /supplier-portal/{token}/ready-for-dispatch`
-- Public Page: `/supplier/po/[token]` (`apps/web/app/supplier/po/[token]/page.tsx`)
+- SMS Channel: `SmsChannel` (`apps/api/app/services/notification_channels/sms_channel.py`)
+- SMS Client: `SmsClient` (`apps/api/app/services/sms_client.py`)
+- Notification Preference Repo: `NotificationPreferenceRepositoryInterface` (`apps/api/app/repositories/interfaces/notification_preference_repository.py`)
+- Notification Preference Service: `NotificationPreferenceService` (`apps/api/app/services/notification_preference_service.py`)
+- Preference Endpoints: `GET /notifications/preferences`, `PUT /notifications/preferences`, `GET/PUT /notifications/preferences/{entity_type}/{entity_id}`
+
 
 
 

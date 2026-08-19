@@ -2,16 +2,68 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.core.di import get_notification_service
+from app.core.di import (
+    get_notification_preference_service,
+    get_notification_service,
+)
 from app.core.security import CurrentUser, get_current_user
 from app.schemas.notification import (
     NotificationListResponse,
+    NotificationPreferenceResponse,
+    NotificationPreferenceUpdateRequest,
     NotificationReadResponse,
     NotificationResponse,
 )
+from app.services.notification_preference_service import NotificationPreferenceService
 from app.services.notification_service import NotificationService
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
+
+
+@router.get("/preferences", response_model=NotificationPreferenceResponse)
+def get_notification_preferences(
+    current_user: CurrentUser = Depends(get_current_user),
+    service: NotificationPreferenceService = Depends(get_notification_preference_service),
+) -> NotificationPreferenceResponse:
+    """Get notification channel opt-in preferences for current user."""
+    return service.get_preferences(entity_type="user", entity_id=current_user.id)
+
+
+@router.put("/preferences", response_model=NotificationPreferenceResponse)
+def update_notification_preferences(
+    payload: NotificationPreferenceUpdateRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: NotificationPreferenceService = Depends(get_notification_preference_service),
+) -> NotificationPreferenceResponse:
+    """Update notification channel opt-in preferences for current user."""
+    return service.update_preferences(
+        entity_type="user", entity_id=current_user.id, payload=payload
+    )
+
+
+@router.get("/preferences/{entity_type}/{entity_id}", response_model=NotificationPreferenceResponse)
+def get_entity_notification_preferences(
+    entity_type: str,
+    entity_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: NotificationPreferenceService = Depends(get_notification_preference_service),
+) -> NotificationPreferenceResponse:
+    """Get notification channel preferences for a specific entity (e.g. retailer)."""
+    return service.get_preferences(entity_type=entity_type, entity_id=entity_id)
+
+
+@router.put("/preferences/{entity_type}/{entity_id}", response_model=NotificationPreferenceResponse)
+def update_entity_notification_preferences(
+    entity_type: str,
+    entity_id: str,
+    payload: NotificationPreferenceUpdateRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: NotificationPreferenceService = Depends(get_notification_preference_service),
+) -> NotificationPreferenceResponse:
+    """Update notification channel preferences for a specific entity (e.g. retailer)."""
+    return service.update_preferences(
+        entity_type=entity_type, entity_id=entity_id, payload=payload
+    )
 
 
 @router.get("", response_model=NotificationListResponse)

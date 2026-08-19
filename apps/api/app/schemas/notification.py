@@ -34,3 +34,31 @@ class NotificationReadResponse(BaseModel):
     success: bool = Field(..., description="Whether operation succeeded")
     id: str | None = Field(None, description="ID of the marked notification")
     updated_count: int | None = Field(None, description="Number of notifications marked as read")
+
+
+class NotificationPreferenceResponse(BaseModel):
+    """Channel and category opt-in preferences for a user or retailer."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    entity_type: str = Field("user", description="'user' or 'retailer'")
+    entity_id: str = Field(..., description="Unique entity ID")
+    in_app_enabled: bool = Field(True, description="In-app notification badge")
+    email_enabled: bool = Field(True, description="Email alerts")
+    whatsapp_enabled: bool = Field(True, description="WhatsApp template alerts")
+    sms_enabled: bool = Field(False, description="SMS text alerts (opt-in)")
+    critical_stock_sms: bool = Field(False, description="Receive SMS on low/critical stock")
+    order_updates_sms: bool = Field(False, description="Receive SMS on order confirmation")
+    dispatch_ready_sms: bool = Field(False, description="Receive SMS on PO dispatch ready")
+
+
+class NotificationPreferenceUpdateRequest(BaseModel):
+    """Payload to update notification channel preferences."""
+
+    in_app_enabled: bool | None = None
+    email_enabled: bool | None = None
+    whatsapp_enabled: bool | None = None
+    sms_enabled: bool | None = None
+    critical_stock_sms: bool | None = None
+    order_updates_sms: bool | None = None
+    dispatch_ready_sms: bool | None = None

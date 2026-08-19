@@ -54,6 +54,7 @@
 | Firebase | Auth + Firestore (realtime push only) | wareflow-d17a4       | —                      | Free (Spark)    | Client SDK + Server Admin SDK                                                                   |
 | Resend   | Email alerts (low-stock, reorder) | —                    | —                      | Free (3k/mo)    | HTTPS API                                                                                       |
 | WhatsApp | Outbound B2B message alerts (Meta Cloud API) | —         | —                      | Free (1k convs/mo) | Meta Graph API (v21.0)                                                                          |
+| SMS Provider | Outbound SMS fallback & critical alerts (Twilio / Indian Gateway) | — | — | Free (Trial credit) | Twilio REST API / HTTPS                                                                         |
 | Groq     | LLM API (AI features)             | —                    | —                      | Free            | HTTPS API                                                                                       |
 | Vercel   | Frontend hosting (Next.js)        | pending              | —                      | Free (Hobby)    | —                                                                                               |
 | Render   | Backend hosting (FastAPI)         | pending              | —                      | Free            | —                                                                                               |
@@ -96,6 +97,11 @@
 | `WHATSAPP_ACCESS_TOKEN`             | Meta WhatsApp Business Cloud API access token | No (secret) |
 | `WHATSAPP_PHONE_NUMBER_ID`          | Meta WhatsApp registered phone number ID      | No          |
 | `WHATSAPP_BUSINESS_ACCOUNT_ID`      | Meta WhatsApp Business Account ID (WABA)      | No          |
+| `SMS_PROVIDER`                      | SMS provider name ('twilio')                  | No          |
+| `SMS_PROVIDER_API_KEY`              | Generic SMS provider API key                  | No (secret) |
+| `TWILIO_ACCOUNT_SID`                | Twilio Account SID                            | No (secret) |
+| `TWILIO_AUTH_TOKEN`                 | Twilio Auth Token                             | No (secret) |
+| `TWILIO_FROM_NUMBER`                | Twilio registered From phone number           | No          |
 | `GROQ_API_KEY`                      | Groq LLM API key                              | No          |
 
 ## Layout & Shell Inventory (Step 4.6)
@@ -672,8 +678,9 @@ wareflow/
 | Delivery Assignment Guard | `DeliveryService.assign_delivery` requires sales order status `PACKED` (or `SHIPPED`), advancing it to `SHIPPED` upon driver assignment |
 | Mandatory Delivery Failure Notes | Failing a delivery requires explanatory failure notes for warehouse operations and triggers an operational alert |
 | Staff Pick List Document Standard | `ExportService.generate_pick_list` renders large-print checkbox list grouped by warehouse location with SKU, name, qty, UoM, and bin location, strictly omitting all pricing info |
-| Notification Channel Strategy (OCP) | `NotificationService` coordinates pluggable `BaseNotificationChannel` implementations (`InAppChannel`, `EmailChannel`, `WhatsAppChannel`), allowing new delivery channels with zero modifications to calling code |
+| Notification Channel Strategy (OCP) | `NotificationService` coordinates pluggable `BaseNotificationChannel` implementations (`InAppChannel`, `EmailChannel`, `WhatsAppChannel`, `SmsChannel`), allowing new delivery channels with zero modifications to calling code |
 | WhatsApp Cloud API Channel (Meta) | Meta Cloud API provides outbound B2B messaging with pre-approved message templates (`wareflow_stock_available`, `wareflow_goods_ready`); free tier capped at 1,000 service conversations/month with always-free email fallback |
+| SMS Channel Fallback & Opt-In Policy | Outbound SMS via `SmsChannel` is strictly opt-in per contact and disciplined to 160-character single-segment messages, reserved for the most critical operational alerts (critical stock depletion, order confirmation) to eliminate carrier spam and overhead |
 | Narrow-Scope Firestore Realtime Mirror | Firestore is used narrowly for realtime notification delivery only (`notifications/{uid}/items/{id}`) with `onSnapshot` in Topbar bell, while Postgres stays the system of record for everything, including history & pagination |
 | Smart Alert Rule Engine (OCP) | `BaseAlertRule` strategy implementations (`LowStockRule`, `CriticalStockRule`, `ExpiringBatchRule`, `OverdueInvoiceRule`, `RestockAlertRule`) can be added independently without modifying `AlertEngineService` |
 | 24-Hour Alert Deduplication Guard | `AlertLog` table and `AlertLogRepository.has_recent_alert` suppress repeated notifications for identical rule/entity combinations within a 24-hour window |
