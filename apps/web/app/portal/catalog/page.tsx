@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
+import { addToCart } from "@/lib/portal-cart";
 
 export interface CatalogProduct {
   id: string;
@@ -187,8 +188,20 @@ export default function PortalCatalogPage() {
           product={orderProduct}
           onClose={() => setOrderProduct(null)}
           onConfirm={(qty) => {
+            addToCart(
+              {
+                productId: orderProduct.id,
+                sku: orderProduct.sku,
+                name: orderProduct.name,
+                unitPrice: orderProduct.effective_price,
+                unit: orderProduct.unit,
+                imageUrl: orderProduct.image_url,
+                categoryName: orderProduct.category_name,
+              },
+              qty
+            );
             setOrderProduct(null);
-            showToast(`Added ${qty} ${orderProduct.unit}(s) of ${orderProduct.name} to order!`);
+            showToast(`Added ${qty} ${orderProduct.unit}(s) of ${orderProduct.name} to cart!`);
           }}
         />
       )}

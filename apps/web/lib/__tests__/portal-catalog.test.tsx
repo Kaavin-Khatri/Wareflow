@@ -213,6 +213,6 @@ describe("Retailer Portal — Tier-Priced Wholesale Catalog View", () => {
     const confirmBtn = screen.getByRole("button", { name: "Confirm & Add" });
     fireEvent.click(confirmBtn);
 
-    expect(await screen.findByText(/Added 2 Box\(s\) of Assam CTC Black Tea 5kg to order!/i)).toBeDefined();
+    expect(await screen.findByText(/Added 2 Box\(s\) of Assam CTC Black Tea 5kg to (order|cart)!/i)).toBeDefined();
   });
 });

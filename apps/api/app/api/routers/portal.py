@@ -4,7 +4,13 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, status
 
-from app.core.di import get_inquiry_service, get_ledger_service, get_portal_auth_service
+from app.core.di import (
+    get_inquiry_service,
+    get_ledger_service,
+    get_notification_service,
+    get_portal_auth_service,
+    get_sales_order_service,
+)
 from app.core.security import CurrentUser, get_current_user_claims, require_portal_retailer
 from app.schemas.billing import RetailerLedgerResponse
 from app.schemas.inquiries import CreateInquiryRequest, ProductInquiryResponse
@@ -13,14 +19,18 @@ from app.schemas.portal import (
     PortalBootstrapRequest,
     PortalCatalogProductResponse,
     PortalCategoryResponse,
+    PortalCreateOrderRequest,
     PortalInvoiceListItemResponse,
     PortalOrderListItemResponse,
+    PortalOrderPlacementResponse,
     RetailerPortalMeResponse,
 )
 from app.schemas.sales_orders import SalesOrderResponse
 from app.services.inquiry_service import InquiryService
 from app.services.ledger_service import LedgerService
+from app.services.notification_service import NotificationService
 from app.services.portal_auth_service import PortalAuthService
+from app.services.sales_order_service import SalesOrderService
 
 router = APIRouter(prefix="/portal", tags=["Retailer Portal"])
 
@@ -100,6 +110,34 @@ def get_my_retailer_profile(
 ) -> RetailerPortalMeResponse:
     """Retrieve retailer business metadata and credit limit status."""
     return service.get_portal_me(current_user)
+
+
+@router.post(
+    "/orders",
+    response_model=PortalOrderPlacementResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Place a wholesale sales order from the retailer self-service portal",
+)
+def place_my_order(
+    body: PortalCreateOrderRequest,
+    current_user: CurrentUser = Depends(require_portal_retailer),
+    service: PortalAuthService = Depends(get_portal_auth_service),
+    sales_order_service: SalesOrderService = Depends(get_sales_order_service),
+    notification_service: NotificationService = Depends(get_notification_service),
+) -> PortalOrderPlacementResponse:
+    """
+    Submit a wholesale order from the retailer self-service portal.
+
+    Reuses SalesOrderService.create_order and confirm_order verbatim.
+    Attempts auto-confirmation; if stock or credit limits are exceeded,
+    retains the order in DRAFT status with a clear reason and notifies staff.
+    """
+    return service.place_retailer_order(
+        current_user=current_user,
+        payload=body,
+        sales_order_service=sales_order_service,
+        notification_service=notification_service,
+    )
 
 
 @router.get(

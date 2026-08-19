@@ -38,6 +38,37 @@ class RetailerPortalMeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PortalOrderItemRequest(BaseModel):
+    """Line item in a self-service retailer portal order."""
+
+    product_id: str = Field(..., description="Product ID to order")
+    qty: float = Field(..., gt=0, description="Quantity in base packaging units")
+
+
+class PortalCreateOrderRequest(BaseModel):
+    """Payload for submitting a wholesale cart from the retailer portal."""
+
+    items: list[PortalOrderItemRequest] = Field(
+        ..., min_length=1, description="List of product line items to order"
+    )
+
+
+class PortalOrderPlacementResponse(BaseModel):
+    """Result of portal order placement including auto-confirmation status."""
+
+    id: str
+    so_number: str
+    status: str
+    total_amount: float
+    auto_confirmed: bool
+    message: str
+    reason: str | None = None
+    items_count: int = 0
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class PortalOrderListItemResponse(BaseModel):
     """Order summary for retailer portal view."""
 

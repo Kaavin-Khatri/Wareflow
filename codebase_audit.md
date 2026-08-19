@@ -501,6 +501,7 @@ wareflow/
 | GET    | `/portal/me`                           | Get authenticated retailer identity & credit line   | Yes (Retailer Portal Only)      |
 | GET    | `/portal/catalog`                      | List catalog with tier pricing & privacy stock bands| Yes (Retailer Portal Only)      |
 | GET    | `/portal/categories`                   | List categories for wholesale catalog filters       | Yes (Retailer Portal Only)      |
+| POST   | `/portal/orders`                       | Submit wholesale sales order (auto-confirm/draft)   | Yes (Retailer Portal Only)      |
 | GET    | `/portal/orders`                       | List sales orders strictly scoped to caller retailer| Yes (Retailer Portal Only)      |
 | GET    | `/portal/orders/{id}`                  | Get order details (strictly scoped data wall)       | Yes (Retailer Portal Only)      |
 | GET    | `/portal/invoices`                     | List invoices strictly scoped to caller retailer    | Yes (Retailer Portal Only)      |
@@ -649,6 +650,8 @@ wareflow/
 | Dual-Inbound Auth Support | `get_current_user` extracts and verifies either Bearer tokens or `httpOnly` session cookies transparently |
 | Dynamic RBAC Navigation | Navigation menus filter items strictly against user's active permissions without hardcoded role branches |
 | Server-Side User Provisioning | Firebase Admin SDK creates users server-side only; service keys are never exposed to client bundles |
+| Zero-Duplicated Portal Orders | `PortalAuthService.place_retailer_order` reuses `SalesOrderService` domain logic verbatim (OCP/DIP proof for external portal) |
+| Read-Only Portal Accounting | Invoices and ledger views in self-service portal are strictly read-only; payment recording remains staff-only |
 
 ## Security & Audit Log Coverage
 

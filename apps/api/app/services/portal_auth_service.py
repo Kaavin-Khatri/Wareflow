@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from app.core.security import CurrentUser
 
 from app.models.portal import RetailerUser
-from app.models.retailer import SalesOrder
+from app.models.retailer import BuyerTypeEnum, SalesOrder
 from app.repositories.interfaces.invoice_repository import InvoiceRepositoryInterface
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
 from app.repositories.interfaces.profile_repository import ProfileRepository
@@ -22,9 +22,16 @@ from app.repositories.interfaces.stock_repository import StockRepositoryInterfac
 from app.schemas.portal import (
     PortalCatalogProductResponse,
     PortalCategoryResponse,
+    PortalCreateOrderRequest,
     PortalInvoiceListItemResponse,
+    PortalOrderItemRequest,
     PortalOrderListItemResponse,
+    PortalOrderPlacementResponse,
     RetailerPortalMeResponse,
+)
+from app.schemas.sales_orders import (
+    SalesOrderCreateRequest,
+    SalesOrderItemCreateRequest,
 )
 from app.services.pricing_strategy import PricingEngineService
 
@@ -172,6 +179,92 @@ class PortalAuthService:
             )
             for o in orders
         ]
+
+    def place_retailer_order(
+        self,
+        current_user: CurrentUser,
+        payload: PortalCreateOrderRequest,
+        sales_order_service: Any,
+        notification_service: Any | None = None,
+    ) -> PortalOrderPlacementResponse:
+        """
+        Place a wholesale order from the retailer self-service portal.
+
+        Reuses SalesOrderService.create_order and confirm_order verbatim (Zero Duplicated Logic).
+        Enforces server-side retailer scoping to prevent cross-account ordering.
+        If credit limit or stock verification fails, retains the order in DRAFT status
+        and dispatches a notification for staff review.
+        """
+        if current_user.account_type != "retailer" or not current_user.retailer_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Retailer portal access only.",
+            )
+
+        retailer = self._retailer_repo.get_by_id(current_user.retailer_id)
+        if not retailer or not retailer.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Retailer account is inactive or not found.",
+            )
+
+        # 1. Build SalesOrderCreateRequest with server-side retailer_id
+        so_create_req = SalesOrderCreateRequest(
+            buyer_type=BuyerTypeEnum.RETAILER,
+            retailer_id=current_user.retailer_id,
+            customer_id=None,
+            items=[
+                SalesOrderItemCreateRequest(
+                    product_id=it.product_id,
+                    qty=it.qty,
+                )
+                for it in payload.items
+            ],
+        )
+
+        # 2. Create draft order
+        draft_order = sales_order_service.create_order(so_create_req, current_user=current_user)
+
+        # 3. Attempt auto-confirmation via SalesOrderService.confirm_order
+        try:
+            confirmed_order = sales_order_service.confirm_order(
+                draft_order.id, current_user=current_user
+            )
+            return PortalOrderPlacementResponse(
+                id=confirmed_order.id,
+                so_number=confirmed_order.so_number,
+                status=confirmed_order.status.value
+                if hasattr(confirmed_order.status, "value")
+                else str(confirmed_order.status),
+                total_amount=float(confirmed_order.total_amount),
+                auto_confirmed=True,
+                message="Order placed and confirmed successfully with reserved inventory.",
+                reason=None,
+                items_count=len(confirmed_order.items),
+                created_at=confirmed_order.created_at,
+            )
+        except HTTPException as exc:
+            reason = str(exc.detail) if exc.detail else "Credit or stock review required"
+            if notification_service:
+                notification_service.send_notification(
+                    user_id=current_user.retailer_id,
+                    type="portal_order_pending_review",
+                    title=f"Order {draft_order.so_number} Placed (Pending Review)",
+                    body=f"Your order {draft_order.so_number} was submitted in draft: {reason}",
+                )
+            return PortalOrderPlacementResponse(
+                id=draft_order.id,
+                so_number=draft_order.so_number,
+                status=draft_order.status.value
+                if hasattr(draft_order.status, "value")
+                else str(draft_order.status),
+                total_amount=float(draft_order.total_amount),
+                auto_confirmed=False,
+                message="Order received in draft status and queued for staff review.",
+                reason=reason,
+                items_count=len(draft_order.items),
+                created_at=draft_order.created_at,
+            )
 
     def get_retailer_order(self, order_id: str, current_user: CurrentUser) -> SalesOrder:
         """Fetch a specific sales order, enforcing server-side ownership wall."""

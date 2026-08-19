@@ -2922,6 +2922,79 @@
 - `codebase_audit.md`
 - `memory.md`
 
+---
+
+## Step 11.4 — Self-Service Order Placement & Retailer Order/Invoice History
+
+**Timestamp:** 2026-08-19T12:15:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Backend Schemas & Models (`apps/api/app/schemas/portal.py`)**:
+   - Added `PortalOrderItemRequest` (`product_id: str`, `qty: float > 0`).
+   - Added `PortalCreateOrderRequest` (`items: list[PortalOrderItemRequest]`).
+   - Added `PortalOrderPlacementResponse` (`id`, `so_number`, `status`, `total_amount`, `auto_confirmed`, `message`, `reason`, `items_count`, `created_at`).
+2. **Order Placement Orchestration (`apps/api/app/services/portal_auth_service.py`)**:
+   - Implemented `place_retailer_order`: Enforces server-side `current_user.retailer_id` extraction (never client-supplied, preventing cross-tenant spoofing).
+   - Reuses `SalesOrderService.create_order` and `SalesOrderService.confirm_order` verbatim (Zero Duplicated Logic).
+   - If stock & credit limits are satisfied: order auto-confirms immediately with FIFO batch allocation and credit reservation.
+   - If stock is insufficient or credit limit is exceeded: order remains safely in `DRAFT` status with clear explanation message, and dispatches a notification via `NotificationService` for operations staff manual review.
+3. **API Endpoints (`apps/api/app/api/routers/portal.py`)**:
+   - `POST /portal/orders`: Submits wholesale order, guarded by `require_portal_retailer` (201 Created).
+   - Verified `GET /portal/orders` and `GET /portal/orders/{id}` strict data wall enforcement.
+4. **Client-Side Cart Management (`apps/web/lib/portal-cart.ts`)**:
+   - Built cart state manager with `localStorage` persistence (`wareflow_portal_cart`) and real-time custom event broadcasting (`wareflow_cart_updated` / `storage`).
+   - Utility functions: `getCartItems`, `saveCartItems`, `addToCart`, `updateCartQuantity`, `removeFromCart`, `clearCart`, and `getCartTotal`.
+5. **Frontend Web UI (`apps/web`)**:
+   - `apps/web/app/portal/layout.tsx`: Added Cart navigation link (`/portal/cart`) with dynamic reactive cart item count badge.
+   - `apps/web/app/portal/catalog/page.tsx`: Connected `QuickOrderModal` confirm action directly to `addToCart`.
+   - `apps/web/app/portal/cart/page.tsx`: Interactive wholesale cart review with quantity steppers, subtotal computation, order submit mutation, and auto-confirmed success / draft review notice cards.
+   - `apps/web/app/portal/orders/page.tsx`: Upgraded orders history table with `GlassCard`, `GlassBadge`, stat cards (Total Placed, Active In-Flight, Cumulative Value), search filter, status tabs, and `GlassModal` for detailed order line items inspection.
+   - `apps/web/app/portal/invoices/page.tsx`: Verified read-only AR invoices and running account ledger view.
+6. **Testing & QA Verification**:
+   - Backend `apps/api/tests/test_portal_orders.py`: 4 tests validating auto-confirmation with FIFO deduction, draft status fallback with staff notification on credit limit excess, draft fallback on insufficient stock, and strict multi-tenant data wall isolation.
+   - Frontend `apps/web/lib/__tests__/portal-orders.test.tsx`: 6 tests validating cart mutations, subtotal math, empty cart rendering, successful auto-confirmed order placement, draft review warning, and order history filtering.
+   - Full test suites: **171 / 171 Pytest tests passing (100% green)**; **135 / 135 Vitest tests passing across 31 test suites (100% green)**.
+   - **0 ESLint errors/warnings**; Next.js production build compiled cleanly across 41 routes.
+
+### Decisions
+
+- **Zero Duplicated Order Logic (Phase 11 Closing Proof)**:
+  - Reused `SalesOrderService.create_order()` and `SalesOrderService.confirm_order()` verbatim without creating a parallel order processing engine. The portal serves as an authenticated external front door to the same domain services.
+- **Server-Side Tenant Identity Enforcement**:
+  - `retailer_id` is always bound from `current_user.retailer_id` on the server, guaranteeing that retailers cannot place orders or view histories belonging to other accounts.
+- **Portal Payment Recording Out of Scope for v1**:
+  - Retailer invoice and ledger views are strictly read-only in v1; payment recording remains staff-only.
+
+### Key values for future steps
+
+- Portal Order Submission API: `POST /portal/orders`
+- Portal Orders List API: `GET /portal/orders`
+- Portal Order Detail API: `GET /portal/orders/{id}`
+- Portal Cart Route: `/portal/cart`
+- Portal Orders Route: `/portal/orders`
+- Portal Invoices Route: `/portal/invoices`
+
+### Files Created
+
+- `apps/api/tests/test_portal_orders.py`
+- `apps/web/lib/portal-cart.ts`
+- `apps/web/app/portal/cart/page.tsx`
+- `apps/web/lib/__tests__/portal-orders.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/schemas/portal.py`
+- `apps/api/app/services/portal_auth_service.py`
+- `apps/api/app/api/routers/portal.py`
+- `apps/web/app/portal/layout.tsx`
+- `apps/web/app/portal/catalog/page.tsx`
+- `apps/web/app/portal/orders/page.tsx`
+- `apps/web/lib/__tests__/portal-catalog.test.tsx`
+- `codebase_audit.md`
+- `memory.md`
+
 
 
 

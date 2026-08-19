@@ -65,6 +65,33 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     return () => unsubscribe();
   }, [isLoginPage, pathname, router]);
 
+  const [cartCount, setCartCount] = useState<number>(0);
+
+  useEffect(() => {
+    const updateCount = () => {
+      try {
+        const raw = localStorage.getItem("wareflow_portal_cart");
+        if (raw) {
+          const items = JSON.parse(raw);
+          const count = items.reduce((sum: number, it: { quantity: number }) => sum + it.quantity, 0);
+          setCartCount(count);
+        } else {
+          setCartCount(0);
+        }
+      } catch {
+        setCartCount(0);
+      }
+    };
+
+    updateCount();
+    window.addEventListener("wareflow_cart_updated", updateCount);
+    window.addEventListener("storage", updateCount);
+    return () => {
+      window.removeEventListener("wareflow_cart_updated", updateCount);
+      window.removeEventListener("storage", updateCount);
+    };
+  }, []);
+
   const handleSignOut = async () => {
     try {
       await signOut(auth);
@@ -83,6 +110,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   const navItems = [
     { name: "Catalog", href: "/portal/catalog", icon: "📦" },
+    { name: "Cart", href: "/portal/cart", icon: "🛒", badge: cartCount > 0 ? cartCount : undefined },
     { name: "My Orders", href: "/portal/orders", icon: "📋" },
     { name: "Invoices & Ledger", href: "/portal/invoices", icon: "🧾" },
     { name: "Appearance", href: "/portal/settings/appearance", icon: "🎨" },
@@ -122,6 +150,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                 >
                   <span>{item.icon}</span>
                   <span>{item.name}</span>
+                  {item.badge !== undefined && (
+                    <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-indigo-500 text-white">
+                      {item.badge}
+                    </span>
+                  )}
                 </Link>
               );
             })}
