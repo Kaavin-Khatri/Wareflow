@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     gsp_api_secret: str = ""
     eway_bill_threshold_inr: float = 50000.0
 
+    # WhatsApp (Meta Cloud API — Step 13.3)
+    whatsapp_access_token: str = ""
+    whatsapp_phone_number_id: str = ""
+    whatsapp_business_account_id: str = ""
+    whatsapp_api_version: str = "v21.0"
+
     @field_validator("allowed_origins", mode="after")
     @classmethod
     def parse_allowed_origins(cls, value: str | list[str]) -> list[str]:

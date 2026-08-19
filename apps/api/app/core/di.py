@@ -154,6 +154,7 @@ from app.services.invoice_service import InvoiceService
 from app.services.ledger_service import LedgerService
 from app.services.notification_channels.email_channel import EmailChannel
 from app.services.notification_channels.in_app_channel import InAppChannel
+from app.services.notification_channels.whatsapp_channel import WhatsAppChannel
 from app.services.notification_service import NotificationService
 from app.services.payment_service import PaymentService
 from app.services.portal_auth_service import PortalAuthService
@@ -822,9 +823,14 @@ def get_notification_service(
     settings = get_settings()
     in_app_ch = InAppChannel(notification_repo=notif_repo)
     email_ch = EmailChannel(api_key=settings.resend_api_key)
+    whatsapp_ch = WhatsAppChannel(
+        access_token=settings.whatsapp_access_token,
+        phone_number_id=settings.whatsapp_phone_number_id,
+        api_version=settings.whatsapp_api_version,
+    )
     return NotificationService(
         notification_repo=notif_repo,
-        channels=[in_app_ch, email_ch],
+        channels=[in_app_ch, email_ch, whatsapp_ch],
         retailer_user_repo=retailer_user_repo,
     )
 
@@ -886,6 +892,11 @@ def get_alert_scheduler() -> AlertScheduler:
                     channels=[
                         InAppChannel(notification_repo=notif_repo),
                         EmailChannel(api_key=settings.resend_api_key),
+                        WhatsAppChannel(
+                            access_token=settings.whatsapp_access_token,
+                            phone_number_id=settings.whatsapp_phone_number_id,
+                            api_version=settings.whatsapp_api_version,
+                        ),
                     ],
                 )
                 from app.repositories.impl.product_repository import SqlAlchemyProductRepository

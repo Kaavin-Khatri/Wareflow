@@ -3190,6 +3190,36 @@
 - Alert Logs: `AlertLog` (`apps/api/app/models/notification.py`), `AlertLogRepository` (`apps/api/app/repositories/impl/alert_log_repository.py`)
 - Endpoints: `POST /alerts/evaluate`, `GET /alerts/compliance`
 
+---
+
+## Step 13.3 — WhatsApp Notification Channel
+**Timestamp:** 2026-08-19T08:15:00Z
+**Status:** COMPLETE
+
+### What was done
+- Created `WhatsAppClient` (`apps/api/app/services/whatsapp_client.py`) as the single isolated point for Meta WhatsApp Business Cloud API calls (`https://graph.facebook.com/v21.0/{phone_number_id}/messages`).
+- Implemented phone number normalization (`normalize_phone_number`) stripping non-digit characters and prepending country code `91` for standard 10-digit Indian numbers.
+- Built `WhatsAppChannel` (`apps/api/app/services/notification_channels/whatsapp_channel.py`) implementing `BaseNotificationChannel`:
+  - Maps stock/restock/reorder notifications to `wareflow_stock_available` template.
+  - Maps order/dispatch/delivery notifications to `wareflow_goods_ready` template.
+  - Maps general alerts with standard title/body parameters.
+- Added environment variable gating: when `WHATSAPP_ACCESS_TOKEN` or `WHATSAPP_PHONE_NUMBER_ID` is unset, `WhatsAppChannel` logs a clear simulation notice and returns without crashing the application.
+- Registered `WhatsAppChannel` into `get_notification_service()` and `alert_engine_factory()` in `apps/api/app/core/di.py` with zero changes to `NotificationService` (OCP proof).
+- Added comprehensive unit tests in `apps/api/tests/test_whatsapp_channel.py` (phone normalization, template mapping, successful Cloud API dispatch, 400/401 error handling, unset env simulation, and `NotificationService` integration).
+- All 201 backend Pytest tests, 146 frontend Vitest tests, and Next.js lint pass 100% green.
+
+### Decisions
+- Strategy Pattern for Notification Channels: WhatsApp is registered as a third pluggable channel (`InAppChannel`, `EmailChannel`, `WhatsAppChannel`).
+- Meta Cloud API Free Tier Guard: Meta provides 1,000 free service conversations/month; email remains the always-available free fallback.
+- Pre-Approved Templates: Business-initiated WhatsApp messages strictly use pre-approved templates (`wareflow_stock_available`, `wareflow_goods_ready`) with positional parameters.
+
+### Key values for future steps
+- WhatsApp Client: `WhatsAppClient` (`apps/api/app/services/whatsapp_client.py`)
+- WhatsApp Channel: `WhatsAppChannel` (`apps/api/app/services/notification_channels/whatsapp_channel.py`)
+- Registered Templates: `wareflow_stock_available`, `wareflow_goods_ready`
+- Env Vars: `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_ACCOUNT_ID`
+
+
 
 
 

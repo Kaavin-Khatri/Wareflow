@@ -53,6 +53,7 @@
 | Supabase | Postgres DB (system of record)    | yappumzftktliybmztgg | Seoul (ap-northeast-2) | Free (t3a.nano) | **Split**: Port 6543 (transaction pooler) at runtime, Port 5432 (session pooler) for migrations |
 | Firebase | Auth + Firestore (realtime push only) | wareflow-d17a4       | —                      | Free (Spark)    | Client SDK + Server Admin SDK                                                                   |
 | Resend   | Email alerts (low-stock, reorder) | —                    | —                      | Free (3k/mo)    | HTTPS API                                                                                       |
+| WhatsApp | Outbound B2B message alerts (Meta Cloud API) | —         | —                      | Free (1k convs/mo) | Meta Graph API (v21.0)                                                                          |
 | Groq     | LLM API (AI features)             | —                    | —                      | Free            | HTTPS API                                                                                       |
 | Vercel   | Frontend hosting (Next.js)        | pending              | —                      | Free (Hobby)    | —                                                                                               |
 | Render   | Backend hosting (FastAPI)         | pending              | —                      | Free            | —                                                                                               |
@@ -92,6 +93,9 @@
 | `FIREBASE_SERVICE_ACCOUNT_KEY_PATH` | Path to Firebase Admin SDK JSON               | No (secret) |
 | `TOTP_ENCRYPTION_KEY`               | Secret encryption key for TOTP secrets/backup | No (secret) |
 | `RESEND_API_KEY`                    | Resend email API key                          | No (secret) |
+| `WHATSAPP_ACCESS_TOKEN`             | Meta WhatsApp Business Cloud API access token | No (secret) |
+| `WHATSAPP_PHONE_NUMBER_ID`          | Meta WhatsApp registered phone number ID      | No          |
+| `WHATSAPP_BUSINESS_ACCOUNT_ID`      | Meta WhatsApp Business Account ID (WABA)      | No          |
 | `GROQ_API_KEY`                      | Groq LLM API key                              | No          |
 
 ## Layout & Shell Inventory (Step 4.6)
@@ -666,8 +670,8 @@ wareflow/
 | Delivery Assignment Guard | `DeliveryService.assign_delivery` requires sales order status `PACKED` (or `SHIPPED`), advancing it to `SHIPPED` upon driver assignment |
 | Mandatory Delivery Failure Notes | Failing a delivery requires explanatory failure notes for warehouse operations and triggers an operational alert |
 | Staff Pick List Document Standard | `ExportService.generate_pick_list` renders large-print checkbox list grouped by warehouse location with SKU, name, qty, UoM, and bin location, strictly omitting all pricing info |
-| Customer Delivery Manifest Standard | `ExportService.generate_packing_slip` renders customer-facing A4 packing slip with distributor header (GSTIN, FSSAI), ship-to consignee, driver/vehicle details, and receiver sign-off block with zero pricing info |
-| Notification Channel Strategy (OCP) | `NotificationService` coordinates pluggable `BaseNotificationChannel` implementations (`InAppChannel`, `EmailChannel`, `SmsChannel`), allowing new delivery channels with zero modifications to calling code |
+| Notification Channel Strategy (OCP) | `NotificationService` coordinates pluggable `BaseNotificationChannel` implementations (`InAppChannel`, `EmailChannel`, `WhatsAppChannel`), allowing new delivery channels with zero modifications to calling code |
+| WhatsApp Cloud API Channel (Meta) | Meta Cloud API provides outbound B2B messaging with pre-approved message templates (`wareflow_stock_available`, `wareflow_goods_ready`); free tier capped at 1,000 service conversations/month with always-free email fallback |
 | Narrow-Scope Firestore Realtime Mirror | Firestore is used narrowly for realtime notification delivery only (`notifications/{uid}/items/{id}`) with `onSnapshot` in Topbar bell, while Postgres stays the system of record for everything, including history & pagination |
 | Smart Alert Rule Engine (OCP) | `BaseAlertRule` strategy implementations (`LowStockRule`, `CriticalStockRule`, `ExpiringBatchRule`, `OverdueInvoiceRule`) can be added independently without modifying `AlertEngineService` |
 | 24-Hour Alert Deduplication Guard | `AlertLog` table and `AlertLogRepository.has_recent_alert` suppress repeated notifications for identical rule/entity combinations within a 24-hour window |
