@@ -52,6 +52,10 @@ from app.repositories.impl.retailer_repository import (
     InMemoryRetailerRepository,
     SqlAlchemyRetailerRepository,
 )
+from app.repositories.impl.retailer_user_repository import (
+    InMemoryRetailerUserRepository,
+    SqlAlchemyRetailerUserRepository,
+)
 from app.repositories.impl.sales_order_repository import (
     InMemorySalesOrderRepository,
     SqlAlchemySalesOrderRepository,
@@ -99,6 +103,7 @@ from app.repositories.interfaces.purchase_return_repository import (
 )
 from app.repositories.interfaces.recall_repository import RecallRepositoryInterface
 from app.repositories.interfaces.retailer_repository import RetailerRepository
+from app.repositories.interfaces.retailer_user_repository import RetailerUserRepository
 from app.repositories.interfaces.sales_order_repository import (
     SalesOrderRepositoryInterface,
 )
@@ -120,6 +125,7 @@ from app.services.einvoice_service import EinvoiceService
 from app.services.invoice_service import InvoiceService
 from app.services.ledger_service import LedgerService
 from app.services.payment_service import PaymentService
+from app.services.portal_auth_service import PortalAuthService
 from app.services.pricing_strategy import PricingEngineService
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
@@ -231,6 +237,17 @@ def get_retailer_repository(db: Session = Depends(get_db_session)) -> RetailerRe
 
 
 @lru_cache
+def get_in_memory_retailer_user_repository() -> RetailerUserRepository:
+    """Factory for in-memory RetailerUserRepository."""
+    return InMemoryRetailerUserRepository()
+
+
+def get_retailer_user_repository(db: Session = Depends(get_db_session)) -> RetailerUserRepository:
+    """Factory for database-backed RetailerUserRepository interface."""
+    return SqlAlchemyRetailerUserRepository(session=db)
+
+
+@lru_cache
 def get_pricing_engine_service() -> PricingEngineService:
     """Factory for PricingEngineService (OCP strategy registry)."""
     return PricingEngineService()
@@ -240,12 +257,14 @@ def get_retailer_service(
     repo: RetailerRepository = Depends(get_retailer_repository),
     audit_service: AuditService = Depends(get_audit_service),
     pricing_engine: PricingEngineService = Depends(get_pricing_engine_service),
+    retailer_user_repo: RetailerUserRepository = Depends(get_retailer_user_repository),
 ) -> RetailerService:
     """Factory for RetailerService with audit logging and pluggable pricing."""
     return RetailerService(
         retailer_repo=repo,
         audit_service=audit_service,
         pricing_engine=pricing_engine,
+        retailer_user_repo=retailer_user_repo,
     )
 
 
@@ -625,3 +644,21 @@ def get_einvoice_service(
         business_repo=business_repo,
         audit_repo=audit_repo,
     )
+
+
+def get_portal_auth_service(
+    retailer_user_repo: RetailerUserRepository = Depends(get_retailer_user_repository),
+    retailer_repo: RetailerRepository = Depends(get_retailer_repository),
+    profile_repo: ProfileRepository = Depends(get_profile_repository),
+    order_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
+    invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
+) -> PortalAuthService:
+    """Factory for PortalAuthService with isolated tenant boundaries."""
+    return PortalAuthService(
+        retailer_user_repo=retailer_user_repo,
+        retailer_repo=retailer_repo,
+        profile_repo=profile_repo,
+        sales_order_repo=order_repo,
+        invoice_repo=invoice_repo,
+    )
+

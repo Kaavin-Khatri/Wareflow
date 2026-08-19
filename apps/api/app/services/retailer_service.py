@@ -1,15 +1,29 @@
-"""Retailer domain service with audit logging and bulk pricing support."""
+"""Retailer domain service with audit logging, bulk pricing, and portal invitations."""
 
+import contextlib
+import logging
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import HTTPException, status
+from firebase_admin import auth as firebase_auth
 
+from app.core.firebase import get_firebase_app
+from app.models.portal import RetailerPortalInvite, RetailerUser
 from app.models.retailer import Retailer
 from app.repositories.interfaces.retailer_repository import RetailerRepository
-from app.schemas.retailers import RetailerCreateRequest, RetailerUpdateRequest
+from app.repositories.interfaces.retailer_user_repository import RetailerUserRepository
+from app.schemas.retailers import (
+    RetailerCreateRequest,
+    RetailerInviteRequest,
+    RetailerInviteResponse,
+    RetailerUpdateRequest,
+)
 from app.services.audit_service import AuditService
 from app.services.pricing_strategy import PricingCalculationResult, PricingEngineService
+
+logger = logging.getLogger(__name__)
 
 
 class RetailerService:
@@ -20,10 +34,13 @@ class RetailerService:
         retailer_repo: RetailerRepository,
         audit_service: AuditService | None = None,
         pricing_engine: PricingEngineService | None = None,
+        retailer_user_repo: RetailerUserRepository | None = None,
     ) -> None:
         self._repo = retailer_repo
         self._audit = audit_service
         self._pricing = pricing_engine or PricingEngineService()
+        self._user_repo = retailer_user_repo
+
 
     def get_retailer(self, retailer_id: str) -> Retailer:
         """Fetch retailer with 404 validation."""
@@ -223,3 +240,104 @@ class RetailerService:
             base_price=base_price,
             quantity=quantity,
         )
+
+    def invite_portal_access(
+        self,
+        retailer_id: str,
+        payload: RetailerInviteRequest,
+        actor_id: str | None = None,
+    ) -> RetailerInviteResponse:
+        """Issue portal access invitation for retailer and provision auth credentials."""
+        retailer = self.get_retailer(retailer_id)
+        if not retailer.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot invite inactive retailer '{retailer.name}'. Please activate the retailer first.",
+            )
+
+        email = (payload.email or retailer.email or "").strip().lower()
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Retailer '{retailer.name}' has no email address configured. Please provide an email in the request.",
+            )
+
+        token = f"inv_{uuid.uuid4().hex[:16]}"
+        expires_at = datetime.now(UTC) + timedelta(days=7)
+
+        invite = RetailerPortalInvite(
+            id=str(uuid.uuid4()),
+            retailer_id=retailer.id,
+            email=email,
+            token=token,
+            is_accepted=False,
+            expires_at=expires_at,
+        )
+        if self._user_repo:
+            self._user_repo.create_invite(invite)
+
+        uid, sign_in_link = self._provision_firebase_user(
+            email=email,
+            display_name=payload.contact_person or retailer.contact_person or retailer.name,
+            phone=payload.phone or retailer.phone,
+        )
+        portal_link = sign_in_link or f"/portal/login?invite={token}&email={email}"
+
+        if self._user_repo:
+            existing_user = self._user_repo.get_user_by_id(uid)
+            if not existing_user:
+                ret_user = RetailerUser(
+                    id=uid,
+                    retailer_id=retailer.id,
+                    email=email,
+                    display_name=payload.contact_person or retailer.contact_person,
+                    phone=payload.phone or retailer.phone,
+                    is_active=True,
+                )
+                self._user_repo.create_user(ret_user)
+
+        if self._audit:
+            self._audit.log(
+                actor_id=actor_id,
+                action="retailer_portal_invite_sent",
+                entity_type="retailer_invite",
+                entity_id=retailer.id,
+                before=None,
+                after={"retailer_name": retailer.name, "email": email, "token": token},
+            )
+
+        return RetailerInviteResponse(
+            retailer_id=retailer.id,
+            retailer_name=retailer.name,
+            email=email,
+            sign_in_link=portal_link,
+            invite_token=token,
+            message=f"Portal invitation generated for retailer '{retailer.name}'.",
+            created_at=datetime.now(UTC),
+        )
+
+    def _provision_firebase_user(
+        self, email: str, display_name: str | None, phone: str | None
+    ) -> tuple[str, str | None]:
+        """Create Firebase auth user if app is live, otherwise generate mock UID."""
+        uid = f"uid_ret_{uuid.uuid4().hex[:12]}"
+        sign_in_link = None
+
+        if get_firebase_app():
+            try:
+                user_record = firebase_auth.create_user(
+                    email=email,
+                    display_name=display_name,
+                    phone_number=phone,
+                )
+                uid = user_record.uid
+                with contextlib.suppress(Exception):
+                    sign_in_link = firebase_auth.generate_password_reset_link(email)
+            except firebase_auth.EmailAlreadyExistsError:
+                user_record = firebase_auth.get_user_by_email(email)
+                uid = user_record.uid
+            except Exception as exc:
+                logger.warning("Firebase Admin create_user for retailer failed: %s", exc)
+
+        return uid, sign_in_link
+

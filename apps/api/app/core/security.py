@@ -1,4 +1,4 @@
-"""Authentication, Firebase token verification, and RBAC permission guards."""
+"""Authentication, Firebase token verification, RBAC permission guards, and tenant scoping."""
 
 import logging
 from dataclasses import dataclass
@@ -9,9 +9,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from firebase_admin import auth as firebase_auth
 
 from app.core.config import get_settings
-from app.core.di import get_profile_repository
+from app.core.di import get_profile_repository, get_retailer_user_repository
 from app.core.firebase import get_firebase_app
 from app.repositories.interfaces.profile_repository import ProfileRepository
+from app.repositories.interfaces.retailer_user_repository import RetailerUserRepository
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +21,14 @@ security_bearer = HTTPBearer(auto_error=False)
 
 @dataclass(frozen=True)
 class CurrentUser:
-    """Authenticated caller context with resolved database profile & RBAC permissions."""
+    """Authenticated caller context with resolved database profile & RBAC/tenant permissions."""
 
     id: str
     email: str
     role: str
     permissions: set[str]
+    account_type: str = "staff"  # "staff" | "retailer"
+    retailer_id: str | None = None
     display_name: str | None = None
     avatar_url: str | None = None
     phone: str | None = None
@@ -38,14 +41,26 @@ class CurrentUser:
 def _handle_test_token(token: str) -> dict[str, Any] | None:
     """Extract synthetic claims for test tokens in non-production test suites."""
     settings = get_settings()
-    if (settings.debug or not token.startswith("ey")) and token.startswith("test_token_"):
-        uid = token.replace("test_token_", "")
-        return {
-            "uid": uid,
-            "email": f"{uid}@example.com",
-            "name": f"Test User {uid}",
-            "picture": None,
-        }
+    if settings.debug or not token.startswith("ey"):
+        if token.startswith("test_token_retailer_"):
+            ret_id = token.replace("test_token_retailer_", "")
+            return {
+                "uid": f"uid_ret_{ret_id}",
+                "email": f"retailer_{ret_id}@example.com",
+                "name": f"Retailer {ret_id}",
+                "account_type": "retailer",
+                "retailer_id": ret_id,
+                "picture": None,
+            }
+        if token.startswith("test_token_"):
+            uid = token.replace("test_token_", "")
+            return {
+                "uid": uid,
+                "email": f"{uid}@example.com",
+                "name": f"Test User {uid}",
+                "account_type": "staff",
+                "picture": None,
+            }
     return None
 
 
@@ -121,63 +136,105 @@ def get_current_user(
     request: Request,
     claims: dict[str, Any] = Depends(get_current_user_claims),
     profile_repo: ProfileRepository = Depends(get_profile_repository),
+    retailer_user_repo: RetailerUserRepository = Depends(get_retailer_user_repository),
 ) -> CurrentUser:
     """
     FastAPI dependency resolving database profile & permissions for the authenticated caller.
 
     Validates that:
     1. Firebase token is valid.
-    2. Profile exists in database.
-    3. User account is active.
-    4. Loads full permission code set from role_permissions.
-    5. Resolves 2FA enrollment and verification status.
+    2. Identifies whether caller is Staff or Retailer.
+    3. Loads appropriate permission code set or retailer tenant scope.
     """
     uid = claims["uid"]
     profile = profile_repo.get_by_id(uid)
 
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User profile not registered. Please bootstrap account.",
-        )
+    if profile:
+        if not profile.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is inactive. Contact administrator.",
+            )
 
-    if not profile.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is inactive. Contact administrator.",
-        )
+        permissions_list = profile_repo.get_role_permissions(profile.role_id)
+        role_name = profile.role.name if profile.role else "Unknown"
 
-    permissions_list = profile_repo.get_role_permissions(profile.role_id)
-    role_name = profile.role.name if profile.role else "Unknown"
+        required_roles = {"Owner", "Manager", "Accountant"}
+        is_2fa_required = role_name in required_roles
+        is_2fa_enabled = bool(profile.totp_enabled)
 
-    # Check 2FA requirement policy (financial / owner roles require 2FA)
-    required_roles = {"Owner", "Manager", "Accountant"}
-    is_2fa_required = role_name in required_roles
-    is_2fa_enabled = bool(profile.totp_enabled)
-
-    # 2FA verification check: if enabled, check header, cookie, or claims
-    two_fa_verified = False
-    if not is_2fa_enabled:
-        two_fa_verified = True
-    else:
-        header_val = request.headers.get("X-2FA-Verified")
-        cookie_val = request.cookies.get("wareflow_2fa_verified")
-        claims_val = claims.get("2fa_verified") or claims.get("is_2fa_verified")
-        if header_val == "true" or cookie_val == "true" or bool(claims_val):
+        two_fa_verified = False
+        if not is_2fa_enabled:
             two_fa_verified = True
+        else:
+            header_val = request.headers.get("X-2FA-Verified")
+            cookie_val = request.cookies.get("wareflow_2fa_verified")
+            claims_val = claims.get("2fa_verified") or claims.get("is_2fa_verified")
+            if header_val == "true" or cookie_val == "true" or bool(claims_val):
+                two_fa_verified = True
 
-    return CurrentUser(
-        id=profile.id,
-        email=profile.email,
-        role=role_name,
-        permissions=set(permissions_list),
-        display_name=profile.display_name,
-        avatar_url=profile.avatar_url,
-        phone=profile.phone,
-        is_active=profile.is_active,
-        is_2fa_enabled=is_2fa_enabled,
-        is_2fa_required=is_2fa_required,
-        is_2fa_verified=two_fa_verified,
+        return CurrentUser(
+            id=profile.id,
+            email=profile.email,
+            role=role_name,
+            permissions=set(permissions_list),
+            account_type="staff",
+            retailer_id=None,
+            display_name=profile.display_name,
+            avatar_url=profile.avatar_url,
+            phone=profile.phone,
+            is_active=profile.is_active,
+            is_2fa_enabled=is_2fa_enabled,
+            is_2fa_required=is_2fa_required,
+            is_2fa_verified=two_fa_verified,
+        )
+
+    # Check retailer user identity
+    retailer_user = retailer_user_repo.get_user_by_id(uid)
+    if retailer_user:
+        if not retailer_user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Retailer portal account is inactive. Contact administrator.",
+            )
+
+        return CurrentUser(
+            id=retailer_user.id,
+            email=retailer_user.email,
+            role="Retailer",
+            permissions=set(),
+            account_type="retailer",
+            retailer_id=retailer_user.retailer_id,
+            display_name=retailer_user.display_name,
+            avatar_url=None,
+            phone=retailer_user.phone,
+            is_active=retailer_user.is_active,
+            is_2fa_enabled=False,
+            is_2fa_required=False,
+            is_2fa_verified=True,
+        )
+
+    # Check test token claims or custom token claims
+    if claims.get("account_type") == "retailer" and claims.get("retailer_id"):
+        return CurrentUser(
+            id=uid,
+            email=claims.get("email", f"{uid}@example.com"),
+            role="Retailer",
+            permissions=set(),
+            account_type="retailer",
+            retailer_id=claims.get("retailer_id"),
+            display_name=claims.get("name"),
+            avatar_url=claims.get("picture"),
+            phone=claims.get("phone_number"),
+            is_active=True,
+            is_2fa_enabled=False,
+            is_2fa_required=False,
+            is_2fa_verified=True,
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="User profile not registered. Please bootstrap account.",
     )
 
 
@@ -199,7 +256,7 @@ def require_permission(permission_code: str):
     def _permission_guard(
         current_user: CurrentUser = Depends(get_current_user),
     ) -> CurrentUser:
-        if permission_code not in current_user.permissions:
+        if current_user.account_type != "staff" or permission_code not in current_user.permissions:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Missing required permission: {permission_code}",
@@ -220,7 +277,7 @@ def require_role(role_name: str):
     def _role_guard(
         current_user: CurrentUser = Depends(get_current_user),
     ) -> CurrentUser:
-        if current_user.role != role_name:
+        if current_user.account_type != "staff" or current_user.role != role_name:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Requires role: {role_name}",
@@ -228,3 +285,56 @@ def require_role(role_name: str):
         return current_user
 
     return _role_guard
+
+
+def require_staff(
+    current_user: CurrentUser = Depends(get_current_user),
+) -> CurrentUser:
+    """FastAPI dependency enforcing that caller is a staff member, not a retailer account."""
+    if current_user.account_type != "staff":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Staff access only. Retailer accounts cannot access administrative resources.",
+        )
+    return current_user
+
+
+def require_portal_retailer(
+    current_user: CurrentUser = Depends(get_current_user),
+) -> CurrentUser:
+    """FastAPI dependency enforcing that caller is a retailer portal user, not a staff member."""
+    if current_user.account_type != "retailer" or not current_user.retailer_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Retailer portal access only. Staff accounts must use the Admin Dashboard.",
+        )
+    return current_user
+
+
+def require_own_retailer(
+    retailer_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+) -> CurrentUser:
+    """
+    FastAPI dependency enforcing the server-side data wall for retailer access.
+
+    If caller is a retailer, guarantees retailer_id matches their assigned account.
+    If caller is staff, requires appropriate administrative viewing permission.
+    """
+    if current_user.account_type == "retailer":
+        if current_user.retailer_id != retailer_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: cannot access another retailer's data.",
+            )
+        return current_user
+
+    if current_user.account_type == "staff":
+        valid_perms = {"retailers:view", "orders:view", "invoices:view", "retailers:manage"}
+        if any(p in current_user.permissions for p in valid_perms):
+            return current_user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Access denied: unauthorized to view this retailer's data.",
+    )

@@ -135,3 +135,56 @@ class ProductInquiry(Base):
     product: Mapped["app.models.catalog.Product"] = relationship("Product")  # noqa: F821
     retailer: Mapped["app.models.retailer.Retailer | None"] = relationship("Retailer")  # noqa: F821
     customer: Mapped["Customer | None"] = relationship("Customer")
+
+
+class RetailerUser(Base):
+    """
+    Firebase Auth user linked to a specific B2B Retailer account for self-service portal.
+
+    Carries retailer_id for server-side tenant scoping.
+    """
+
+    __tablename__ = "retailer_users"
+
+    id: Mapped[str] = mapped_column(String(128), primary_key=True)  # Firebase UID
+    retailer_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("retailers.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    # Relationships
+    retailer: Mapped["app.models.retailer.Retailer"] = relationship("Retailer")  # noqa: F821
+
+
+class RetailerPortalInvite(Base):
+    """Pending self-service portal invitation link issued to a retailer."""
+
+    __tablename__ = "retailer_portal_invites"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    retailer_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("retailers.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    token: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    is_accepted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    # Relationships
+    retailer: Mapped["app.models.retailer.Retailer"] = relationship("Retailer")  # noqa: F821
+

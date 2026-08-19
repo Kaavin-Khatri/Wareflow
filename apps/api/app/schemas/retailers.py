@@ -55,6 +55,26 @@ class RetailerCreditLimitUpdateRequest(BaseModel):
     credit_limit: float = Field(..., ge=0, description="New authorized credit limit in INR")
 
 
+class RetailerInviteRequest(BaseModel):
+    """Schema for inviting a retailer to the self-service portal."""
+
+    email: str | None = Field(None, description="Override email to send invite to (defaults to retailer's email)")
+    contact_person: str | None = Field(None, max_length=100)
+    phone: str | None = Field(None, max_length=50)
+
+
+class RetailerInviteResponse(BaseModel):
+    """Schema response for an issued portal invite."""
+
+    retailer_id: str
+    retailer_name: str
+    email: str
+    sign_in_link: str | None = None
+    invite_token: str | None = None
+    message: str
+    created_at: datetime | None = None
+
+
 class RetailerResponse(BaseModel):
     """Schema representing full retailer account details."""
 
@@ -77,3 +97,4 @@ class RetailerResponse(BaseModel):
         return max(0.0, float(self.credit_limit) - float(self.credit_balance))
 
     model_config = ConfigDict(from_attributes=True)
+

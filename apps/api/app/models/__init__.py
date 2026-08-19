@@ -12,6 +12,8 @@ from app.models.portal import (
     Customer,
     InquiryStatusEnum,
     ProductInquiry,
+    RetailerPortalInvite,
+    RetailerUser,
     StockSubscription,
     SupplierAccessToken,
 )
@@ -81,6 +83,8 @@ __all__ = [
     "Permission",
     "RolePermission",
     # Portal & Subscriptions
+    "RetailerUser",
+    "RetailerPortalInvite",
     "StockSubscription",
     "SupplierAccessToken",
     "ProductInquiry",

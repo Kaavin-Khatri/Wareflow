@@ -2689,6 +2689,93 @@
 - `codebase_audit.md`
 - `memory.md`
 
+---
+
+## Step 11.1 — Retailer Portal Auth & Scoped Access
+
+**Timestamp:** 2026-08-19T02:35:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Retailer Authentication & Identity Models (`apps/api/app/models/portal.py`, `apps/api/app/models/__init__.py`)**:
+   - Created `RetailerUser` model representing portal user accounts linked to a specific `retailer_id` (`retailers.id`).
+   - Created `RetailerPortalInvite` model storing cryptographic invitation tokens, target retailer mapping, expiration timestamps, and acceptance state.
+2. **Strict Server-Side Data Wall & Dependency Guards (`apps/api/app/core/security.py`)**:
+   - Extended `CurrentUser` with `account_type: str = "staff"` ("staff" | "retailer") and `retailer_id: str | None = None`.
+   - Updated `get_current_user` to inspect Firebase claims / database records and assign `account_type="retailer"` with explicit `retailer_id` and an empty staff permission set.
+   - Updated `require_permission` to strictly reject non-staff callers (`account_type != "staff"`) with 403 Forbidden.
+   - Added `require_staff` to block retailers from accessing admin endpoints.
+   - Added `require_portal_retailer` to block staff accounts from customer portal endpoints.
+   - Added `require_own_retailer(retailer_id)` ensuring a retailer cannot access or probe any order, invoice, or ledger record outside their own `retailer_id`.
+3. **Domain Services & Repositories (`apps/api/app/services/portal_auth_service.py`, `apps/api/app/services/retailer_service.py`, `apps/api/app/repositories/impl/retailer_user_repository.py`)**:
+   - Extended `RetailerService` with `invite_portal_access(retailer_id, payload, actor_id)`: validates retailer existence, generates secure invite tokens with 7-day expiration, provisions Firebase Auth user, and logs `retailer_portal_invite_sent` to audit repository.
+   - Implemented `PortalAuthService`: handles portal bootstrap and enforces server-side ownership filters on `list_retailer_orders`, `get_retailer_order`, and `list_retailer_invoices`.
+   - Added `InMemoryProfileRepository` in `apps/api/app/repositories/impl/profile_repository.py` for DIP unit test isolation.
+4. **API Endpoints (`apps/api/app/api/routers/retailers.py`, `apps/api/app/api/routers/portal.py`)**:
+   - `POST /retailers/{id}/invite-portal-access`: Guarded by `retailers:manage` (Owner/Manager only).
+   - `POST /portal/auth/bootstrap`: Binds Firebase token & invite token to active retailer account.
+   - `GET /portal/me`: Returns authenticated retailer identity, pricing tier, credit limit, and available balance.
+   - `GET /portal/orders` & `GET /portal/orders/{id}`: Returns sales orders strictly scoped to caller's `retailer_id`.
+   - `GET /portal/invoices` & `GET /portal/invoices/{id}`: Returns invoices strictly scoped to caller's `retailer_id`.
+   - `GET /portal/ledger`: Returns full chronological AR ledger statement strictly scoped to caller's `retailer_id`.
+5. **Frontend Retailer Portal Shell & UI (`apps/web/app/portal/`)**:
+   - `apps/web/app/portal/layout.tsx`: Dedicated liquid glass shell without admin sidebars, featuring brand badge, live credit line status chip, navigation links (Catalog, My Orders, Invoices & Ledger, Appearance), and Sign Out button.
+   - `apps/web/app/portal/login/page.tsx`: Retailer authentication page supporting email/password, invite token pre-fill (`?invite=...` & `?email=...`), and Google OAuth sign-in with clear staff account rejection banner.
+   - `apps/web/app/portal/catalog/page.tsx`: Wholesale catalog shell.
+   - `apps/web/app/portal/orders/page.tsx`: Scoped orders dashboard.
+   - `apps/web/app/portal/invoices/page.tsx`: Scoped invoices and chronological accounts-receivable ledger statement.
+6. **Automated Testing & QA Verification**:
+   - Backend `apps/api/tests/test_retailer_portal_auth.py` (6 tests passing: invite token generation, bootstrap binding & staff rejection, own orders/invoices viewing, cross-retailer 403 blocking probe, cross-boundary guards, and HTTP router endpoints).
+   - Frontend `apps/web/lib/__tests__/portal-auth.test.tsx` (3 tests passing: login form rendering, invite acceptance mode, and scoped navbar rendering).
+   - Full test suites: **158 / 158 Pytest tests passing (100% green)**; **118 / 118 Vitest tests passing across 28 test suites (100% green)**.
+   - **0 errors on ESLint**; Next.js production build compiled 39 routes cleanly.
+
+### Decisions
+
+- **Complete Server-Side Data Wall over Client-Side Hiding**:
+  - Retailers have a completely different permission universe from staff. Security is enforced in the DB/service layer via `retailer_id` filtering and `require_own_retailer`, preventing IDOR or parameter tampering.
+- **Dedicated `/portal` Shell & Login**:
+  - Distinct `/portal/login` and `/portal/*` route tree ensures retailers never see internal warehouse/admin navigation, and staff accounts attempting to access `/portal` are cleanly redirected.
+
+### Key values for future steps
+
+- Portal Router: `/portal` (`apps/api/app/api/routers/portal.py`)
+- Portal Auth Service: `PortalAuthService` (`apps/api/app/services/portal_auth_service.py`)
+- Retailer User Repository: `RetailerUserRepository` (`apps/api/app/repositories/interfaces/retailer_user_repository.py`)
+- Security Guards: `require_portal_retailer`, `require_own_retailer`, `require_staff` (`app.core.security`)
+- Portal Frontend Entry: `/portal/login`, `/portal/catalog`, `/portal/orders`, `/portal/invoices`
+
+### Files Created
+
+- `apps/api/app/models/portal.py`
+- `apps/api/app/schemas/portal.py`
+- `apps/api/app/repositories/interfaces/retailer_user_repository.py`
+- `apps/api/app/repositories/impl/retailer_user_repository.py`
+- `apps/api/app/services/portal_auth_service.py`
+- `apps/api/app/api/routers/portal.py`
+- `apps/api/tests/test_retailer_portal_auth.py`
+- `apps/web/app/portal/layout.tsx`
+- `apps/web/app/portal/login/page.tsx`
+- `apps/web/app/portal/catalog/page.tsx`
+- `apps/web/app/portal/orders/page.tsx`
+- `apps/web/app/portal/invoices/page.tsx`
+- `apps/web/lib/__tests__/portal-auth.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/models/__init__.py`
+- `apps/api/app/schemas/retailers.py`
+- `apps/api/app/repositories/impl/profile_repository.py`
+- `apps/api/app/services/retailer_service.py`
+- `apps/api/app/core/security.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/api/routers/retailers.py`
+- `apps/api/app/main.py`
+- `codebase_audit.md`
+- `memory.md`
+
+
 
 
 

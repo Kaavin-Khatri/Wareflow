@@ -496,6 +496,14 @@ wareflow/
 | POST   | `/suppliers`                           | Register new supplier with GSTIN validation         | Yes (`inventory:manage`)        |
 | GET    | `/suppliers/{id}`                      | Retrieve details for a single supplier              | Yes (Authenticated)             |
 | PATCH  | `/suppliers/{id}`                      | Update supplier details, contacts, or active status | Yes (`inventory:manage`)        |
+| POST   | `/retailers/{id}/invite-portal-access` | Generate invite link and token for retailer portal  | Yes (`retailers:manage` / Owner)|
+| POST   | `/portal/auth/bootstrap`               | Bind Firebase token & invite to retailer user       | Yes (Firebase Token)            |
+| GET    | `/portal/me`                           | Get authenticated retailer identity & credit line   | Yes (Retailer Portal Only)      |
+| GET    | `/portal/orders`                       | List sales orders strictly scoped to caller retailer| Yes (Retailer Portal Only)      |
+| GET    | `/portal/orders/{id}`                  | Get order details (strictly scoped data wall)       | Yes (Retailer Portal Only)      |
+| GET    | `/portal/invoices`                     | List invoices strictly scoped to caller retailer    | Yes (Retailer Portal Only)      |
+| GET    | `/portal/invoices/{id}`                | Get invoice details (strictly scoped data wall)     | Yes (Retailer Portal Only)      |
+| GET    | `/portal/ledger`                       | Get AR ledger statement strictly scoped to retailer | Yes (Retailer Portal Only)      |
 
 
 

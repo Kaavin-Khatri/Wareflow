@@ -8,6 +8,8 @@ from app.schemas.billing import RetailerLedgerResponse
 from app.schemas.retailers import (
     RetailerCreateRequest,
     RetailerCreditLimitUpdateRequest,
+    RetailerInviteRequest,
+    RetailerInviteResponse,
     RetailerResponse,
     RetailerUpdateRequest,
 )
@@ -130,3 +132,28 @@ def get_retailer_ledger(
     and the final running balance exactly matches retailer.credit_balance.
     """
     return ledger_service.get_retailer_ledger(retailer_id=retailer_id)
+
+
+@router.post(
+    "/{retailer_id}/invite-portal-access",
+    response_model=RetailerInviteResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Issue self-service portal invite link for a retailer",
+)
+def invite_retailer_portal_access(
+    retailer_id: str,
+    payload: RetailerInviteRequest,
+    current_user: CurrentUser = Depends(require_permission("retailers:manage")),
+    service: RetailerService = Depends(get_retailer_service),
+) -> RetailerInviteResponse:
+    """
+    Generate portal access invitation and provision Firebase user credentials.
+
+    Restricted to Owner/Manager administrative staff.
+    """
+    return service.invite_portal_access(
+        retailer_id=retailer_id,
+        payload=payload,
+        actor_id=current_user.id,
+    )
+

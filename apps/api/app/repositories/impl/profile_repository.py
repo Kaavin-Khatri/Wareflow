@@ -146,3 +146,116 @@ class SqlAlchemyProfileRepository:
         self._session.commit()
         self._session.refresh(profile)
         return profile
+
+
+class InMemoryProfileRepository:
+    """In-memory mock repository for Profile entity unit testing."""
+
+    def __init__(
+        self,
+        initial_profiles: list[Profile] | None = None,
+        initial_roles: list[Role] | None = None,
+        initial_role_permissions: dict[str, list[str]] | None = None,
+    ) -> None:
+        self._profiles: dict[str, Profile] = {}
+        self._roles: dict[str, Role] = {}
+        self._role_permissions: dict[str, list[str]] = initial_role_permissions or {}
+        if initial_profiles:
+            for p in initial_profiles:
+                self._profiles[p.id] = p
+        if initial_roles:
+            for r in initial_roles:
+                self._roles[r.id] = r
+
+    def get_by_id(self, profile_id: str) -> Profile | None:
+        return self._profiles.get(profile_id)
+
+    def get_by_email(self, email: str) -> Profile | None:
+        norm = email.strip().lower()
+        for p in self._profiles.values():
+            if p.email.strip().lower() == norm:
+                return p
+        return None
+
+    def count_all(self) -> int:
+        return len(self._profiles)
+
+    def list_all(self, skip: int = 0, limit: int = 100) -> list[Profile]:
+        return list(self._profiles.values())[skip : skip + limit]
+
+    def create(self, profile: Profile) -> Profile:
+        self._profiles[profile.id] = profile
+        return profile
+
+    def get_role_by_id(self, role_id: str) -> Role | None:
+        return self._roles.get(role_id)
+
+    def get_role_by_name(self, name: str) -> Role | None:
+        norm = name.strip().lower()
+        for r in self._roles.values():
+            if r.name.strip().lower() == norm:
+                return r
+        return None
+
+    def list_roles(self) -> list[Role]:
+        return list(self._roles.values())
+
+    def list_permissions(self) -> list[Permission]:
+        return []
+
+    def get_role_permissions(self, role_id: str) -> list[str]:
+        return self._role_permissions.get(role_id, [])
+
+    def update_role(self, profile_id: str, role_id: str) -> Profile | None:
+        p = self.get_by_id(profile_id)
+        if not p:
+            return None
+        p.role_id = role_id
+        return p
+
+    def update_status(self, profile_id: str, is_active: bool) -> Profile | None:
+        p = self.get_by_id(profile_id)
+        if not p:
+            return None
+        p.is_active = is_active
+        return p
+
+    def update_role_permissions(self, role_id: str, permission_codes: list[str]) -> list[str]:
+        self._role_permissions[role_id] = permission_codes
+        return permission_codes
+
+    def update_two_factor(
+        self,
+        profile_id: str,
+        totp_secret_encrypted: str | None,
+        totp_enabled: bool,
+        backup_codes_encrypted: str | None,
+    ) -> Profile | None:
+        p = self.get_by_id(profile_id)
+        if not p:
+            return None
+        p.totp_secret_encrypted = totp_secret_encrypted
+        p.totp_enabled = totp_enabled
+        p.backup_codes_encrypted = backup_codes_encrypted
+        p.totp_enrolled_at = datetime.now(UTC) if totp_enabled else None
+        return p
+
+    def update_backup_codes(
+        self, profile_id: str, backup_codes_encrypted: str | None
+    ) -> Profile | None:
+        p = self.get_by_id(profile_id)
+        if not p:
+            return None
+        p.backup_codes_encrypted = backup_codes_encrypted
+        return p
+
+    def update_appearance_preferences(
+        self, profile_id: str, theme_preference: str, accent_color: str
+    ) -> Profile | None:
+        p = self.get_by_id(profile_id)
+        if not p:
+            return None
+        p.theme_preference = theme_preference
+        p.accent_color = accent_color
+        return p
+
