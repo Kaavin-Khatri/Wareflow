@@ -3067,6 +3067,73 @@
 - `codebase_audit.md`
 - `memory.md`
 
+### Step 12.2 — Packing Slip & Pick List Generation
+
+**Timestamp:** 2026-08-19T07:25:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Pick List Generation (`apps/api/app/services/export_service.py`)**:
+   - Implemented `generate_pick_list(sales_order_id)` producing high-contrast, staff-facing A4 PDFs using ReportLab flowables.
+   - Formatted large-print checkboxes `[   ]` per line for physical floor ticking.
+   - Automatically groups line items by warehouse location (handling multi-warehouse split orders cleanly).
+   - Displays SKU, Product Name, Pick Qty, Unit of Measure, Bin/Aisle Location, and picker sign-off block.
+   - Strictly enforces **ZERO pricing information** (no rates, unit prices, tax amounts, or monetary totals).
+
+2. **Customer Packing Slip Generation (`apps/api/app/services/export_service.py`)**:
+   - Implemented `generate_packing_slip(sales_order_id)` producing clean, professional customer-facing delivery manifests.
+   - Renders distributor compliance header (Legal Entity Name, Address, 15-char GSTIN, 14-digit FSSAI License, Phone, Email).
+   - Renders destination Ship-To consignee details and dispatch/driver transport metadata.
+   - Formatted line items table with verification checkboxes, items count, and receiver goods acknowledgment signature block.
+   - Strictly enforces **ZERO pricing information** (packing slip is a physical verification manifest, not a tax invoice).
+
+3. **FastAPI Endpoints (`apps/api/app/api/routers/sales_orders.py`)**:
+   - Added `GET /sales-orders/{id}/packing-slip.pdf` streaming PDF bytes with `Content-Disposition: inline; filename="packing-slip-{id}.pdf"`.
+   - Added `GET /sales-orders/{id}/pick-list.pdf` streaming PDF bytes with `Content-Disposition: inline; filename="pick-list-{id}.pdf"`.
+   - Protected with standard `orders:view` permission checks.
+
+4. **Web UI Integration (`apps/web/app/admin/sales-orders/page.tsx`)**:
+   - Added "Print Pick List" and "Print Packing Slip" actions in the sales order detail modal alongside existing invoice generation.
+   - Integrated direct browser opening/printing via `handlePrintPickList` and `handlePrintPackingSlip`.
+
+5. **Automated Testing & Verification**:
+   - Added comprehensive Pytest test suite (`apps/api/tests/test_packing_slip_and_pick_list.py`) covering pick list checkboxes, multi-warehouse grouping, packing slip headers, HTTP streaming endpoints, and strictly asserting zero price presence.
+   - Added Vitest tests in `apps/web/lib/__tests__/sales-orders.test.tsx` verifying modal buttons and export triggers.
+   - All 181 backend Pytest tests passing 100% green.
+   - All 142 frontend Vitest tests passing 100% green.
+   - ESLint and Next.js production builds passing with zero errors.
+
+### SOLID Principles Applied
+
+- **Single Responsibility Principle (SRP)**: Dedicated `ExportService` handles PDF document layout and generation exclusively, keeping `SalesOrderService` and `DeliveryService` clean of document rendering details.
+- **Open/Closed Principle (OCP)**: Document generators consume repository interfaces; new document styles or formats can be introduced without modifying sales order business logic.
+- **Interface Segregation Principle (ISP)**: Document endpoints depend only on granular export query needs without imposing extra write dependencies.
+- **Dependency Inversion Principle (DIP)**: `ExportService` receives repository interfaces via FastAPI dependency injection container (`get_export_service`).
+
+### Key values for future steps
+
+- Pick List Export API: `GET /sales-orders/{id}/pick-list.pdf`
+- Packing Slip Export API: `GET /sales-orders/{id}/packing-slip.pdf`
+- Document Generator: `ExportService` (`apps/api/app/services/export_service.py`)
+
+### Files Created
+
+- `apps/api/app/services/export_service.py`
+- `apps/api/tests/test_packing_slip_and_pick_list.py`
+
+### Files Modified
+
+- `apps/api/requirements.txt`
+- `apps/api/app/core/di.py`
+- `apps/api/app/api/routers/sales_orders.py`
+- `apps/api/app/repositories/impl/sales_order_repository.py`
+- `apps/web/app/admin/sales-orders/page.tsx`
+- `apps/web/lib/__tests__/sales-orders.test.tsx`
+- `codebase_audit.md`
+- `memory.md`
+
+
 
 
 

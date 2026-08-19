@@ -272,4 +272,38 @@ describe("SalesOrdersAdminPage", () => {
       expect(apiClient.post).toHaveBeenCalledWith("/sales-orders/so-1/confirm");
     });
   });
+
+  it("opens details modal and triggers Print Pick List and Print Packing Slip exports", async () => {
+    const originalOpen = window.open;
+    const mockOpen = vi.fn();
+    window.open = mockOpen;
+
+    render(<SalesOrdersAdminPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("SO-202608-0002").length).toBeGreaterThanOrEqual(1);
+    });
+
+    // Open detail modal for confirmed order (so-2)
+    const detailButtons = screen.getAllByRole("button", { name: /Details/i });
+    fireEvent.click(detailButtons[1]);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Sales Order: SO-202608-0002").length).toBeGreaterThanOrEqual(1);
+    });
+
+    // Check Print Pick List button
+    const pickListBtn = screen.getByRole("button", { name: /Print Pick List/i });
+    expect(pickListBtn).toBeDefined();
+    fireEvent.click(pickListBtn);
+    expect(mockOpen).toHaveBeenCalledWith(expect.stringContaining("/sales-orders/so-2/pick-list.pdf"), "_blank");
+
+    // Check Print Packing Slip button
+    const packingSlipBtn = screen.getByRole("button", { name: /Print Packing Slip/i });
+    expect(packingSlipBtn).toBeDefined();
+    fireEvent.click(packingSlipBtn);
+    expect(mockOpen).toHaveBeenCalledWith(expect.stringContaining("/sales-orders/so-2/packing-slip.pdf"), "_blank");
+
+    window.open = originalOpen;
+  });
 });

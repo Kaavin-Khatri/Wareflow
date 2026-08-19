@@ -23,6 +23,7 @@ class SqlAlchemySalesOrderRepository(SalesOrderRepositoryInterface):
             select(SalesOrder)
             .options(
                 joinedload(SalesOrder.retailer),
+                joinedload(SalesOrder.customer),
                 joinedload(SalesOrder.items)
                 .joinedload(SalesOrderItem.product)
                 .joinedload(Product.base_uom),
@@ -37,6 +38,7 @@ class SqlAlchemySalesOrderRepository(SalesOrderRepositoryInterface):
             select(SalesOrder)
             .options(
                 joinedload(SalesOrder.retailer),
+                joinedload(SalesOrder.customer),
                 joinedload(SalesOrder.items).joinedload(SalesOrderItem.product),
             )
             .where(SalesOrder.so_number == so_number)
@@ -54,6 +56,7 @@ class SqlAlchemySalesOrderRepository(SalesOrderRepositoryInterface):
     ) -> tuple[list[SalesOrder], int]:
         stmt = select(SalesOrder).options(
             joinedload(SalesOrder.retailer),
+            joinedload(SalesOrder.customer),
             joinedload(SalesOrder.items).joinedload(SalesOrderItem.product),
         )
 
@@ -137,7 +140,9 @@ class InMemorySalesOrderRepository(SalesOrderRepositoryInterface):
                 else:
                     self.orders[o["id"]] = dict(o)
 
-    def _to_model(self, data: dict[str, Any]) -> SalesOrder:
+    def _to_model(self, data: Any) -> SalesOrder:
+        if isinstance(data, SalesOrder):
+            return data
         so = SalesOrder(
             id=data["id"],
             so_number=data["so_number"],

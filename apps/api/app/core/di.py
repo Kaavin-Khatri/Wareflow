@@ -136,6 +136,7 @@ from app.services.audit_service import AuditService
 from app.services.business_settings_service import BusinessSettingsService
 from app.services.customer_service import CustomerService
 from app.services.einvoice_service import EinvoiceService
+from app.services.export_service import ExportService
 from app.services.inquiry_service import InquiryService
 from app.services.invoice_service import InvoiceService
 from app.services.ledger_service import LedgerService
@@ -769,6 +770,22 @@ def get_delivery_service(
         audit_service=audit_service,
         notification_service=notif_service,
     )
+
+
+def get_export_service(
+    so_repo: SalesOrderRepositoryInterface = Depends(get_sales_order_repository),
+    business_settings_repo: BusinessSettingsRepositoryInterface = Depends(get_business_settings_repository),
+    delivery_repo: DeliveryRepositoryInterface = Depends(get_delivery_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+) -> ExportService:
+    """Factory for ExportService with DIP dependencies."""
+    return ExportService(
+        sales_order_repo=so_repo,
+        business_settings_repo=business_settings_repo,
+        delivery_repo=delivery_repo,
+        stock_repo=stock_repo,
+    )
+
 
 
 

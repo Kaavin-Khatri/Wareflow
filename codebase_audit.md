@@ -42,6 +42,7 @@
 | Auth (backend)     | Firebase Admin SDK        | >=6.0.0   |
 | 2FA (TOTP & QR)    | pyotp + qrcode            | >=2.9.0   |
 | Encryption         | cryptography              | >=42.0.0  |
+| PDF Engine (api)   | ReportLab (platypus)      | >=4.0.0   |
 | Test Runner (api)  | Pytest + pytest-cov       | >=8.0.0   |
 
 ## Services
@@ -516,8 +517,8 @@ wareflow/
 | GET    | `/deliveries`                          | List dispatch records with status/driver filters    | Yes (`orders:view`)             |
 | GET    | `/deliveries/{id}`                     | Get delivery detail with buyer & address context    | Yes (`orders:view`)             |
 | PATCH  | `/deliveries/{id}/status`              | Update delivery transit status & auto-advance SO    | Yes (`orders:create`)           |
-
-
+| GET    | `/sales-orders/{id}/packing-slip.pdf`  | Customer-facing delivery manifest PDF (zero prices) | Yes (`orders:view`)             |
+| GET    | `/sales-orders/{id}/pick-list.pdf`     | Warehouse staff checkbox pick list PDF (zero prices)| Yes (`orders:view`)             |
 
 ## Architecture Layers
 
@@ -660,6 +661,8 @@ wareflow/
 | Delivery Status Order Sync | `DeliveryService` auto-advances parent sales order to `DELIVERED` when delivery is marked `delivered`; keeps order at `SHIPPED` if `failed` |
 | Delivery Assignment Guard | `DeliveryService.assign_delivery` requires sales order status `PACKED` (or `SHIPPED`), advancing it to `SHIPPED` upon driver assignment |
 | Mandatory Delivery Failure Notes | Failing a delivery requires explanatory failure notes for warehouse operations and triggers an operational alert |
+| Staff Pick List Document Standard | `ExportService.generate_pick_list` renders large-print checkbox list grouped by warehouse location with SKU, name, qty, UoM, and bin location, strictly omitting all pricing info |
+| Customer Delivery Manifest Standard | `ExportService.generate_packing_slip` renders customer-facing A4 packing slip with distributor header (GSTIN, FSSAI), ship-to consignee, driver/vehicle details, and receiver sign-off block with zero pricing info |
 
 ## Security & Audit Log Coverage
 

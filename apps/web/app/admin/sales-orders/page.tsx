@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   FileSpreadsheet,
   FileText,
+  Printer,
   Eye,
   Trash2,
   RotateCcw,
@@ -326,6 +327,16 @@ export default function SalesOrdersAdminPage() {
     } finally {
       setGeneratingInvoice(false);
     }
+  }
+
+  function handlePrintPickList(orderId: string) {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    window.open(`${apiUrl}/sales-orders/${orderId}/pick-list.pdf`, "_blank");
+  }
+
+  function handlePrintPackingSlip(orderId: string) {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    window.open(`${apiUrl}/sales-orders/${orderId}/packing-slip.pdf`, "_blank");
   }
 
   async function handleOpenDetail(order: SalesOrder) {
@@ -1056,6 +1067,28 @@ export default function SalesOrdersAdminPage() {
                         </GlassButton>
                       </Link>
                     </div>
+                  )}
+
+                  {selectedOrder.status !== "cancelled" && (
+                    <>
+                      <GlassButton
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handlePrintPickList(selectedOrder.id)}
+                      >
+                        <Printer className="w-3.5 h-3.5 mr-1 text-indigo-400" /> Print Pick List
+                      </GlassButton>
+
+                      <GlassButton
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handlePrintPackingSlip(selectedOrder.id)}
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5 mr-1 text-emerald-400" /> Print Packing Slip
+                      </GlassButton>
+                    </>
                   )}
 
                   {selectedOrder.status !== "draft" && selectedOrder.status !== "cancelled" && (

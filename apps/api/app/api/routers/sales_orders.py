@@ -1,8 +1,8 @@
 """Sales Orders API router."""
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.core.di import get_delivery_service, get_sales_order_service
+from app.core.di import get_delivery_service, get_export_service, get_sales_order_service
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.deliveries import DeliveryAssignRequest, DeliveryResponse
 from app.schemas.sales_orders import (
@@ -11,6 +11,7 @@ from app.schemas.sales_orders import (
     SalesOrderStatusUpdateRequest,
 )
 from app.services.delivery_service import DeliveryService
+from app.services.export_service import ExportService
 from app.services.sales_order_service import SalesOrderService
 
 router = APIRouter(prefix="/sales-orders", tags=["Sales Orders"])
@@ -144,4 +145,49 @@ def get_order_delivery(
 ) -> DeliveryResponse | None:
     """Retrieve the delivery status and dispatch information for a sales order."""
     return delivery_service.get_delivery_by_order(sales_order_id=id)
+
+
+@router.get(
+    "/{id}/packing-slip.pdf",
+    status_code=status.HTTP_200_OK,
+    summary="Generate customer-facing Packing Slip PDF",
+)
+def get_packing_slip_pdf(
+    id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    export_service: ExportService = Depends(get_export_service),
+) -> Response:
+    """
+    Generate and stream print-ready customer-facing Packing Slip PDF.
+    Contains distributor legal header, ship-to address, quantities shipped, and zero prices.
+    """
+    pdf_bytes = export_service.generate_packing_slip(sales_order_id=id)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="packing-slip-{id}.pdf"'},
+    )
+
+
+@router.get(
+    "/{id}/pick-list.pdf",
+    status_code=status.HTTP_200_OK,
+    summary="Generate staff-facing Warehouse Pick List PDF",
+)
+def get_pick_list_pdf(
+    id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    export_service: ExportService = Depends(get_export_service),
+) -> Response:
+    """
+    Generate and stream staff-facing Warehouse Pick List PDF.
+    Contains large print checklist format, warehouse location grouping, and zero pricing info.
+    """
+    pdf_bytes = export_service.generate_pick_list(sales_order_id=id)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="pick-list-{id}.pdf"'},
+    )
+
 
