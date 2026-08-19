@@ -14,6 +14,7 @@ import {
   setPersistence,
   type Auth,
 } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDummyKeyForBuildPrerender0000",
@@ -30,6 +31,9 @@ export const firebaseApp: FirebaseApp =
 
 // Initialize Auth
 export const auth: Auth = getAuth(firebaseApp);
+
+// Initialize Firestore
+export const db: Firestore = getFirestore(firebaseApp);
 
 if (typeof window !== "undefined") {
   setPersistence(auth, browserLocalPersistence).catch(() => {

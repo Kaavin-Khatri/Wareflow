@@ -3133,6 +3133,32 @@
 - `codebase_audit.md`
 - `memory.md`
 
+## Step 13.1 — Notification Engine (Strategy Pattern: channels)
+**Timestamp:** 2026-08-19T07:40:00Z
+**Status:** COMPLETE
+
+### What was done
+- Created `NotificationPayload` and `BaseNotificationChannel` strategy interface defining `send(payload) -> bool`.
+- Implemented `InAppChannel` writing to both PostgreSQL `notifications` table (system of record) and Firestore `notifications/{uid}/items/{id}` path (realtime mirror).
+- Implemented `EmailChannel` integrating Resend API for transactional HTML alert emails with development simulation logging fallback.
+- Upgraded `NotificationService` to fan out notifications across requested channels (`notify(user_id, type, title, body, channels=[...])`) with delivery status tracking and dynamic channel registration (`register_channel`), preserving full backward compatibility.
+- Updated `NotificationRepositoryInterface`, `NotificationRepository` (SQLAlchemy), and `InMemoryNotificationRepository` to support `list_for_user_paginated`, `count_unread`, `mark_as_read`, and `mark_all_as_read`.
+- Created FastAPI endpoints `GET /notifications`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all` with Pydantic request/response schemas.
+- Enhanced web `Topbar` component with live unread badge, dropdown list, mark-all-read action, real-time Firestore `onSnapshot` listener, and in-app floating toast alerts.
+- Added comprehensive backend Pytest tests (channel fanout, OCP extensibility with `StubSmsChannel`, Firestore realtime mirror, unread counts, HTTP endpoints) and frontend Vitest tests.
+
+### Decisions
+- Channel pattern recorded as a reference OCP example: adding new channels (e.g. `SmsChannel`, `WhatsAppChannel`) requires zero changes to `NotificationService`.
+- Firestore used narrowly for realtime notification delivery only (`notifications/{uid}/items/{id}`) — Postgres stays the system of record for everything, including notification history and pagination.
+
+### Key values for future steps
+- Notification Service: `NotificationService` (`apps/api/app/services/notification_service.py`)
+- InApp Channel: `InAppChannel` (`apps/api/app/services/notification_channels/in_app_channel.py`)
+- Email Channel: `EmailChannel` (`apps/api/app/services/notification_channels/email_channel.py`)
+- Notifications API: `GET /notifications`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`
+- Realtime Firestore Path: `notifications/{uid}/items/{id}`
+
+
 
 
 

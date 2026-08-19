@@ -22,6 +22,7 @@ from app.api.routers import (
     inquiries,
     invoices,
     me,
+    notifications,
     portal,
     products,
     profiles,
@@ -79,6 +80,7 @@ def create_app() -> FastAPI:
     application.include_router(sales_returns.router)
     application.include_router(portal.router)
     application.include_router(inquiries.router)
+    application.include_router(notifications.router)
 
     application.include_router(suppliers.router)
     application.include_router(purchase_orders.router)

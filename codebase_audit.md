@@ -50,7 +50,7 @@
 | Service  | Role                              | Project/ID           | Region                 | Tier            | Connection Mode                                                                                 |
 | -------- | --------------------------------- | -------------------- | ---------------------- | --------------- | ----------------------------------------------------------------------------------------------- |
 | Supabase | Postgres DB (system of record)    | yappumzftktliybmztgg | Seoul (ap-northeast-2) | Free (t3a.nano) | **Split**: Port 6543 (transaction pooler) at runtime, Port 5432 (session pooler) for migrations |
-| Firebase | Auth (Google/Apple/Email)         | wareflow-d17a4       | —                      | Free (Spark)    | Client SDK + Server Admin SDK                                                                   |
+| Firebase | Auth + Firestore (realtime push only) | wareflow-d17a4       | —                      | Free (Spark)    | Client SDK + Server Admin SDK                                                                   |
 | Resend   | Email alerts (low-stock, reorder) | —                    | —                      | Free (3k/mo)    | HTTPS API                                                                                       |
 | Groq     | LLM API (AI features)             | —                    | —                      | Free            | HTTPS API                                                                                       |
 | Vercel   | Frontend hosting (Next.js)        | pending              | —                      | Free (Hobby)    | —                                                                                               |
@@ -519,6 +519,9 @@ wareflow/
 | PATCH  | `/deliveries/{id}/status`              | Update delivery transit status & auto-advance SO    | Yes (`orders:create`)           |
 | GET    | `/sales-orders/{id}/packing-slip.pdf`  | Customer-facing delivery manifest PDF (zero prices) | Yes (`orders:view`)             |
 | GET    | `/sales-orders/{id}/pick-list.pdf`     | Warehouse staff checkbox pick list PDF (zero prices)| Yes (`orders:view`)             |
+| GET    | `/notifications`                       | List paginated notifications with unread count      | Yes (Authenticated User)        |
+| PATCH  | `/notifications/{id}/read`             | Mark single notification as read                    | Yes (Authenticated User)        |
+| PATCH  | `/notifications/read-all`              | Mark all unread notifications as read               | Yes (Authenticated User)        |
 
 ## Architecture Layers
 
@@ -663,6 +666,8 @@ wareflow/
 | Mandatory Delivery Failure Notes | Failing a delivery requires explanatory failure notes for warehouse operations and triggers an operational alert |
 | Staff Pick List Document Standard | `ExportService.generate_pick_list` renders large-print checkbox list grouped by warehouse location with SKU, name, qty, UoM, and bin location, strictly omitting all pricing info |
 | Customer Delivery Manifest Standard | `ExportService.generate_packing_slip` renders customer-facing A4 packing slip with distributor header (GSTIN, FSSAI), ship-to consignee, driver/vehicle details, and receiver sign-off block with zero pricing info |
+| Notification Channel Strategy (OCP) | `NotificationService` coordinates pluggable `BaseNotificationChannel` implementations (`InAppChannel`, `EmailChannel`, `SmsChannel`), allowing new delivery channels with zero modifications to calling code |
+| Narrow-Scope Firestore Realtime Mirror | Firestore is used narrowly for realtime notification delivery only (`notifications/{uid}/items/{id}`) with `onSnapshot` in Topbar bell, while Postgres stays the system of record for everything, including history & pagination |
 
 ## Security & Audit Log Coverage
 

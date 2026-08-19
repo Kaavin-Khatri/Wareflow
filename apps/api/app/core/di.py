@@ -39,6 +39,10 @@ from app.repositories.impl.payment_repository import (
     InMemoryPaymentRepository,
     SqlAlchemyPaymentRepository,
 )
+from app.repositories.impl.notification_repository import (
+    InMemoryNotificationRepository,
+    NotificationRepository,
+)
 from app.repositories.impl.product_repository import (
     InMemoryProductRepository,
     SqlAlchemyProductRepository,
@@ -140,6 +144,8 @@ from app.services.export_service import ExportService
 from app.services.inquiry_service import InquiryService
 from app.services.invoice_service import InvoiceService
 from app.services.ledger_service import LedgerService
+from app.services.notification_channels.email_channel import EmailChannel
+from app.services.notification_channels.in_app_channel import InAppChannel
 from app.services.notification_service import NotificationService
 from app.services.payment_service import PaymentService
 from app.services.portal_auth_service import PortalAuthService
@@ -785,6 +791,35 @@ def get_export_service(
         delivery_repo=delivery_repo,
         stock_repo=stock_repo,
     )
+
+
+@lru_cache
+def get_in_memory_notification_repository() -> NotificationRepositoryInterface:
+    """Factory for in-memory NotificationRepository."""
+    return InMemoryNotificationRepository()
+
+
+def get_notification_repository(
+    db: Session = Depends(get_db_session),
+) -> NotificationRepositoryInterface:
+    """Factory for database-backed NotificationRepository."""
+    return NotificationRepository(session=db)
+
+
+def get_notification_service(
+    notif_repo: NotificationRepositoryInterface = Depends(get_notification_repository),
+    retailer_user_repo: RetailerUserRepository = Depends(get_retailer_user_repository),
+) -> NotificationService:
+    """Factory for NotificationService with Strategy Pattern channels."""
+    settings = get_settings()
+    in_app_ch = InAppChannel(notification_repo=notif_repo)
+    email_ch = EmailChannel(api_key=settings.resend_api_key)
+    return NotificationService(
+        notification_repo=notif_repo,
+        channels=[in_app_ch, email_ch],
+        retailer_user_repo=retailer_user_repo,
+    )
+
 
 
 
