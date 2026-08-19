@@ -187,6 +187,14 @@ from app.services.stock_analytics_service import StockAnalyticsService
 from app.services.stock_service import StockService
 from app.services.stock_subscription_service import StockSubscriptionService
 from app.services.storage_service import StorageServiceInterface, SupabaseStorageService
+from app.repositories.impl.supplier_access_token_repository import (
+    InMemorySupplierAccessTokenRepository,
+    SqlAlchemySupplierAccessTokenRepository,
+)
+from app.repositories.interfaces.supplier_access_token_repository import (
+    SupplierAccessTokenRepositoryInterface,
+)
+from app.services.supplier_portal_service import SupplierPortalService
 from app.services.supplier_service import SupplierService
 from app.services.transfer_service import TransferService
 from app.services.two_factor_service import TwoFactorService
@@ -398,21 +406,17 @@ def get_db_purchase_order_repository(
     return SqlAlchemyPurchaseOrderRepository(session=db)
 
 
-def get_purchase_order_service(
-    po_repo: PurchaseOrderRepositoryInterface = Depends(get_db_purchase_order_repository),
-    supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
-    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
-    stock_service: StockService = Depends(get_stock_service),
-    audit_service: AuditService = Depends(get_audit_service),
-) -> PurchaseOrderService:
-    """Factory for PurchaseOrderService with DIP dependencies."""
-    return PurchaseOrderService(
-        po_repo=po_repo,
-        supplier_repo=supplier_repo,
-        product_repo=product_repo,
-        stock_service=stock_service,
-        audit_service=audit_service,
-    )
+@lru_cache
+def get_in_memory_supplier_access_token_repository() -> SupplierAccessTokenRepositoryInterface:
+    """Factory for in-memory SupplierAccessTokenRepository."""
+    return InMemorySupplierAccessTokenRepository()
+
+
+def get_supplier_access_token_repository(
+    db: Session = Depends(get_db_session),
+) -> SupplierAccessTokenRepositoryInterface:
+    """Factory for database-backed SupplierAccessTokenRepository."""
+    return SqlAlchemySupplierAccessTokenRepository(session=db)
 
 
 @lru_cache
@@ -840,6 +844,44 @@ def get_notification_service(
         notification_repo=notif_repo,
         channels=[in_app_ch, email_ch, whatsapp_ch],
         retailer_user_repo=retailer_user_repo,
+    )
+
+
+def get_supplier_portal_service(
+    token_repo: SupplierAccessTokenRepositoryInterface = Depends(get_supplier_access_token_repository),
+    po_repo: PurchaseOrderRepositoryInterface = Depends(get_db_purchase_order_repository),
+    profile_repo: ProfileRepository = Depends(get_profile_repository),
+    notif_service: NotificationService = Depends(get_notification_service),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> SupplierPortalService:
+    """Factory for SupplierPortalService with DIP dependencies."""
+    return SupplierPortalService(
+        token_repo=token_repo,
+        po_repo=po_repo,
+        profile_repo=profile_repo,
+        notification_service=notif_service,
+        audit_service=audit_service,
+    )
+
+
+def get_purchase_order_service(
+    po_repo: PurchaseOrderRepositoryInterface = Depends(get_db_purchase_order_repository),
+    supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    stock_service: StockService = Depends(get_stock_service),
+    audit_service: AuditService = Depends(get_audit_service),
+    supplier_portal_service: SupplierPortalService = Depends(get_supplier_portal_service),
+    token_repo: SupplierAccessTokenRepositoryInterface = Depends(get_supplier_access_token_repository),
+) -> PurchaseOrderService:
+    """Factory for PurchaseOrderService with DIP dependencies."""
+    return PurchaseOrderService(
+        po_repo=po_repo,
+        supplier_repo=supplier_repo,
+        product_repo=product_repo,
+        stock_service=stock_service,
+        audit_service=audit_service,
+        supplier_portal_service=supplier_portal_service,
+        token_repo=token_repo,
     )
 
 

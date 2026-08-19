@@ -35,6 +35,7 @@ from app.api.routers import (
     staff,
     stock,
     stock_analytics,
+    supplier_portal,
     suppliers,
     two_factor,
     uom,
@@ -98,6 +99,7 @@ def create_app() -> FastAPI:
     application.include_router(notifications.router)
 
     application.include_router(suppliers.router)
+    application.include_router(supplier_portal.router)
     application.include_router(purchase_orders.router)
     application.include_router(purchase_returns.router)
     application.include_router(business_settings.router)

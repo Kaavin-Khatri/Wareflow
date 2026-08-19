@@ -104,6 +104,7 @@ class PurchaseOrderResponse(BaseModel):
     total_amount: float
     items_count: int
     items: list[POItemResponse]
+    magic_link_token: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -6,6 +6,9 @@ from fastapi import HTTPException, status
 from app.models.supplier import POStatusEnum, PurchaseOrder, PurchaseOrderItem
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
 from app.repositories.interfaces.purchase_order_repository import PurchaseOrderRepositoryInterface
+from app.repositories.interfaces.supplier_access_token_repository import (
+    SupplierAccessTokenRepositoryInterface,
+)
 from app.repositories.interfaces.supplier_repository import SupplierRepositoryInterface
 from app.schemas.purchase_orders import (
     POCreateRequest,
@@ -46,12 +49,16 @@ class PurchaseOrderService:
         product_repo: ProductRepositoryInterface,
         stock_service: StockService,
         audit_service: AuditService | None = None,
+        supplier_portal_service: Any | None = None,
+        token_repo: SupplierAccessTokenRepositoryInterface | None = None,
     ) -> None:
         self.po_repo = po_repo
         self.supplier_repo = supplier_repo
         self.product_repo = product_repo
         self.stock_service = stock_service
         self.audit_service = audit_service
+        self.supplier_portal_service = supplier_portal_service
+        self.token_repo = token_repo
 
     def _to_item_response(self, item: PurchaseOrderItem) -> POItemResponse:
         """Transform PurchaseOrderItem ORM model into POItemResponse schema."""
@@ -84,6 +91,10 @@ class PurchaseOrderService:
         """Transform PurchaseOrder ORM model into PurchaseOrderResponse schema."""
         supplier_name = po.supplier.name if po.supplier else "Unknown Supplier"
         items_resp = [self._to_item_response(item) for item in (po.items or [])]
+        magic_token = None
+        if self.token_repo:
+            token_obj = self.token_repo.get_by_purchase_order_id(po.id)
+            magic_token = token_obj.token if token_obj else None
 
         return PurchaseOrderResponse(
             id=po.id,
@@ -91,11 +102,12 @@ class PurchaseOrderService:
             supplier_id=po.supplier_id,
             supplier_name=supplier_name,
             status=po.status,
-            order_date=po.order_date,
+            order_date=getattr(po, "order_date", None) or datetime.now(),
             expected_date=po.expected_date,
             total_amount=float(po.total_amount),
             items_count=len(items_resp),
             items=items_resp,
+            magic_link_token=magic_token,
             created_at=getattr(po, "created_at", None) or datetime.now(),
         )
 
@@ -301,6 +313,15 @@ class PurchaseOrderService:
             )
 
         updated = self.po_repo.update_status(po_id, POStatusEnum.ORDERED)
+
+        if self.supplier_portal_service and updated:
+            try:
+                self.supplier_portal_service.generate_access_token(
+                    supplier_id=updated.supplier_id,
+                    purchase_order_id=updated.id,
+                )
+            except Exception:
+                pass
 
         if self.audit_service and actor_id and updated:
             self.audit_service.log_action(

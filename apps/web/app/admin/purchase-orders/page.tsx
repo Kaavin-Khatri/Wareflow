@@ -58,6 +58,7 @@ export interface PurchaseOrderItemType {
   total_amount: number;
   items_count: number;
   items: POItem[];
+  magic_link_token?: string | null;
   created_at: string;
 }
 
@@ -244,6 +245,9 @@ export default function PurchaseOrdersPage() {
     const totalSpend = purchaseOrders.reduce((sum, po) => sum + (po.total_amount || 0), 0);
     const draftCount = purchaseOrders.filter((p) => p.status === "draft").length;
     const orderedCount = purchaseOrders.filter((p) => p.status === "ordered").length;
+    const readyForDispatchCount = purchaseOrders.filter(
+      (p) => p.status === "ready_for_dispatch",
+    ).length;
     const partiallyReceivedCount = purchaseOrders.filter(
       (p) => p.status === "partially_received",
     ).length;
@@ -254,6 +258,7 @@ export default function PurchaseOrdersPage() {
       totalSpend,
       draftCount,
       orderedCount,
+      readyForDispatchCount,
       partiallyReceivedCount,
       receivedCount,
     };
@@ -266,6 +271,14 @@ export default function PurchaseOrdersPage() {
         return <GlassBadge variant="neutral">Draft</GlassBadge>;
       case "ordered":
         return <GlassBadge variant="accent">Ordered</GlassBadge>;
+      case "ready_for_dispatch":
+        return (
+          <GlassBadge variant="accent" className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20">
+            <span className="flex items-center gap-1">
+              <Truck className="w-3 h-3 text-cyan-400 inline" /> Ready for Pickup
+            </span>
+          </GlassBadge>
+        );
       case "partially_received":
         return <GlassBadge variant="warning">Partially Received</GlassBadge>;
       case "received":
@@ -585,7 +598,9 @@ export default function PurchaseOrdersPage() {
             </GlassButton>
           )}
 
-          {(po.status === "ordered" || po.status === "partially_received") && (
+          {(po.status === "ordered" ||
+            po.status === "ready_for_dispatch" ||
+            po.status === "partially_received") && (
             <GlassButton
               variant="primary"
               size="sm"
@@ -722,6 +737,7 @@ export default function PurchaseOrdersPage() {
               { id: "all", label: "All Orders" },
               { id: "draft", label: "Draft" },
               { id: "ordered", label: "Ordered" },
+              { id: "ready_for_dispatch", label: "Ready for Pickup" },
               { id: "partially_received", label: "Partially Received" },
               { id: "received", label: "Received" },
             ].map((tab) => (
@@ -1170,6 +1186,33 @@ export default function PurchaseOrdersPage() {
                   ))}
                 </div>
               </div>
+
+              {activePO.magic_link_token && (
+                <div className="p-3.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-cyan-400 font-semibold text-xs">
+                      <Truck className="w-4 h-4" />
+                      Supplier Magic Link (Ready-for-Dispatch Portal)
+                    </div>
+                    <GlassButton
+                      size="sm"
+                      variant="outline"
+                      className="text-[11px] h-7 px-2 border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/20"
+                      onClick={() => {
+                        const url = `${window.location.origin}/supplier/po/${activePO.magic_link_token}`;
+                        navigator.clipboard.writeText(url);
+                        setSuccess("Supplier magic link copied to clipboard!");
+                        setTimeout(() => setSuccess(null), 3000);
+                      }}
+                    >
+                      Copy Link
+                    </GlassButton>
+                  </div>
+                  <p className="text-[11px] text-slate-300">
+                    Send this link to <span className="text-white font-medium">{activePO.supplier_name}</span> via WhatsApp/SMS so they can signal dispatch readiness without logging in.
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-center justify-between pt-3 border-t border-white/10">
                 {activePO.status !== "draft" && activePO.status !== "cancelled" ? (

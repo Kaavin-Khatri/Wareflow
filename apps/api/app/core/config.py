@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     debug: bool = False
     allow_first_signup: bool = True
     allowed_origins: list[str] | str = ["http://localhost:3000"]
+    frontend_url: str = "http://localhost:3000"
 
     # Supabase / Postgres
     database_url: str = ""

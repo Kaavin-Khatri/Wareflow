@@ -3257,11 +3257,52 @@
 - **Targeted Notification Channel Routing**: Subscriber's preference (`whatsapp`, `email`, `both`) is strictly respected during dispatch.
 - **Phone Call Quick-Action Support**: Internal staff can search and subscribe retailers directly from the product catalog table during incoming phone queries.
 
+---
+
+## Step 13.5 — Supplier Ready-for-Dispatch Signal → Owner Notification
+**Timestamp:** 2026-08-19T12:45:00Z
+**Status:** COMPLETE
+
+### What was done
+- **Supplier Access Token Repository**:
+  - Created `SupplierAccessTokenRepositoryInterface` (`apps/api/app/repositories/interfaces/supplier_access_token_repository.py`).
+  - Implemented `SqlAlchemySupplierAccessTokenRepository` and `InMemorySupplierAccessTokenRepository` (`apps/api/app/repositories/impl/supplier_access_token_repository.py`).
+- **Supplier Portal Schemas & Domain Service**:
+  - Created `apps/api/app/schemas/supplier_portal.py` (`SupplierPortalPOResponse`, `SupplierPortalPOItemResponse`, `ReadyForDispatchResponse`).
+  - Implemented `SupplierPortalService` (`apps/api/app/services/supplier_portal_service.py`) managing 30-day token generation, expiration checks (410 Gone), read-only PO projection, PO status transition to `ready_for_dispatch`, single-use token invalidation, and multi-channel notification dispatch.
+- **Purchase Order Service Integration**:
+  - Injected `SupplierPortalService` into `PurchaseOrderService` to auto-generate magic links upon PO transition to `ordered`.
+  - Added `magic_link_token` field to `PurchaseOrderResponse`.
+- **Public API Router**:
+  - Implemented unauthenticated endpoints in `apps/api/app/api/routers/supplier_portal.py`:
+    - `GET /supplier-portal/{token}`: Returns read-only PO summary and item breakdown.
+    - `POST /supplier-portal/{token}/ready-for-dispatch`: Signals consignment readiness, invalidates token, and alerts staff.
+  - Registered router in `apps/api/app/main.py` and DI container in `apps/api/app/core/di.py`.
+- **Config & Environment**:
+  - Added `frontend_url: str = "http://localhost:3000"` to `Settings` in `apps/api/app/core/config.py` and `FRONTEND_URL` in `apps/api/.env.example`.
+- **Frontend Pages & UI Enhancements**:
+  - Created public, mobile-first supplier portal page `apps/web/app/supplier/po/[token]/page.tsx` with glassmorphic cards, item breakdown, and "Mark Consignment Ready for Dispatch" action.
+  - Updated `apps/web/app/admin/purchase-orders/page.tsx`:
+    - Added `ready_for_dispatch` badge with `<Truck />` icon.
+    - Added "Ready for Pickup" status filter tab and updated KPI metrics.
+    - Enabled "Receive Goods" quick-action on `ready_for_dispatch` orders.
+    - Added copyable "Supplier Magic Link" banner inside PO details modal.
+- **Tests & Verification**:
+  - Added backend test suite `apps/api/tests/test_supplier_portal.py` (5 tests covering token generation, expiration, single-use invalidation, status transition, notifications, and public HTTP endpoints).
+  - Added frontend test suite `apps/web/lib/__tests__/supplier-portal-ui.test.tsx` (3 tests covering badge styling, magic link copy action, and ready for dispatch button).
+  - All 210 backend Pytest tests, 152 frontend Vitest tests, and Next.js build pass 100% green.
+
+### Decisions
+- **Zero-Login Supplier Flow**: Suppliers need no accounts or passwords; a secure 48-byte URL-safe cryptographic token provides scoped, single-purpose access.
+- **Single-Use Invalidation**: Once marked ready for dispatch, the token is permanently removed to prevent replay actions.
+- **Multi-Channel Notification Dispatch**: WhatsApp + Email notifications are dispatched to all active staff holding `inventory:manage` permissions (or Owner role) using the `wareflow_goods_ready` template.
+
 ### Key values for future steps
-- Stock Subscription Repo: `StockSubscriptionRepositoryInterface` (`apps/api/app/repositories/interfaces/stock_subscription_repository.py`)
-- Stock Subscription Service: `StockSubscriptionService` (`apps/api/app/services/stock_subscription_service.py`)
-- Restock Alert Rule: `RestockAlertRule` (`apps/api/app/services/alert_rules/restock_alert_rule.py`)
-- Endpoints: `POST/DELETE /products/{id}/subscribe`, `GET /products/{id}/subscribers`, `GET /retailers/{id}/subscriptions`, `GET /retailers/subscriptions/counts`
+- Token Repo: `SupplierAccessTokenRepositoryInterface` (`apps/api/app/repositories/interfaces/supplier_access_token_repository.py`)
+- Supplier Portal Service: `SupplierPortalService` (`apps/api/app/services/supplier_portal_service.py`)
+- Endpoints: `GET /supplier-portal/{token}`, `POST /supplier-portal/{token}/ready-for-dispatch`
+- Public Page: `/supplier/po/[token]` (`apps/web/app/supplier/po/[token]/page.tsx`)
+
 
 
 
