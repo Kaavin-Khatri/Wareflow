@@ -2,13 +2,15 @@
 
 from fastapi import APIRouter, Depends, Query, status
 
-from app.core.di import get_sales_order_service
+from app.core.di import get_delivery_service, get_sales_order_service
 from app.core.security import CurrentUser, get_current_user, require_permission
+from app.schemas.deliveries import DeliveryAssignRequest, DeliveryResponse
 from app.schemas.sales_orders import (
     SalesOrderCreateRequest,
     SalesOrderResponse,
     SalesOrderStatusUpdateRequest,
 )
+from app.services.delivery_service import DeliveryService
 from app.services.sales_order_service import SalesOrderService
 
 router = APIRouter(prefix="/sales-orders", tags=["Sales Orders"])
@@ -111,3 +113,35 @@ def update_sales_order_status(
     Cancelling a confirmed order automatically restores deducted stock batches via compensating adjustment movements.
     """
     return service.update_status(order_id=id, payload=payload, current_user=current_user)
+
+
+@router.post(
+    "/{id}/delivery",
+    response_model=DeliveryResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Assign driver and vehicle delivery to packed sales order",
+)
+def assign_order_delivery(
+    id: str,
+    payload: DeliveryAssignRequest,
+    current_user: CurrentUser = Depends(require_permission("inventory:manage")),
+    delivery_service: DeliveryService = Depends(get_delivery_service),
+) -> DeliveryResponse:
+    """Assign a driver and vehicle to a packed sales order, advancing order status to shipped."""
+    return delivery_service.assign_delivery(sales_order_id=id, payload=payload, current_user=current_user)
+
+
+@router.get(
+    "/{id}/delivery",
+    response_model=DeliveryResponse | None,
+    status_code=status.HTTP_200_OK,
+    summary="Get delivery details for a sales order",
+)
+def get_order_delivery(
+    id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    delivery_service: DeliveryService = Depends(get_delivery_service),
+) -> DeliveryResponse | None:
+    """Retrieve the delivery status and dispatch information for a sales order."""
+    return delivery_service.get_delivery_by_order(sales_order_id=id)
+

@@ -102,6 +102,15 @@ export default function SalesOrdersAdminPage() {
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
+  const [selectedOrderDelivery, setSelectedOrderDelivery] = useState<{
+    id: string;
+    driver_name?: string | null;
+    vehicle_no?: string | null;
+    status: string;
+    notes?: string | null;
+    dispatched_at?: string | null;
+    delivered_at?: string | null;
+  } | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -319,8 +328,30 @@ export default function SalesOrdersAdminPage() {
     }
   }
 
-
-
+  async function handleOpenDetail(order: SalesOrder) {
+    setSelectedOrder(order);
+    setActionError(null);
+    setSelectedOrderDelivery(null);
+    setIsDetailModalOpen(true);
+    try {
+      const delivery = await apiClient.get<{
+        id: string;
+        status: string;
+        driver_name?: string | null;
+        vehicle_no?: string | null;
+        notes?: string | null;
+        dispatched_at?: string | null;
+        delivered_at?: string | null;
+      } | null>(`/sales-orders/${order.id}/delivery`);
+      if (delivery && delivery.id && delivery.status) {
+        setSelectedOrderDelivery(delivery);
+      } else {
+        setSelectedOrderDelivery(null);
+      }
+    } catch {
+      setSelectedOrderDelivery(null);
+    }
+  }
 
   const columns: DataTableColumn<SalesOrder>[] = [
     {
@@ -449,11 +480,7 @@ export default function SalesOrdersAdminPage() {
         <GlassButton
           variant="ghost"
           size="sm"
-          onClick={() => {
-            setSelectedOrder(order);
-            setActionError(null);
-            setIsDetailModalOpen(true);
-          }}
+          onClick={() => handleOpenDetail(order)}
           className="text-xs"
         >
           <Eye className="w-3.5 h-3.5 mr-1" /> Details
@@ -869,6 +896,46 @@ export default function SalesOrdersAdminPage() {
                   </span>
                 </div>
               </div>
+
+              {/* Delivery Dispatch Info Banner (if assigned) */}
+              {selectedOrderDelivery && selectedOrderDelivery.status && (
+                <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-xs space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Truck className="w-4 h-4 text-indigo-400" />
+                      <span className="font-semibold text-white">Delivery Dispatch Status</span>
+                    </div>
+                    <GlassBadge
+                      variant={
+                        selectedOrderDelivery.status === "delivered"
+                          ? "success"
+                          : selectedOrderDelivery.status === "out_for_delivery"
+                          ? "warning"
+                          : selectedOrderDelivery.status === "failed"
+                          ? "error"
+                          : "accent"
+                      }
+                    >
+                      {String(selectedOrderDelivery.status).replace(/_/g, " ").toUpperCase()}
+                    </GlassBadge>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-slate-300 font-mono">
+                    <div>Driver: <span className="text-white">{selectedOrderDelivery.driver_name || "—"}</span></div>
+                    <div>Vehicle: <span className="text-white">{selectedOrderDelivery.vehicle_no || "—"}</span></div>
+                    {selectedOrderDelivery.dispatched_at && (
+                      <div>Dispatched: <span className="text-white">{new Date(selectedOrderDelivery.dispatched_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
+                    )}
+                    {selectedOrderDelivery.delivered_at && (
+                      <div>Delivered: <span className="text-white">{new Date(selectedOrderDelivery.delivered_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
+                    )}
+                  </div>
+                  {selectedOrderDelivery.notes && (
+                    <p className={`text-[11px] p-2 rounded-lg ${selectedOrderDelivery.status === "failed" ? "bg-rose-500/10 text-rose-300 border border-rose-500/20" : "bg-black/20 text-slate-300"}`}>
+                      {selectedOrderDelivery.notes}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Line Items Table */}
               <div className="space-y-2">

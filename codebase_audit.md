@@ -511,6 +511,11 @@ wareflow/
 | GET    | `/portal/inquiries`                    | List inquiries strictly scoped to caller retailer   | Yes (Retailer Portal Only)      |
 | GET    | `/inquiries`                           | List all product inquiries with status/product filter| Yes (Staff Only)                |
 | PATCH  | `/inquiries/{id}/respond`              | Respond to inquiry & dispatch notification to buyer | Yes (Staff Only)                |
+| POST   | `/sales-orders/{id}/delivery`          | Assign driver & vehicle to packed sales order       | Yes (`orders:create`)           |
+| GET    | `/sales-orders/{id}/delivery`          | Get delivery dispatch record for sales order        | Yes (`orders:view`)             |
+| GET    | `/deliveries`                          | List dispatch records with status/driver filters    | Yes (`orders:view`)             |
+| GET    | `/deliveries/{id}`                     | Get delivery detail with buyer & address context    | Yes (`orders:view`)             |
+| PATCH  | `/deliveries/{id}/status`              | Update delivery transit status & auto-advance SO    | Yes (`orders:create`)           |
 
 
 
@@ -652,6 +657,9 @@ wareflow/
 | Server-Side User Provisioning | Firebase Admin SDK creates users server-side only; service keys are never exposed to client bundles |
 | Zero-Duplicated Portal Orders | `PortalAuthService.place_retailer_order` reuses `SalesOrderService` domain logic verbatim (OCP/DIP proof for external portal) |
 | Read-Only Portal Accounting | Invoices and ledger views in self-service portal are strictly read-only; payment recording remains staff-only |
+| Delivery Status Order Sync | `DeliveryService` auto-advances parent sales order to `DELIVERED` when delivery is marked `delivered`; keeps order at `SHIPPED` if `failed` |
+| Delivery Assignment Guard | `DeliveryService.assign_delivery` requires sales order status `PACKED` (or `SHIPPED`), advancing it to `SHIPPED` upon driver assignment |
+| Mandatory Delivery Failure Notes | Failing a delivery requires explanatory failure notes for warehouse operations and triggers an operational alert |
 
 ## Security & Audit Log Coverage
 

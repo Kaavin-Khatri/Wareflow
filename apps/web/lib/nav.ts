@@ -144,6 +144,12 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         icon: "HelpCircle",
         requiredPermission: "inventory:view",
       },
+      {
+        name: "Delivery & Logistics",
+        href: "/admin/deliveries",
+        icon: "Truck",
+        requiredPermission: "inventory:view",
+      },
     ],
   },
   {

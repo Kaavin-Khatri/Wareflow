@@ -142,6 +142,14 @@ from app.services.ledger_service import LedgerService
 from app.services.notification_service import NotificationService
 from app.services.payment_service import PaymentService
 from app.services.portal_auth_service import PortalAuthService
+from app.repositories.impl.delivery_repository import (
+    InMemoryDeliveryRepository,
+    SqlAlchemyDeliveryRepository,
+)
+from app.repositories.interfaces.delivery_repository import (
+    DeliveryRepositoryInterface,
+)
+from app.services.delivery_service import DeliveryService
 from app.services.pricing_strategy import PricingEngineService
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
@@ -733,5 +741,34 @@ def get_inquiry_service(
         product_repo=product_repo,
         notification_service=notif_service,
     )
+
+
+@lru_cache
+def get_in_memory_delivery_repository() -> DeliveryRepositoryInterface:
+    """Factory for in-memory DeliveryRepository."""
+    return InMemoryDeliveryRepository()
+
+
+def get_delivery_repository(
+    db: Session = Depends(get_db_session),
+) -> DeliveryRepositoryInterface:
+    """Factory for database-backed DeliveryRepository."""
+    return SqlAlchemyDeliveryRepository(session=db)
+
+
+def get_delivery_service(
+    delivery_repo: DeliveryRepositoryInterface = Depends(get_delivery_repository),
+    so_repo: SalesOrderRepositoryInterface = Depends(get_sales_order_repository),
+    audit_service: AuditService = Depends(get_audit_service),
+    notif_service: NotificationService = Depends(get_notification_service),
+) -> DeliveryService:
+    """Factory for DeliveryService with DIP dependencies."""
+    return DeliveryService(
+        delivery_repo=delivery_repo,
+        sales_order_repo=so_repo,
+        audit_service=audit_service,
+        notification_service=notif_service,
+    )
+
 
 

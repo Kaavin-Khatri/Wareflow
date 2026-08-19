@@ -17,6 +17,7 @@ from app.api.routers import (
     business_settings,
     categories,
     customers,
+    deliveries,
     health,
     inquiries,
     invoices,
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
     application.include_router(customers.router)
     application.include_router(sales_orders.router)
     application.include_router(invoices.router)
+    application.include_router(deliveries.router)
     application.include_router(sales_returns.router)
     application.include_router(portal.router)
     application.include_router(inquiries.router)

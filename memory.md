@@ -2992,8 +2992,81 @@
 - `apps/web/app/portal/catalog/page.tsx`
 - `apps/web/app/portal/orders/page.tsx`
 - `apps/web/lib/__tests__/portal-catalog.test.tsx`
+---
+
+## Step 12.1 — Delivery Assignment & Status Board
+
+**Timestamp:** 2026-08-19T12:40:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Delivery Data Model & Schema Definition (`apps/api`)**:
+   - Built `Delivery` model in `apps/api/app/models/delivery.py` with columns `id`, `sales_order_id`, `driver_name`, `vehicle_no`, `status` (`DeliveryStatusEnum`: `assigned`, `out_for_delivery`, `delivered`, `failed`), `dispatched_at`, `delivered_at`, `notes`, and `created_at`, plus bidirectional relationship with `SalesOrder`.
+   - Defined Pydantic schemas in `apps/api/app/schemas/deliveries.py` (`DeliveryAssignRequest`, `DeliveryStatusUpdateRequest`, `DeliveryResponse`).
+2. **Repository Architecture (`apps/api`)**:
+   - Created `DeliveryRepositoryInterface` protocol in `apps/api/app/repositories/interfaces/delivery_repository.py`.
+   - Implemented `SqlAlchemyDeliveryRepository` (with `joinedload` on `sales_order.retailer` and `sales_order.customer`) and `InMemoryDeliveryRepository` in `apps/api/app/repositories/impl/delivery_repository.py`.
+   - Registered providers in `apps/api/app/core/di.py`.
+3. **Delivery Domain Service (`apps/api/app/services/delivery_service.py`)**:
+   - `assign_delivery`: Verifies sales order status is `PACKED` (or `SHIPPED`), creates/updates delivery record with driver and vehicle in `ASSIGNED` status, advances order to `SHIPPED`, and writes audit log.
+   - `update_delivery_status`: Supports state transitions:
+     - `out_for_delivery`: Sets `dispatched_at = now()`.
+     - `delivered`: Sets `delivered_at = now()` and automatically updates parent `sales_order.status = DELIVERED`.
+     - `failed`: Strictly requires a non-empty `notes` field explaining why; keeps the sales order at `SHIPPED` without completing it and triggers an alert.
+   - `get_delivery`, `get_delivery_by_order`, `list_deliveries` (supporting status/date filters and driver isolation).
+4. **FastAPI Endpoints (`apps/api`)**:
+   - `POST /sales-orders/{id}/delivery` & `GET /sales-orders/{id}/delivery` in `apps/api/app/api/routers/sales_orders.py`.
+   - `GET /deliveries`, `GET /deliveries/{id}`, and `PATCH /deliveries/{id}/status` in `apps/api/app/api/routers/deliveries.py`.
+   - Included `deliveries.router` in `apps/api/app/main.py`.
+5. **Frontend Delivery Kanban Board & Integration (`apps/web`)**:
+   - Built `/admin/deliveries/page.tsx` with 4 status columns (`Assigned`, `Out for Delivery`, `Delivered`, `Exceptions / Failed`), KPI summary cards (Assigned, In Transit, Delivered, Exceptions), search and driver filter, status transition buttons ("Start Delivery", "Delivered", "Failed", "Reschedule"), and "Assign Delivery" modal with packed sales order selector.
+   - Added inline delivery tracking banner and direct board navigation to the sales order details modal in `apps/web/app/admin/sales-orders/page.tsx`.
+   - Added "Delivery & Logistics" navigation link to `apps/web/lib/nav.ts` under Wholesale Operations.
+6. **Testing & QA Verification**:
+   - Backend `apps/api/tests/test_deliveries.py`: 6 tests validating 422 block on assigning non-packed orders, auto-advance to `shipped` on assign, dispatch timestamp recording, auto-advance to `delivered` on delivery completion, mandatory failure notes with order preserved at `shipped`, and full HTTP router integration.
+   - Frontend `apps/web/lib/__tests__/deliveries.test.tsx`: 6 Vitest tests validating Kanban column rendering, KPI metric cards, card search filtering, status progression actions, failure notes validation, and assign delivery modal submission.
+   - Full test suites: **177 / 177 Pytest tests passing (100% green)**; **141 / 141 Vitest tests passing across 32 test suites (100% green)**.
+   - **0 ESLint errors/warnings**; Next.js production build compiled cleanly across 42 routes.
+
+### Decisions
+
+- **Delivery-Status-Drives-Order-Status Rule**:
+  - Marking a delivery `delivered` automatically advances the parent `sales_order.status` to `delivered` in a single atomic transaction.
+- **Strict Failure Handling & Preservation of Shipped State**:
+  - Failing a delivery requires explanatory notes and keeps the sales order at status `shipped` (never falsely marked complete) while notifying operations for rescheduling.
+- **Dispatch Guard**:
+  - Only sales orders in `PACKED` (or already `SHIPPED`) status can be assigned for delivery; draft or confirmed orders are blocked with 422.
+
+### Key values for future steps
+
+- Delivery Assign API: `POST /sales-orders/{id}/delivery`
+- Delivery Status Update API: `PATCH /deliveries/{id}/status`
+- Deliveries List API: `GET /deliveries`
+- Delivery Detail API: `GET /deliveries/{id}`
+- Delivery Board Route: `/admin/deliveries`
+
+### Files Created
+
+- `apps/api/app/schemas/deliveries.py`
+- `apps/api/app/repositories/interfaces/delivery_repository.py`
+- `apps/api/app/repositories/impl/delivery_repository.py`
+- `apps/api/app/services/delivery_service.py`
+- `apps/api/app/api/routers/deliveries.py`
+- `apps/api/tests/test_deliveries.py`
+- `apps/web/app/admin/deliveries/page.tsx`
+- `apps/web/lib/__tests__/deliveries.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/core/di.py`
+- `apps/api/app/api/routers/sales_orders.py`
+- `apps/api/app/main.py`
+- `apps/web/app/admin/sales-orders/page.tsx`
+- `apps/web/lib/nav.ts`
 - `codebase_audit.md`
 - `memory.md`
+
 
 
 
