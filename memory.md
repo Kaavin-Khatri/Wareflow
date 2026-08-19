@@ -3158,6 +3158,39 @@
 - Notifications API: `GET /notifications`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`
 - Realtime Firestore Path: `notifications/{uid}/items/{id}`
 
+---
+
+## Step 13.2 — Low-Stock, Reorder-Point, Expiring-Batch & Overdue-Invoice Alerts
+**Timestamp:** 2026-08-19T07:55:00Z
+**Status:** COMPLETE
+
+### What was done
+- Created `BaseAlertRule` interface (`apps/api/app/services/alert_rules/base.py`) with `rule_name`, `evaluate(context)`, and `evaluate_entity(entity_id, context)` methods.
+- Implemented 4 concrete alert rule strategies adhering strictly to OCP & SRP:
+  - `LowStockRule`: Flags products where aggregate on-hand stock <= `reorder_point`, calculates suggested replenishment quantity (`reorder_qty` or 2x reorder point), and links to `/admin/purchase-orders`.
+  - `CriticalStockRule`: Triggers urgent alerts for stockouts (`0` balance) or critical depletion (<= 25% of `reorder_point`), blocking fulfillment.
+  - `ExpiringBatchRule`: Identifies stock batches with positive remaining quantity expiring in <= 30 days, providing quarantine / markdown recommendations and linking to `/admin/stock/ledger`.
+  - `OverdueInvoiceRule`: Detects unpaid or partially paid invoices with `due_date < today` (or defaulting to invoice date + credit term), computes days overdue and total balance due, linking to `/admin/retailers/{id}/ledger`.
+- Added `AlertLog` table and `AlertLogRepositoryInterface` (`apps/api/app/repositories/interfaces/alert_log_repository.py`) with SQLAlchemy and InMemory implementations to enforce a strict 24-hour deduplication guard (`has_recent_alert`), preventing alert spam across repetitive evaluation sweeps.
+- Upgraded `AlertEngineService` (`apps/api/app/services/alert_engine_service.py`) to orchestrate operational rules and FSSAI regulatory compliance (`ExpiringLicenseRule`), dispatching alerts through `NotificationService` across in-app and email channels.
+- Integrated `AlertScheduler` (`apps/api/app/core/alert_scheduler.py`) using APScheduler `BackgroundScheduler` running periodic scans (default 30 min) managed via FastAPI `lifespan` in `apps/api/app/main.py`.
+- Added fast inline alert triggers in `SalesOrderService.confirm_order` and `StockService.adjust_stock` so inventory deductions immediately evaluate affected product thresholds within seconds without waiting for background scheduler ticks.
+- Created comprehensive test suite in `apps/api/tests/test_alert_rules.py` testing each rule strategy, 24-hour deduplication suppression, sales order confirmation inline triggers, and scheduler lifecycle.
+- All 193 backend Pytest tests, 146 frontend Vitest tests, and Next.js production build passing 100% green.
+
+### Decisions
+- Strategy Pattern for Alert Rules (OCP): New alerts (e.g. supplier fulfillment delays, price spike anomalies) can be added as standalone classes extending `BaseAlertRule` with zero changes to `AlertEngineService`.
+- 24-Hour Deduplication Window: Repeated evaluation cycles within 24 hours check `alert_logs` table before sending notifications to avoid notification fatigue.
+- Hybrid Trigger Architecture: 30-minute periodic APScheduler scan acts as a safety net, while event hooks on stock and sales order operations fire alerts instantly.
+
+### Key values for future steps
+- Alert Engine: `AlertEngineService` (`apps/api/app/services/alert_engine_service.py`)
+- Alert Rules: `apps/api/app/services/alert_rules/`
+- Alert Scheduler: `AlertScheduler` (`apps/api/app/core/alert_scheduler.py`)
+- Alert Logs: `AlertLog` (`apps/api/app/models/notification.py`), `AlertLogRepository` (`apps/api/app/repositories/impl/alert_log_repository.py`)
+- Endpoints: `POST /alerts/evaluate`, `GET /alerts/compliance`
+
+
 
 
 

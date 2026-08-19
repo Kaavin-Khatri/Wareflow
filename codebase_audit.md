@@ -43,6 +43,7 @@
 | 2FA (TOTP & QR)    | pyotp + qrcode            | >=2.9.0   |
 | Encryption         | cryptography              | >=42.0.0  |
 | PDF Engine (api)   | ReportLab (platypus)      | >=4.0.0   |
+| Background Worker  | APScheduler               | >=3.10.0,<4.0.0 |
 | Test Runner (api)  | Pytest + pytest-cov       | >=8.0.0   |
 
 ## Services
@@ -668,6 +669,9 @@ wareflow/
 | Customer Delivery Manifest Standard | `ExportService.generate_packing_slip` renders customer-facing A4 packing slip with distributor header (GSTIN, FSSAI), ship-to consignee, driver/vehicle details, and receiver sign-off block with zero pricing info |
 | Notification Channel Strategy (OCP) | `NotificationService` coordinates pluggable `BaseNotificationChannel` implementations (`InAppChannel`, `EmailChannel`, `SmsChannel`), allowing new delivery channels with zero modifications to calling code |
 | Narrow-Scope Firestore Realtime Mirror | Firestore is used narrowly for realtime notification delivery only (`notifications/{uid}/items/{id}`) with `onSnapshot` in Topbar bell, while Postgres stays the system of record for everything, including history & pagination |
+| Smart Alert Rule Engine (OCP) | `BaseAlertRule` strategy implementations (`LowStockRule`, `CriticalStockRule`, `ExpiringBatchRule`, `OverdueInvoiceRule`) can be added independently without modifying `AlertEngineService` |
+| 24-Hour Alert Deduplication Guard | `AlertLog` table and `AlertLogRepository.has_recent_alert` suppress repeated notifications for identical rule/entity combinations within a 24-hour window |
+| Hybrid Periodic & Inline Alert Triggers | APScheduler executes background rule sweeps on a 30-minute timer, while inline hooks on `confirm_order` and `adjust_stock` trigger immediate evaluations within seconds |
 
 ## Security & Audit Log Coverage
 
@@ -708,5 +712,7 @@ wareflow/
 
 - **Forward-Built Pre-Phase 6 Purchasing Spend Charts**: Spend-over-time, supplier spend, and category spend charts are intentionally forward-built to complete the Stock Analytics UI, but stay at zero / display empty states until Phase 6 (Purchase Orders & Receiving) produces real purchase order receipt transactions. This is expected and documented.
 - **Supabase Free Project Inactivity Pause**: Supabase free-tier projects automatically pause after ~1 week of inactivity. If API endpoints return connection errors after an idle period, unpause the project from the Supabase dashboard.
+- **In-Process APScheduler Lifetime**: The background alert scheduler runs in-process inside the FastAPI application lifespan. While ideal for single-instance free-tier deployments, multi-worker deployments (e.g. Gunicorn with >1 worker) would execute duplicate timer ticks unless bounded by `AlertLog` deduplication or migrated to an external Redis-backed Celery worker.
+
 
 

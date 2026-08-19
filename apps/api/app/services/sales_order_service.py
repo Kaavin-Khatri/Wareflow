@@ -45,6 +45,7 @@ class SalesOrderService:
         customer_repo: CustomerRepositoryInterface | None = None,
         uom_service: UomService | None = None,
         audit_service: AuditService | None = None,
+        alert_engine: Any = None,
     ):
         self.so_repo = so_repo
         self.retailer_repo = retailer_repo
@@ -54,6 +55,7 @@ class SalesOrderService:
         self.customer_repo = customer_repo
         self.uom_service = uom_service
         self.audit_service = audit_service
+        self.alert_engine = alert_engine
 
     def create_order(
         self, payload: SalesOrderCreateRequest, current_user: Any = None
@@ -112,6 +114,15 @@ class SalesOrderService:
             after=self._so_to_dict(saved),
             current_user=current_user,
         )
+
+        # Inline smart alert trigger for all affected products
+        if self.alert_engine:
+            for item in order.items:
+                try:
+                    self.alert_engine.evaluate_product_stock_inline(item.product_id)
+                except Exception:
+                    pass
+
         return self._to_response(saved)
 
     def update_status(

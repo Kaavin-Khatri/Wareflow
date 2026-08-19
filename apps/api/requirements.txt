@@ -28,5 +28,8 @@ groq>=0.9.0,<1.0.0
 # PDF Generation
 reportlab>=4.0.0,<6.0.0
 
+# Scheduling & Background Tasks
+apscheduler>=3.10.0,<4.0.0
+
 # Environment
 python-dotenv>=1.0.0,<2.0.0

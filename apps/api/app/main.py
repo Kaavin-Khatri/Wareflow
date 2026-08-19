@@ -39,7 +39,21 @@ from app.api.routers import (
     two_factor,
     uom,
 )
+from contextlib import asynccontextmanager
+
 from app.core.config import get_settings
+from app.core.di import get_alert_scheduler
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application startup & shutdown hooks (APScheduler background worker)."""
+    scheduler = get_alert_scheduler()
+    scheduler.start()
+    try:
+        yield
+    finally:
+        scheduler.shutdown()
 
 
 def create_app() -> FastAPI:
@@ -50,6 +64,7 @@ def create_app() -> FastAPI:
         title=settings.app_name,
         version="0.1.0",
         description="AI-assisted wholesale inventory management API",
+        lifespan=lifespan,
     )
 
     application.add_middleware(

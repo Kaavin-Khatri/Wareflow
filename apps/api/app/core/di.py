@@ -14,6 +14,10 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
 from app.db.session import get_db_session
+from app.repositories.impl.alert_log_repository import (
+    InMemoryAlertLogRepository,
+    SQLAlchemyAlertLogRepository,
+)
 from app.repositories.impl.audit_repository import SqlAlchemyAuditRepository
 from app.repositories.impl.business_settings_repository import (
     InMemoryBusinessSettingsRepository,
@@ -92,6 +96,9 @@ from app.repositories.impl.transfer_repository import (
 from app.repositories.impl.uom_repository import (
     SqlAlchemyUomRepository,
 )
+from app.repositories.interfaces.alert_log_repository import (
+    AlertLogRepositoryInterface,
+)
 from app.repositories.interfaces.audit_repository import AuditRepository
 from app.repositories.interfaces.business_settings_repository import (
     BusinessSettingsRepositoryInterface,
@@ -135,7 +142,8 @@ from app.repositories.interfaces.stock_repository import StockRepositoryInterfac
 from app.repositories.interfaces.supplier_repository import SupplierRepositoryInterface
 from app.repositories.interfaces.transfer_repository import TransferRepositoryInterface
 from app.repositories.interfaces.uom_repository import UomRepositoryInterface
-from app.services.alert_engine_service import AlertEngineService, ExpiringLicenseRule
+from app.core.alert_scheduler import AlertScheduler
+from app.services.alert_engine_service import AlertEngineService
 from app.services.audit_service import AuditService
 from app.services.business_settings_service import BusinessSettingsService
 from app.services.customer_service import CustomerService
@@ -819,6 +827,90 @@ def get_notification_service(
         channels=[in_app_ch, email_ch],
         retailer_user_repo=retailer_user_repo,
     )
+
+
+@lru_cache
+def get_in_memory_alert_log_repository() -> AlertLogRepositoryInterface:
+    """Factory for in-memory AlertLogRepository."""
+    return InMemoryAlertLogRepository()
+
+
+def get_alert_log_repository(
+    db: Session = Depends(get_db_session),
+) -> AlertLogRepositoryInterface:
+    """Factory for database-backed AlertLogRepository."""
+    return SQLAlchemyAlertLogRepository(db=db)
+
+
+def get_alert_engine_service(
+    alert_log_repo: AlertLogRepositoryInterface = Depends(get_alert_log_repository),
+    notification_service: NotificationService = Depends(get_notification_service),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
+    profile_repo: ProfileRepository = Depends(get_profile_repository),
+    retailer_repo: RetailerRepository = Depends(get_retailer_repository),
+    supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
+) -> AlertEngineService:
+    """Factory for AlertEngineService coordinating rules and deduplication."""
+    return AlertEngineService(
+        alert_log_repo=alert_log_repo,
+        notification_service=notification_service,
+        product_repo=product_repo,
+        stock_repo=stock_repo,
+        invoice_repo=invoice_repo,
+        profile_repo=profile_repo,
+        retailer_repo=retailer_repo,
+        supplier_repo=supplier_repo,
+    )
+
+
+_global_alert_scheduler: AlertScheduler | None = None
+
+
+def get_alert_scheduler() -> AlertScheduler:
+    """Factory singleton for APScheduler background worker."""
+    global _global_alert_scheduler
+    if _global_alert_scheduler is None:
+        from app.db.session import get_session_factory
+
+        def alert_engine_factory() -> AlertEngineService:
+            session_factory = get_session_factory()
+            db = session_factory()
+            try:
+                alert_log_repo = SQLAlchemyAlertLogRepository(db=db)
+                notif_repo = NotificationRepository(session=db)
+                settings = get_settings()
+                notif_service = NotificationService(
+                    notification_repo=notif_repo,
+                    channels=[
+                        InAppChannel(notification_repo=notif_repo),
+                        EmailChannel(api_key=settings.resend_api_key),
+                    ],
+                )
+                from app.repositories.impl.product_repository import SqlAlchemyProductRepository
+                from app.repositories.impl.stock_repository import SqlAlchemyStockRepository
+                from app.repositories.impl.invoice_repository import SqlAlchemyInvoiceRepository
+                from app.repositories.impl.profile_repository import SqlAlchemyProfileRepository
+                from app.repositories.impl.retailer_repository import SqlAlchemyRetailerRepository
+                from app.repositories.impl.supplier_repository import SqlAlchemySupplierRepository
+
+                return AlertEngineService(
+                    alert_log_repo=alert_log_repo,
+                    notification_service=notif_service,
+                    product_repo=SqlAlchemyProductRepository(session=db),
+                    stock_repo=SqlAlchemyStockRepository(session=db),
+                    invoice_repo=SqlAlchemyInvoiceRepository(session=db),
+                    profile_repo=SqlAlchemyProfileRepository(session=db),
+                    retailer_repo=SqlAlchemyRetailerRepository(session=db),
+                    supplier_repo=SqlAlchemySupplierRepository(session=db),
+                )
+            finally:
+                db.close()
+
+        _global_alert_scheduler = AlertScheduler(alert_engine_factory=alert_engine_factory)
+    return _global_alert_scheduler
+
 
 
 

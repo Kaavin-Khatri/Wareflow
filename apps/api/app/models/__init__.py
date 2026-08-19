@@ -6,7 +6,7 @@ from app.models.billing import Invoice, InvoiceItem, InvoiceStatusEnum, Payment,
 from app.models.catalog import Category, Product
 from app.models.delivery import Delivery, DeliveryStatusEnum
 from app.models.inventory import StockMovement, StockMovementTypeEnum
-from app.models.notification import Notification
+from app.models.notification import AlertLog, Notification
 from app.models.portal import (
     ChannelPreferenceEnum,
     Customer,
@@ -99,6 +99,7 @@ __all__ = [
     "StockMovement",
     "StockMovementTypeEnum",
     "Notification",
+    "AlertLog",
     # Audit & Business Settings
     "AdminAuditLog",
     "BusinessSettings",

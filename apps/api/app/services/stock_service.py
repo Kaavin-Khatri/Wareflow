@@ -39,11 +39,13 @@ class StockService:
         uom_repo: UomRepositoryInterface | None = None,
         uom_service: UomService | None = None,
         audit_repo: AuditRepository | None = None,
+        alert_engine: Any = None,
     ):
         self.stock_repo = stock_repo
         self.uom_repo = uom_repo
         self.uom_service = uom_service or (UomService(uom_repo=uom_repo) if uom_repo else None)
         self.audit_repo = audit_repo
+        self.alert_engine = alert_engine
 
     @staticmethod
     def calculate_stock_status(
@@ -397,6 +399,13 @@ class StockService:
                     "notes": payload.notes,
                 },
             )
+
+        # Inline smart alert trigger
+        if self.alert_engine:
+            try:
+                self.alert_engine.evaluate_product_stock_inline(payload.product_id)
+            except Exception:
+                pass
 
         return StockAdjustmentResponse(
             movement_id=movement.id,

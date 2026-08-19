@@ -58,3 +58,20 @@ class ComplianceSummaryResponse(BaseModel):
     suppliers_missing_license: int
     active_alerts_count: int
     alerts: list[AlertItemResponse] = Field(default_factory=list)
+
+
+class SmartAlertItemResponse(BaseModel):
+    """Fired smart alert item from rule engine."""
+
+    rule_name: str
+    entity_type: str
+    entity_id: str
+    alert_type: str
+    title: str
+    body: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    target_permissions: list[str] = Field(default_factory=list)
+    target_roles: list[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
+
