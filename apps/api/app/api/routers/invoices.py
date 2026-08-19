@@ -4,12 +4,19 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, status
 
-from app.core.di import get_invoice_service
+from app.core.di import get_invoice_service, get_payment_service
 from app.core.security import CurrentUser, get_current_user, require_permission
+from app.schemas.billing import (
+    OverdueDetectionResponse,
+    PaymentCreateRequest,
+    PaymentResponse,
+)
 from app.schemas.invoices import InvoiceListResponse, InvoiceResponse
 from app.services.invoice_service import InvoiceService
+from app.services.payment_service import PaymentService
 
 router = APIRouter(tags=["invoices"])
+
 
 
 @router.post(
@@ -72,3 +79,60 @@ def get_invoice(
 ) -> InvoiceResponse:
     """Fetch full invoice details including frozen line item snapshots."""
     return invoice_service.get_invoice(invoice_id=invoice_id)
+
+
+@router.post(
+    "/invoices/{invoice_id}/payments",
+    response_model=PaymentResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Record payment against an invoice",
+)
+def record_payment(
+    invoice_id: str,
+    payload: PaymentCreateRequest,
+    payment_service: PaymentService = Depends(get_payment_service),
+    current_user: CurrentUser = Depends(require_permission("orders:manage")),
+) -> PaymentResponse:
+    """
+    Record payment against an invoice.
+
+    Validates amount does not exceed outstanding balance, transitions invoice status,
+    and decreases the retailer's credit_balance.
+    """
+    return payment_service.record_payment(
+        invoice_id=invoice_id,
+        payload=payload,
+        current_user=current_user,
+    )
+
+
+@router.get(
+    "/invoices/{invoice_id}/payments",
+    response_model=list[PaymentResponse],
+    summary="List all payments recorded for an invoice",
+)
+def list_payments_for_invoice(
+    invoice_id: str,
+    payment_service: PaymentService = Depends(get_payment_service),
+    current_user: CurrentUser = Depends(get_current_user),
+) -> list[PaymentResponse]:
+    """Fetch all payments received towards a specific invoice."""
+    return payment_service.list_payments_for_invoice(invoice_id=invoice_id)
+
+
+@router.post(
+    "/invoices/detect-overdue",
+    response_model=OverdueDetectionResponse,
+    summary="Run overdue invoices scan job",
+)
+def detect_overdue_invoices(
+    due_days: int = Query(30, ge=1, le=365, description="Days after invoice date when an unpaid invoice is marked overdue"),
+    payment_service: PaymentService = Depends(get_payment_service),
+    current_user: CurrentUser = Depends(require_permission("orders:manage")),
+) -> OverdueDetectionResponse:
+    """Scan and transition unpaid/partially-paid invoices past due window to overdue status."""
+    return payment_service.detect_overdue_invoices(
+        due_days=due_days,
+        current_user=current_user,
+    )
+

@@ -2519,6 +2519,96 @@
 - `codebase_audit.md`
 - `memory.md`
 
+---
+
+### Step 10.2 — Payments & Accounts-Receivable Ledger
+
+**Timestamp:** 2026-08-19T01:47:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Pydantic V2 Schemas (`apps/api/app/schemas/billing.py` & `apps/api/app/schemas/invoices.py`)**:
+   - Created `PaymentCreateRequest` (`amount`, `method`, `paid_at`, `note`), `PaymentResponse`, `LedgerEntryResponse`, `RetailerLedgerResponse`, `OverdueDetectionResponse`.
+   - Enriched invoice schemas with `paid_amount`, `outstanding_balance`, and list of recorded `payments`.
+2. **Repository Layer & Dependency Inversion (`apps/api/app/repositories/interfaces/payment_repository.py` & `apps/api/app/repositories/impl/payment_repository.py`)**:
+   - Defined `PaymentRepositoryInterface` Protocol (`create_payment`, `get_payment_by_id`, `list_payments_by_invoice_id`, `list_payments_by_retailer_id`, `get_total_paid_for_invoice`).
+   - Implemented `SqlAlchemyPaymentRepository` and `InMemoryPaymentRepository` supporting zero-IO in-memory unit testing.
+   - Updated `InvoiceRepositoryInterface` and implementations with `update_invoice`, `list_by_retailer_id`, and `list_overdue_candidates`.
+3. **Domain Services (`apps/api/app/services/payment_service.py` & `apps/api/app/services/ledger_service.py`)**:
+   - `PaymentService`:
+     - **Overpayment Guardrail**: Validates payment amount > 0 and <= outstanding balance (`total_amount - paid_amount`), raising HTTP 422 if exceeded.
+     - **Invoice Status Thresholds**: Dynamically transitions invoice status: `unpaid` → `partially_paid` (when cumulative paid < total) → `paid` (when cumulative paid == total).
+     - **Retailer Credit Balance Reduction**: DECREASES `retailers.credit_balance` by payment amount (`credit_balance` represents balance currently owed).
+     - **Audit Logging**: Emits `payment_recorded` audit event with invoice and retailer balance diffs.
+     - **Overdue Detection**: Scans unpaid/partially-paid invoices past configurable `due_days` (default 30 days) and transitions them to `overdue` (emitting `overdue_invoices_flagged` audit event).
+   - `LedgerService`:
+     - `get_retailer_ledger(retailer_id)`: Assembles chronological statement of every invoice (debit +amount) and payment (credit -amount) with running balance matching `retailers.credit_balance` exactly.
+4. **API Routers & Dependency Injection (`apps/api/app/api/routers/invoices.py`, `apps/api/app/api/routers/retailers.py`, `apps/api/app/core/di.py`)**:
+   - `POST /invoices/{id}/payments`: Permission-guarded (`invoices:manage`) payment recording.
+   - `GET /invoices/{id}/payments`: Payment history retrieval.
+   - `POST /invoices/detect-overdue`: On-demand overdue invoice scan with configurable `due_days` query parameter.
+   - `GET /retailers/{id}/ledger`: Permission-guarded (`retailers:view` / `invoices:view`) chronological AR statement.
+   - Wired DI providers in `di.py` (`get_payment_repository`, `get_payment_service`, `get_ledger_service`, enriched `get_invoice_service`).
+5. **Frontend Web UI (`apps/web/app/admin/retailers/[id]/ledger/page.tsx`, `apps/web/app/admin/invoices/page.tsx`, `apps/web/app/admin/retailers/page.tsx`)**:
+   - Built `/admin/retailers/[id]/ledger` Accounts-Receivable statement view with KPI summary cards (Current Balance Owed, Credit Line & Limit, Total Invoiced, Total Settled), credit line utilization gauge, CSV export, Print/PDF export, transaction type filter tabs (all, invoices, payments), and embedded Record Payment modal.
+   - Enriched `/admin/retailers` table with credit balance / credit limit utilization chip and direct link to statement ledger.
+   - Enriched `/admin/invoices` with Record Payment button, modal form, overdue scanning trigger, and payment settlements history timeline in the preview modal.
+6. **Automated Testing & QA Verification**:
+   - Backend `apps/api/tests/test_payments_and_ledger.py` (5 hermetic tests passing: partial vs full payment status transitions, paired running balance invariant matching `retailer.credit_balance` across mixed invoices/payments, overpayment blocking with clear 422 error, overdue detection scan, and router integration).
+   - Frontend `apps/web/lib/__tests__/ledger.test.tsx` (3 tests passing: KPI cards and ledger table rendering, transaction type filtering, payment modal submission).
+   - Full test suites: **147 / 147 Pytest tests passing (100% green)**; **114 / 114 Vitest tests passing across 27 test suites (100% green)**.
+   - **0 errors on Ruff and ESLint**; Next.js production build cleanly compiled with 35 static/dynamic routes.
+
+### Decisions
+
+- **Paired AR Ledger Invariant (Verbatim Rule)**:
+  - `Invoice confirmation (Step 9.1)` **INCREASES** `retailers.credit_balance` by invoice total.
+  - `Payment (Step 10.2)` **DECREASES** `retailers.credit_balance` by payment amount (`credit_balance` represents amount currently owed).
+  - The chronological ledger statement computes running balance: `running_balance += debit_amount (invoice)` and `running_balance -= credit_amount (payment)`. The final running balance matches `retailers.credit_balance` exactly.
+- **Overdue Window**:
+  - Configurable due-date window (default 30 days) flags unpaid or partially paid invoices older than 30 days as `overdue` to trigger alerts.
+- **Strict Overpayment Prevention**:
+  - Direct validation prevents any payment greater than the invoice's remaining `outstanding_balance` (`total_amount - paid_amount`).
+
+### Key values for future steps
+
+- Payment Model: `Payment` (`apps/api/app/models/billing.py`)
+- Payment Repository Interface: `apps/api/app/repositories/interfaces/payment_repository.py`
+- Payment Repository Impl: `apps/api/app/repositories/impl/payment_repository.py`
+- Payment Domain Service: `apps/api/app/services/payment_service.py`
+- Ledger Domain Service: `apps/api/app/services/ledger_service.py`
+- Payment Endpoints: `POST /invoices/{id}/payments`, `GET /invoices/{id}/payments`, `POST /invoices/detect-overdue`
+- Ledger Endpoint: `GET /retailers/{id}/ledger`
+- Web Ledger Route: `/admin/retailers/[id]/ledger`
+
+### Files Created
+
+- `apps/api/app/schemas/billing.py`
+- `apps/api/app/repositories/interfaces/payment_repository.py`
+- `apps/api/app/repositories/impl/payment_repository.py`
+- `apps/api/app/services/payment_service.py`
+- `apps/api/app/services/ledger_service.py`
+- `apps/api/tests/test_payments_and_ledger.py`
+- `apps/web/app/admin/retailers/[id]/ledger/page.tsx`
+- `apps/web/lib/__tests__/ledger.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/schemas/invoices.py`
+- `apps/api/app/repositories/interfaces/invoice_repository.py`
+- `apps/api/app/repositories/impl/invoice_repository.py`
+- `apps/api/app/services/invoice_service.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/api/routers/invoices.py`
+- `apps/api/app/api/routers/retailers.py`
+- `apps/web/app/admin/invoices/page.tsx`
+- `apps/web/app/admin/retailers/page.tsx`
+- `apps/web/lib/__tests__/invoices.test.tsx`
+- `codebase_audit.md`
+- `memory.md`
+
+
 
 
 

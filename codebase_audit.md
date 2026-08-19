@@ -597,7 +597,10 @@ wareflow/
 | Symmetric Secret Encryption | TOTP secrets and backup codes encrypted at rest with Fernet (AES-128-CBC + HMAC-SHA256) |
 | Single-Use Atomic Backup Codes | 10 backup codes generated at enrollment, permanently consumed upon single use |
 | Operational Staff Exemption | Warehouse/Sales staff exempt from mandatory 2FA to prevent delays during high-speed packing and shop-floor runs |
-| General Admin Action Audit Log | `admin_audit_log` records immutable before/after diffs for sensitive actions (price, credit, permissions, staff) |
+| Paired AR Ledger Invariant | Invoice confirmation increases `retailers.credit_balance` by total; payment decreases `retailers.credit_balance` by payment amount (`credit_balance` is balance owed) |
+| Chronological Statement | `LedgerService` dynamically builds statement with running balances matching stored `retailers.credit_balance` |
+| Overdue Detection Window | Configurable due-date window (default 30 days) scans and transitions unpaid/partially paid invoices past due date to `overdue` |
+| General Admin Action Audit Log | `admin_audit_log` records immutable before/after diffs for sensitive actions (price, credit, permissions, staff, payments) |
 | Humanized Audit Narratives | `AuditService` synthesizes readable business sentences from raw diffs while preserving JSON diff inspection |
 | SOLID from day one | Prevents spaghetti; makes testing and swapping implementations easy |
 | Application factory | Testable app creation, supports different configs per environment |
@@ -634,9 +637,9 @@ wareflow/
   - `sales_order_confirmed`: Confirmation of sales order with credit reservation & FIFO batch deduction (`POST /sales-orders/{id}/confirm`)
   - `sales_order_status_updated`: Fulfillment status changes (packed, shipped, delivered, cancelled) (`PATCH /sales-orders/{id}/status`)
   - `invoice_generated`: Generation of sequential GST tax invoice for confirmed sales order (`POST /sales-orders/{id}/invoice`)
+  - `payment_recorded`: Collection of settlement against tax invoice reducing retailer credit balance (`POST /invoices/{id}/payments`)
+  - `overdue_invoices_flagged`: Batch scan flagging unpaid past-due invoices as overdue (`POST /invoices/detect-overdue`)
   - `retailer_created`: Registration of a new wholesale retailer account (`POST /retailers`)
-
-
   - `retailer_updated`: Updates to retailer contact info, pricing tier, or active status (`PATCH /retailers/{id}`)
   - `retailer_credit_limit_updated`: Retailer authorized credit limit adjustments (`PATCH /retailers/{id}/credit-limit`)
   - `business_settings_updated`: Legal business entity details, GSTIN, or FSSAI license updates (`PUT /settings/business`)
@@ -663,4 +666,5 @@ wareflow/
 
 - **Forward-Built Pre-Phase 6 Purchasing Spend Charts**: Spend-over-time, supplier spend, and category spend charts are intentionally forward-built to complete the Stock Analytics UI, but stay at zero / display empty states until Phase 6 (Purchase Orders & Receiving) produces real purchase order receipt transactions. This is expected and documented.
 - **Supabase Free Project Inactivity Pause**: Supabase free-tier projects automatically pause after ~1 week of inactivity. If API endpoints return connection errors after an idle period, unpause the project from the Supabase dashboard.
+
 

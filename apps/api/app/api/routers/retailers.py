@@ -2,14 +2,16 @@
 
 from fastapi import APIRouter, Depends, Query, status
 
-from app.core.di import get_retailer_service
+from app.core.di import get_ledger_service, get_retailer_service
 from app.core.security import CurrentUser, get_current_user, require_permission
+from app.schemas.billing import RetailerLedgerResponse
 from app.schemas.retailers import (
     RetailerCreateRequest,
     RetailerCreditLimitUpdateRequest,
     RetailerResponse,
     RetailerUpdateRequest,
 )
+from app.services.ledger_service import LedgerService
 from app.services.retailer_service import RetailerService
 
 router = APIRouter(prefix="/retailers", tags=["Retailers"])
@@ -108,3 +110,24 @@ def update_retailer_credit_limit(
         actor_id=current_user.id,
     )
     return RetailerResponse.model_validate(updated)
+
+
+@router.get(
+    "/{retailer_id}/ledger",
+    response_model=RetailerLedgerResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get retailer accounts-receivable chronological ledger statement",
+)
+def get_retailer_ledger(
+    retailer_id: str,
+    ledger_service: LedgerService = Depends(get_ledger_service),
+    current_user: CurrentUser = Depends(get_current_user),
+) -> RetailerLedgerResponse:
+    """
+    Fetch a complete chronological accounts-receivable statement.
+
+    Each invoice is a debit charge (+), each payment is a credit settlement (-),
+    and the final running balance exactly matches retailer.credit_balance.
+    """
+    return ledger_service.get_retailer_ledger(retailer_id=retailer_id)
+

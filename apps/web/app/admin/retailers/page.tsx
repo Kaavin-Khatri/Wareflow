@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Link from "next/link";
 import AppLayout from "@/components/AppLayout";
 import { ListViewTemplate } from "@/components/templates/ListViewTemplate";
 import { DataTable, DataTableColumn } from "@/components/DataTable";
@@ -21,8 +22,10 @@ import {
   CheckCircle2,
   AlertCircle,
   IndianRupee,
-  CreditCard,
+  ReceiptText,
 } from "lucide-react";
+
+
 
 
 export interface RetailerItem {
@@ -287,17 +290,34 @@ export default function RetailersAdminPage() {
         const limit = Number(row.credit_limit) || 0;
         const balance = Number(row.credit_balance) || 0;
         const available = Math.max(0, limit - balance);
+        const utilizationPct = limit > 0 ? Math.min(100, Math.round((balance / limit) * 100)) : 0;
+        const isWarning = utilizationPct >= 80;
+        const isCritical = limit > 0 && balance >= limit;
+
         return (
-          <div className="space-y-0.5">
-            <div className="text-xs font-mono font-semibold text-[var(--text)] flex items-center gap-1">
-              <CreditCard className="w-3 h-3 text-emerald-400" />
-              Limit: ₹{limit.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-            </div>
-            <div className="text-[10px] text-[var(--text-muted)] flex items-center gap-2">
-              <span>Used: ₹{balance.toLocaleString("en-IN")}</span>
-              <span className="text-emerald-400 font-medium">
-                Avail: ₹{available.toLocaleString("en-IN")}
+          <div className="space-y-1.5 min-w-[170px]">
+            <div className="flex items-center justify-between gap-1 text-xs font-mono font-semibold">
+              <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
+                isCritical
+                  ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                  : isWarning
+                  ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                  : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+              }`}>
+                ₹{balance.toLocaleString("en-IN")} / ₹{limit.toLocaleString("en-IN")}
               </span>
+              <span className="text-[10px] text-[var(--text-muted)] font-normal">{utilizationPct}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all rounded-full ${
+                  isCritical ? "bg-rose-500" : isWarning ? "bg-amber-500" : "bg-emerald-500"
+                }`}
+                style={{ width: `${utilizationPct}%` }}
+              />
+            </div>
+            <div className="text-[10px] text-[var(--text-muted)] flex items-center justify-between">
+              <span>Avail: ₹{available.toLocaleString("en-IN")}</span>
             </div>
           </div>
         );
@@ -336,7 +356,17 @@ export default function RetailersAdminPage() {
       header: "Actions",
       align: "right",
       render: (row) => (
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-end gap-1.5">
+          <Link href={`/admin/retailers/${row.id}/ledger`}>
+            <GlassButton
+              size="sm"
+              variant="outline"
+              className="h-8 px-2.5 text-xs text-cyan-400 hover:text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/10"
+            >
+              <ReceiptText className="w-3.5 h-3.5 mr-1" />
+              Ledger
+            </GlassButton>
+          </Link>
           <GlassButton
             size="sm"
             variant="ghost"
@@ -349,6 +379,7 @@ export default function RetailersAdminPage() {
         </div>
       ),
     },
+
   ];
 
   return (

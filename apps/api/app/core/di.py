@@ -27,6 +27,10 @@ from app.repositories.impl.invoice_repository import (
     InMemoryInvoiceRepository,
     SqlAlchemyInvoiceRepository,
 )
+from app.repositories.impl.payment_repository import (
+    InMemoryPaymentRepository,
+    SqlAlchemyPaymentRepository,
+)
 from app.repositories.impl.product_repository import (
     InMemoryProductRepository,
     SqlAlchemyProductRepository,
@@ -82,6 +86,9 @@ from app.repositories.interfaces.customer_repository import (
 from app.repositories.interfaces.invoice_repository import (
     InvoiceRepositoryInterface,
 )
+from app.repositories.interfaces.payment_repository import (
+    PaymentRepositoryInterface,
+)
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
 from app.repositories.interfaces.profile_repository import ProfileRepository
 from app.repositories.interfaces.purchase_order_repository import (
@@ -110,6 +117,8 @@ from app.services.audit_service import AuditService
 from app.services.business_settings_service import BusinessSettingsService
 from app.services.customer_service import CustomerService
 from app.services.invoice_service import InvoiceService
+from app.services.ledger_service import LedgerService
+from app.services.payment_service import PaymentService
 from app.services.pricing_strategy import PricingEngineService
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
@@ -548,11 +557,25 @@ def get_db_invoice_repository(
     return SqlAlchemyInvoiceRepository(session=db)
 
 
+@lru_cache
+def get_payment_repository() -> PaymentRepositoryInterface:
+    """Factory for in-memory PaymentRepositoryInterface."""
+    return InMemoryPaymentRepository()
+
+
+def get_db_payment_repository(
+    db: Session = Depends(get_db_session),
+) -> PaymentRepositoryInterface:
+    """Factory for database-backed PaymentRepositoryInterface."""
+    return SqlAlchemyPaymentRepository(session=db)
+
+
 def get_invoice_service(
     invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
     sales_order_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
     product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
     audit_repo: AuditRepository = Depends(get_audit_repository),
+    payment_repo: PaymentRepositoryInterface = Depends(get_db_payment_repository),
 ) -> InvoiceService:
     """Factory for InvoiceService with DIP dependencies."""
     return InvoiceService(
@@ -560,7 +583,38 @@ def get_invoice_service(
         sales_order_repo=sales_order_repo,
         product_repo=product_repo,
         audit_repo=audit_repo,
+        payment_repo=payment_repo,
     )
+
+
+def get_payment_service(
+    payment_repo: PaymentRepositoryInterface = Depends(get_db_payment_repository),
+    invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
+    retailer_repo: RetailerRepository = Depends(get_retailer_repository),
+    audit_repo: AuditRepository = Depends(get_audit_repository),
+) -> PaymentService:
+    """Factory for PaymentService with DIP dependencies."""
+    return PaymentService(
+        payment_repo=payment_repo,
+        invoice_repo=invoice_repo,
+        retailer_repo=retailer_repo,
+        audit_repo=audit_repo,
+    )
+
+
+def get_ledger_service(
+    retailer_repo: RetailerRepository = Depends(get_retailer_repository),
+    invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
+    payment_repo: PaymentRepositoryInterface = Depends(get_db_payment_repository),
+) -> LedgerService:
+    """Factory for LedgerService with DIP dependencies."""
+    return LedgerService(
+        retailer_repo=retailer_repo,
+        invoice_repo=invoice_repo,
+        payment_repo=payment_repo,
+    )
+
+
 
 
 

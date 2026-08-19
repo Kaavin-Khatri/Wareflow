@@ -29,6 +29,18 @@ class InvoiceRepositoryInterface(Protocol):
         """Persist a new invoice with its frozen line items atomically."""
         ...
 
+    def update_invoice(self, invoice: Invoice) -> Invoice:
+        """Update an existing invoice's status or metadata."""
+        ...
+
+    def list_by_retailer_id(self, retailer_id: str) -> list[Invoice]:
+        """Fetch all invoices issued to a specific retailer."""
+        ...
+
+    def list_overdue_candidates(self, cutoff_date: datetime) -> list[Invoice]:
+        """Fetch unpaid or partially-paid invoices created before cutoff_date."""
+        ...
+
     def list_invoices(
         self,
         retailer_id: str | None = None,
@@ -40,3 +52,5 @@ class InvoiceRepositoryInterface(Protocol):
     ) -> tuple[list[Invoice], int]:
         """Fetch paginated, filterable invoice records."""
         ...
+
+

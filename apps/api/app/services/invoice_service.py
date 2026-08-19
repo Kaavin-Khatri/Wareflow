@@ -14,6 +14,7 @@ from app.models.billing import Invoice, InvoiceItem, InvoiceStatusEnum
 from app.models.retailer import SalesOrder, SOStatusEnum
 from app.repositories.interfaces.audit_repository import AuditRepository
 from app.repositories.interfaces.invoice_repository import InvoiceRepositoryInterface
+from app.repositories.interfaces.payment_repository import PaymentRepositoryInterface
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
 from app.repositories.interfaces.sales_order_repository import SalesOrderRepositoryInterface
 from app.schemas.invoices import (
@@ -31,7 +32,6 @@ LEGAL_INVOICE_STATUSES = {
 }
 
 
-
 class InvoiceService:
     """Business logic service for invoicing."""
 
@@ -41,12 +41,14 @@ class InvoiceService:
         sales_order_repo: SalesOrderRepositoryInterface,
         product_repo: ProductRepositoryInterface,
         audit_repo: AuditRepository | None = None,
+        payment_repo: PaymentRepositoryInterface | None = None,
     ) -> None:
-
         self.invoice_repo = invoice_repo
         self.sales_order_repo = sales_order_repo
         self.product_repo = product_repo
         self.audit_repo = audit_repo
+        self.payment_repo = payment_repo
+
 
     def get_financial_year(self, dt: datetime | None = None) -> str:
         """Calculate Indian Financial Year (April 1 - March 31)."""
@@ -228,6 +230,11 @@ class InvoiceService:
                     buyer_name = so.customer.name
                     buyer_type = "customer"
 
+            paid = 0.0
+            if self.payment_repo:
+                paid = self.payment_repo.get_total_paid_for_invoice(inv.id)
+            outstanding = max(0.0, round(float(inv.total_amount) - paid, 2))
+
             items.append(
                 InvoiceListItemResponse(
                     id=inv.id,
@@ -240,6 +247,8 @@ class InvoiceService:
                     subtotal=float(inv.subtotal),
                     tax_amount=float(inv.tax_amount),
                     total_amount=float(inv.total_amount),
+                    paid_amount=paid,
+                    outstanding_balance=outstanding,
                     status=inv.status.value if hasattr(inv.status, "value") else str(inv.status),
                     items_count=len(inv.items) if hasattr(inv, "items") and inv.items else 0,
                     created_at=inv.created_at,
@@ -305,6 +314,24 @@ class InvoiceService:
                 )
             )
 
+        paid_amount = 0.0
+        payment_list: list[dict[str, object]] = []
+        if self.payment_repo:
+            paid_amount = self.payment_repo.get_total_paid_for_invoice(invoice.id)
+            payments = self.payment_repo.list_by_invoice_id(invoice.id)
+            for p in payments:
+                payment_list.append(
+                    {
+                        "id": p.id,
+                        "amount": float(p.amount),
+                        "method": str(p.method.value if hasattr(p.method, "value") else p.method),
+                        "paid_at": p.paid_at.isoformat() if hasattr(p.paid_at, "isoformat") else str(p.paid_at),
+                        "note": p.note,
+                    }
+                )
+
+        outstanding_balance = max(0.0, round(float(invoice.total_amount) - paid_amount, 2))
+
         return InvoiceResponse(
             id=invoice.id,
             sales_order_id=invoice.sales_order_id,
@@ -322,6 +349,8 @@ class InvoiceService:
             subtotal=float(invoice.subtotal),
             tax_amount=float(invoice.tax_amount),
             total_amount=float(invoice.total_amount),
+            paid_amount=paid_amount,
+            outstanding_balance=outstanding_balance,
             status=invoice.status.value if hasattr(invoice.status, "value") else str(invoice.status),
             e_invoice_irn=invoice.e_invoice_irn,
             e_invoice_ack_no=invoice.e_invoice_ack_no,
@@ -329,4 +358,6 @@ class InvoiceService:
             e_way_bill_no=invoice.e_way_bill_no,
             created_at=invoice.created_at,
             items=items_resp,
+            payments=payment_list,
         )
+

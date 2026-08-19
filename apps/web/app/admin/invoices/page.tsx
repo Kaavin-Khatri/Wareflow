@@ -6,6 +6,7 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassBadge } from "@/components/glass/GlassBadge";
 import { GlassModal } from "@/components/glass/GlassModal";
+import { GlassInput } from "@/components/glass/GlassInput";
 import { DataTable, DataTableColumn } from "@/components/DataTable";
 import { apiClient } from "@/lib/api-client";
 import {
@@ -21,7 +22,10 @@ import {
   ArrowLeft,
   X,
   CreditCard,
+  PlusCircle,
+  RefreshCw,
 } from "lucide-react";
+
 
 interface InvoiceItem {
   id: string;
@@ -35,6 +39,14 @@ interface InvoiceItem {
   tax_amount: number;
   total: number;
   uom_id?: string | null;
+}
+
+interface PaymentRecord {
+  id: string;
+  amount: number;
+  method: string;
+  paid_at: string;
+  note?: string | null;
 }
 
 interface InvoiceDetail {
@@ -54,6 +66,8 @@ interface InvoiceDetail {
   subtotal: number;
   tax_amount: number;
   total_amount: number;
+  paid_amount?: number;
+  outstanding_balance?: number;
   status: "unpaid" | "partially_paid" | "paid" | "overdue" | string;
   e_invoice_irn?: string | null;
   e_invoice_ack_no?: string | null;
@@ -61,6 +75,7 @@ interface InvoiceDetail {
   e_way_bill_no?: string | null;
   created_at: string;
   items: InvoiceItem[];
+  payments?: PaymentRecord[];
 }
 
 interface InvoiceListItem {
@@ -74,6 +89,8 @@ interface InvoiceListItem {
   subtotal: number;
   tax_amount: number;
   total_amount: number;
+  paid_amount?: number;
+  outstanding_balance?: number;
   status: "unpaid" | "partially_paid" | "paid" | "overdue" | string;
   items_count: number;
   created_at: string;
@@ -93,81 +110,135 @@ const MOCK_INVOICES: InvoiceListItem[] = [
     sales_order_id: "so-101",
     sales_order_number: "SO-2026-001",
     invoice_no: "INV/2026-27/0001",
-    invoice_date: new Date(Date.now() - 3600000 * 24).toISOString(),
+    invoice_date: new Date(Date.now() - 3600000 * 24 * 5).toISOString(),
     buyer_type: "retailer",
     buyer_name: "Apex Wholesale Mart",
     subtotal: 11000.0,
     tax_amount: 1980.0,
     total_amount: 12980.0,
-    status: "unpaid",
+    paid_amount: 12980.0,
+    outstanding_balance: 0.0,
+    status: "paid",
     items_count: 2,
-    created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
+    created_at: new Date(Date.now() - 3600000 * 24 * 5).toISOString(),
   },
   {
     id: "inv-2",
     sales_order_id: "so-102",
     sales_order_number: "SO-2026-002",
     invoice_no: "INV/2026-27/0002",
-    invoice_date: new Date(Date.now() - 86400000 * 3).toISOString(),
+    invoice_date: new Date(Date.now() - 3600000 * 24 * 2).toISOString(),
     buyer_type: "retailer",
-    buyer_name: "Fresh Mart Retail",
+    buyer_name: "Metro Retail Distribution",
     subtotal: 25000.0,
-
     tax_amount: 4500.0,
     total_amount: 29500.0,
-    status: "paid",
+    paid_amount: 10000.0,
+    outstanding_balance: 19500.0,
+    status: "partially_paid",
+    items_count: 5,
+    created_at: new Date(Date.now() - 3600000 * 24 * 2).toISOString(),
+  },
+  {
+    id: "inv-3",
+    sales_order_id: "so-103",
+    sales_order_number: "SO-2026-003",
+    invoice_no: "INV/2026-27/0003",
+    invoice_date: new Date(Date.now() - 3600000 * 24 * 35).toISOString(),
+    buyer_type: "retailer",
+    buyer_name: "Fresh Foods Supermarket",
+    subtotal: 18000.0,
+    tax_amount: 3240.0,
+    total_amount: 21240.0,
+    paid_amount: 0.0,
+    outstanding_balance: 21240.0,
+    status: "overdue",
     items_count: 3,
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+    created_at: new Date(Date.now() - 3600000 * 24 * 35).toISOString(),
   },
 ];
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
-  // Selected Invoice Detail Modal
+  // Detail Modal State
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDetail | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  // Record Payment Modal State
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [targetInvoice, setTargetInvoice] = useState<InvoiceListItem | InvoiceDetail | null>(null);
+  const [payAmount, setPayAmount] = useState<number>(0);
+  const [payMethod, setPayMethod] = useState<string>("upi");
+  const [payDate, setPayDate] = useState<string>(new Date().toISOString().split("T")[0]);
+  const [payNote, setPayNote] = useState<string>("");
+  const [submittingPay, setSubmittingPay] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+
+  // Overdue scan state
+  const [scanningOverdue, setScanningOverdue] = useState(false);
+
+  const fetchInvoices = async () => {
+    try {
+      setLoading(true);
+      const res = await apiClient.get<InvoiceListResponse>("/invoices?page_size=100");
+      if (res && res.items && res.items.length > 0) {
+        setInvoices(res.items);
+      } else {
+        setInvoices(MOCK_INVOICES);
+      }
+    } catch {
+      setInvoices(MOCK_INVOICES);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let isMounted = true;
-    const fetchInvoices = async () => {
+    let ignore = false;
+    async function init() {
       try {
+        setLoading(true);
         const res = await apiClient.get<InvoiceListResponse>("/invoices?page_size=100");
-        if (!isMounted) return;
-        if (res && Array.isArray(res.items) && res.items.length > 0) {
-          setInvoices(res.items);
-        } else {
-          setInvoices(MOCK_INVOICES);
+        if (!ignore) {
+          if (res && res.items && res.items.length > 0) {
+            setInvoices(res.items);
+          } else {
+            setInvoices(MOCK_INVOICES);
+          }
         }
       } catch {
-        if (isMounted) setInvoices(MOCK_INVOICES);
+        if (!ignore) {
+          setInvoices(MOCK_INVOICES);
+        }
       } finally {
-        if (isMounted) setLoading(false);
+        if (!ignore) {
+          setLoading(false);
+        }
       }
-    };
-
-    fetchInvoices();
+    }
+    init();
     return () => {
-      isMounted = false;
+      ignore = true;
     };
   }, []);
+
 
   // KPIs
   const kpis = useMemo(() => {
     const totalCount = invoices.length;
     const totalBilled = invoices.reduce((acc, i) => acc + (Number(i.total_amount) || 0), 0);
-    const unpaidAmount = invoices
-      .filter((i) => i.status === "unpaid" || i.status === "overdue" || i.status === "partially_paid")
-      .reduce((acc, i) => acc + (Number(i.total_amount) || 0), 0);
-    const paidAmount = invoices
-      .filter((i) => i.status === "paid")
-      .reduce((acc, i) => acc + (Number(i.total_amount) || 0), 0);
+    const paidAmount = invoices.reduce(
+      (acc, i) => acc + (i.status === "paid" ? Number(i.total_amount) : Number(i.paid_amount || 0)),
+      0
+    );
+    const unpaidAmount = Math.max(0, totalBilled - paidAmount);
 
     return { totalCount, totalBilled, unpaidAmount, paidAmount };
   }, [invoices]);
@@ -194,7 +265,7 @@ export default function InvoicesPage() {
       const detail = await apiClient.get<InvoiceDetail>(`/invoices/${item.id}`);
       setSelectedInvoice(detail);
     } catch {
-      // Fallback to synthesized detail
+      // Fallback detail
       setSelectedInvoice({
         id: item.id,
         sales_order_id: item.sales_order_id,
@@ -211,6 +282,8 @@ export default function InvoicesPage() {
         subtotal: item.subtotal,
         tax_amount: item.tax_amount,
         total_amount: item.total_amount,
+        paid_amount: item.paid_amount || (item.status === "paid" ? item.total_amount : 0),
+        outstanding_balance: item.outstanding_balance ?? (item.status === "paid" ? 0 : item.total_amount),
         status: item.status,
         created_at: item.created_at,
         items: [
@@ -242,6 +315,70 @@ export default function InvoicesPage() {
       });
     } finally {
       setLoadingDetail(false);
+    }
+  };
+
+  const handleOpenPaymentModal = (inv: InvoiceListItem | InvoiceDetail) => {
+    setTargetInvoice(inv);
+    const outstanding =
+      inv.outstanding_balance !== undefined
+        ? inv.outstanding_balance
+        : inv.status === "paid"
+        ? 0
+        : inv.total_amount;
+    setPayAmount(outstanding);
+    setPayMethod("upi");
+    setPayDate(new Date().toISOString().split("T")[0]);
+    setPayNote("");
+    setPayError(null);
+    setPaymentModalOpen(true);
+  };
+
+  const handleRecordPaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetInvoice) return;
+
+    if (payAmount <= 0) {
+      setPayError("Payment amount must be greater than zero.");
+      return;
+    }
+
+    try {
+      setSubmittingPay(true);
+      setPayError(null);
+      await apiClient.post(`/invoices/${targetInvoice.id}/payments`, {
+        amount: Number(payAmount),
+        method: payMethod,
+        paid_at: new Date(payDate).toISOString(),
+        note: payNote.trim() || undefined,
+      });
+
+      setSuccess(`Payment of ₹${Number(payAmount).toLocaleString("en-IN")} successfully recorded for ${targetInvoice.invoice_no}.`);
+      setPaymentModalOpen(false);
+      await fetchInvoices();
+      if (isDetailOpen && selectedInvoice?.id === targetInvoice.id) {
+        const refreshed = await apiClient.get<InvoiceDetail>(`/invoices/${targetInvoice.id}`);
+        setSelectedInvoice(refreshed);
+      }
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err: unknown) {
+      setPayError(err instanceof Error ? err.message : "Failed to record payment.");
+    } finally {
+      setSubmittingPay(false);
+    }
+  };
+
+  const handleRunOverdueScan = async () => {
+    try {
+      setScanningOverdue(true);
+      const res = await apiClient.post<{ overdue_count: number }>("/invoices/detect-overdue?due_days=30");
+      setSuccess(`Overdue scan complete. Flagged ${res.overdue_count} past-due invoice(s) as overdue.`);
+      await fetchInvoices();
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to scan overdue invoices.");
+    } finally {
+      setScanningOverdue(false);
     }
   };
 
@@ -359,14 +496,28 @@ export default function InvoicesPage() {
       header: "Action",
       align: "right",
       render: (inv) => (
-        <GlassButton
-          variant="secondary"
-          size="sm"
-          onClick={() => handleOpenDetail(inv)}
-        >
-          <Eye className="w-3.5 h-3.5 mr-1 text-purple-400" />
-          View & Print
-        </GlassButton>
+        <div className="flex items-center justify-end gap-1.5">
+          {inv.status !== "paid" && (
+            <GlassButton
+              variant="primary"
+              size="sm"
+              onClick={() => handleOpenPaymentModal(inv)}
+              className="text-xs h-7 px-2 bg-emerald-600 hover:bg-emerald-500 border-emerald-500/30"
+            >
+              <PlusCircle className="w-3 h-3 mr-1" />
+              Pay
+            </GlassButton>
+          )}
+          <GlassButton
+            variant="secondary"
+            size="sm"
+            onClick={() => handleOpenDetail(inv)}
+            className="text-xs h-7 px-2"
+          >
+            <Eye className="w-3 h-3 mr-1 text-purple-400" />
+            View
+          </GlassButton>
+        </div>
       ),
     },
   ];
@@ -385,23 +536,47 @@ export default function InvoicesPage() {
             <div>
               <h1 className="text-xl font-bold text-[var(--text)] flex items-center gap-2">
                 <FileText className="w-5 h-5 text-purple-400" />
-                GST Tax Invoices & Billing
+                GST Tax Invoices & Receivables
               </h1>
               <p className="text-xs text-[var(--text-muted)]">
-                Immutable frozen tax invoices generated from confirmed wholesale sales orders.
+                Immutable frozen tax invoices and accounts receivable ledger management.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <GlassButton
+              variant="outline"
+              size="sm"
+              onClick={handleRunOverdueScan}
+              disabled={scanningOverdue}
+              className="text-xs"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 text-amber-400 ${scanningOverdue ? "animate-spin" : ""}`} />
+              {scanningOverdue ? "Scanning..." : "Scan Overdue (30d)"}
+            </GlassButton>
             <Link href="/admin/sales-orders">
-              <GlassButton variant="secondary" size="md">
-                <ShoppingBag className="w-4 h-4 mr-1.5 text-purple-400" />
+              <GlassButton variant="secondary" size="sm" className="text-xs">
+                <ShoppingBag className="w-3.5 h-3.5 mr-1.5 text-purple-400" />
                 Sales Orders
               </GlassButton>
             </Link>
           </div>
         </div>
+
+        {/* Notifications */}
+        {error && (
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            {success}
+          </div>
+        )}
 
         {/* 4 KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -417,22 +592,22 @@ export default function InvoicesPage() {
 
           <GlassCard className="p-4 space-y-1">
             <span className="text-xs text-amber-400 font-medium flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" /> Outstanding Unpaid
+              <Clock className="w-3.5 h-3.5" /> Outstanding Receivables
             </span>
             <div className="text-2xl font-bold font-mono text-amber-400">
               ₹{kpis.unpaidAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </div>
-            <p className="text-[11px] text-[var(--text-muted)]">Receivables pending settlement</p>
+            <p className="text-[11px] text-[var(--text-muted)]">Pending settlement across buyers</p>
           </GlassCard>
 
           <GlassCard className="p-4 space-y-1">
             <span className="text-xs text-emerald-400 font-medium flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Collected Revenue
+              <CheckCircle2 className="w-3.5 h-3.5" /> Total Payments Collected
             </span>
             <div className="text-2xl font-bold font-mono text-emerald-400">
               ₹{kpis.paidAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </div>
-            <p className="text-[11px] text-[var(--text-muted)]">Settled invoice payments</p>
+            <p className="text-[11px] text-[var(--text-muted)]">Settled cash and bank receipts</p>
           </GlassCard>
 
           <GlassCard className="p-4 space-y-1">
@@ -442,7 +617,7 @@ export default function InvoicesPage() {
             <div className="text-2xl font-bold font-mono text-cyan-400">
               {kpis.totalCount}
             </div>
-            <p className="text-[11px] text-[var(--text-muted)]">FY 2026-27 sequential ledger</p>
+            <p className="text-[11px] text-[var(--text-muted)]">Sequential audit-ready series</p>
           </GlassCard>
         </div>
 
@@ -475,7 +650,6 @@ export default function InvoicesPage() {
               </button>
             ))}
           </div>
-
         </GlassCard>
 
         {/* Invoices DataTable */}
@@ -493,7 +667,9 @@ export default function InvoicesPage() {
           isOpen={isDetailOpen}
           onClose={() => setIsDetailOpen(false)}
           title={`Tax Invoice: ${selectedInvoice?.invoice_no || ""}`}
+          maxWidth="lg"
         >
+
           {loadingDetail ? (
             <div className="p-8 text-center text-xs text-[var(--text-muted)]">
               Loading frozen invoice document...
@@ -529,8 +705,8 @@ export default function InvoicesPage() {
                     <div className="text-xs text-[var(--text-muted)]">
                       SO Ref: <span className="text-[var(--text)] font-semibold">{selectedInvoice.sales_order_number || "Direct"}</span>
                     </div>
-                    <div className="pt-1">
-                      <GlassBadge variant={selectedInvoice.status === "paid" ? "success" : "warning"}>
+                    <div className="pt-1 flex items-center justify-end gap-1.5">
+                      <GlassBadge variant={selectedInvoice.status === "paid" ? "success" : selectedInvoice.status === "partially_paid" ? "accent" : "warning"}>
                         {selectedInvoice.status.toUpperCase()}
                       </GlassBadge>
                     </div>
@@ -590,18 +766,31 @@ export default function InvoicesPage() {
                   </table>
                 </div>
 
-                {/* Totals Breakdown */}
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pt-2">
-                  <div className="text-[11px] text-[var(--text-muted)] space-y-1 max-w-sm">
+                {/* Payment History and Summary */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-2">
                     <span className="font-bold text-[var(--text)] block uppercase tracking-tight text-[10px]">
-                      Declaration & Terms:
+                      Payment Settlements History:
                     </span>
-                    <p>
-                      We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
-                    </p>
+                    {selectedInvoice.payments && selectedInvoice.payments.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {selectedInvoice.payments.map((p) => (
+                          <div key={p.id} className="p-2 rounded-lg bg-black/20 border border-white/[0.06] text-xs font-mono flex items-center justify-between">
+                            <div>
+                              <span className="text-emerald-400 font-bold">₹{p.amount.toFixed(2)}</span>
+                              <span className="text-[var(--text-muted)] text-[10px] ml-2 uppercase">({p.method.replace("_", " ")})</span>
+                              {p.note && <div className="text-[10px] text-[var(--text-muted)] font-sans">{p.note}</div>}
+                            </div>
+                            <span className="text-[10px] text-[var(--text-muted)]">{new Date(p.paid_at).toLocaleDateString("en-IN")}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[var(--text-muted)] italic">No payments recorded yet.</p>
+                    )}
                   </div>
 
-                  <div className="w-full sm:w-64 space-y-1.5 font-mono text-xs">
+                  <div className="space-y-1.5 font-mono text-xs">
                     <div className="flex justify-between text-[var(--text-muted)]">
                       <span>Subtotal:</span>
                       <span>₹{selectedInvoice.subtotal.toFixed(2)}</span>
@@ -614,9 +803,17 @@ export default function InvoicesPage() {
                       <span>SGST (9%):</span>
                       <span>₹{(selectedInvoice.tax_amount / 2).toFixed(2)}</span>
                     </div>
-                    <div className="border-t border-[var(--glass-border)] pt-1.5 flex justify-between text-sm font-bold text-emerald-400">
+                    <div className="border-t border-[var(--glass-border)] pt-1.5 flex justify-between text-xs font-bold text-emerald-400">
                       <span>Grand Total:</span>
                       <span>₹{selectedInvoice.total_amount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-purple-300">
+                      <span>Total Paid:</span>
+                      <span>₹{(selectedInvoice.paid_amount || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-bold text-rose-400 bg-rose-500/10 p-1.5 rounded-lg border border-rose-500/20">
+                      <span>Outstanding Balance:</span>
+                      <span>₹{(selectedInvoice.outstanding_balance ?? (selectedInvoice.total_amount - (selectedInvoice.paid_amount || 0))).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -633,6 +830,16 @@ export default function InvoicesPage() {
                 </GlassButton>
 
                 <div className="flex items-center gap-2">
+                  {selectedInvoice.status !== "paid" && (
+                    <GlassButton
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleOpenPaymentModal(selectedInvoice)}
+                      className="bg-emerald-600 hover:bg-emerald-500"
+                    >
+                      <PlusCircle className="w-4 h-4 mr-1.5" /> Record Payment
+                    </GlassButton>
+                  )}
                   <GlassButton
                     variant="primary"
                     size="sm"
@@ -644,6 +851,120 @@ export default function InvoicesPage() {
               </div>
             </div>
           ) : null}
+        </GlassModal>
+
+        {/* RECORD PAYMENT MODAL */}
+        <GlassModal
+          isOpen={paymentModalOpen}
+          onClose={() => setPaymentModalOpen(false)}
+          title={`Record Payment for ${targetInvoice?.invoice_no || "Invoice"}`}
+          maxWidth="md"
+        >
+
+          <form onSubmit={handleRecordPaymentSubmit} className="space-y-4">
+            {payError && (
+              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {payError}
+              </div>
+            )}
+
+            <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-between text-xs font-mono">
+              <div>
+                <span className="text-[var(--text-muted)] block text-[10px]">Invoice Total</span>
+                <span className="font-bold text-[var(--text)]">₹{Number(targetInvoice?.total_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-[var(--text-muted)] block text-[10px]">Outstanding Balance</span>
+                <span className="font-bold text-amber-400">
+                  ₹{Number(
+                    targetInvoice?.outstanding_balance !== undefined
+                      ? targetInvoice.outstanding_balance
+                      : targetInvoice?.total_amount || 0
+                  ).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-[var(--text)] mb-1.5">
+                  Payment Amount (₹) <span className="text-rose-400">*</span>
+                </label>
+                <GlassInput
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={targetInvoice?.outstanding_balance || targetInvoice?.total_amount}
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(parseFloat(e.target.value) || 0)}
+                  placeholder="e.g. 5000"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[var(--text)] mb-1.5">
+                  Payment Method <span className="text-rose-400">*</span>
+                </label>
+                <select
+                  value={payMethod}
+                  onChange={(e) => setPayMethod(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                >
+                  <option value="upi">UPI / QR</option>
+                  <option value="bank_transfer">Bank Transfer (NEFT/RTGS/IMPS)</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="cash">Cash</option>
+                  <option value="card">Debit / Credit Card</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[var(--text)] mb-1.5">
+                Payment Date
+              </label>
+              <GlassInput
+                type="date"
+                value={payDate}
+                onChange={(e) => setPayDate(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[var(--text)] mb-1.5">
+                Transaction Note / Reference
+              </label>
+              <GlassInput
+                type="text"
+                placeholder="e.g. UPI Ref #9876543210 or NEFT UTR"
+                value={payNote}
+                onChange={(e) => setPayNote(e.target.value)}
+              />
+            </div>
+
+            <div className="pt-3 border-t border-white/[0.08] flex items-center justify-end gap-2.5">
+              <GlassButton
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setPaymentModalOpen(false)}
+                disabled={submittingPay}
+              >
+                Cancel
+              </GlassButton>
+              <GlassButton
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={submittingPay}
+                className="bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-500/20"
+              >
+                {submittingPay ? "Recording..." : "Record & Post Payment"}
+              </GlassButton>
+            </div>
+          </form>
         </GlassModal>
       </div>
     </div>

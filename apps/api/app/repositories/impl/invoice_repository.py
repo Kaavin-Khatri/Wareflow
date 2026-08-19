@@ -77,6 +77,42 @@ class SqlAlchemyInvoiceRepository(InvoiceRepositoryInterface):
         self.session.flush()
         return invoice
 
+    def update_invoice(self, invoice: Invoice) -> Invoice:
+        """Update existing invoice state."""
+        self.session.merge(invoice)
+        self.session.flush()
+        return invoice
+
+    def list_by_retailer_id(self, retailer_id: str) -> list[Invoice]:
+        """Fetch all invoices issued to a specific retailer chronologically."""
+        stmt = (
+            select(Invoice)
+            .options(
+                selectinload(Invoice.items),
+                selectinload(Invoice.sales_order).selectinload(SalesOrder.retailer),
+                selectinload(Invoice.sales_order).selectinload(SalesOrder.customer),
+            )
+            .join(Invoice.sales_order)
+            .where(SalesOrder.retailer_id == retailer_id)
+            .order_by(Invoice.invoice_date.asc(), Invoice.created_at.asc())
+        )
+        return list(self.session.execute(stmt).scalars().all())
+
+    def list_overdue_candidates(self, cutoff_date: datetime) -> list[Invoice]:
+        """Fetch unpaid or partially-paid invoices created before cutoff_date."""
+        stmt = (
+            select(Invoice)
+            .options(
+                selectinload(Invoice.items),
+                selectinload(Invoice.sales_order).selectinload(SalesOrder.retailer),
+            )
+            .where(
+                Invoice.status.in_(["unpaid", "partially_paid"]),
+                Invoice.invoice_date < cutoff_date,
+            )
+        )
+        return list(self.session.execute(stmt).scalars().all())
+
     def list_invoices(
         self,
         retailer_id: str | None = None,
@@ -114,6 +150,7 @@ class SqlAlchemyInvoiceRepository(InvoiceRepositoryInterface):
         items = list(self.session.execute(query).scalars().all())
 
         return items, total
+
 
 
 class InMemoryInvoiceRepository(InvoiceRepositoryInterface):
@@ -169,6 +206,47 @@ class InMemoryInvoiceRepository(InvoiceRepositoryInterface):
             invoice.sales_order = self._sales_orders[invoice.sales_order_id]
         return invoice
 
+    def update_invoice(self, invoice: Invoice) -> Invoice:
+        self._invoices[invoice.id] = invoice
+        return invoice
+
+
+    def list_by_retailer_id(self, retailer_id: str) -> list[Invoice]:
+        results = []
+        for inv in self._invoices.values():
+            if not hasattr(inv, "items"):
+                inv.items = self._items.get(inv.id, [])
+            if inv.sales_order_id and not hasattr(inv, "sales_order"):
+                inv.sales_order = self._sales_orders.get(inv.sales_order_id)
+            if (
+                getattr(inv, "sales_order", None)
+                and getattr(inv.sales_order, "retailer_id", None) == retailer_id
+            ):
+                results.append(inv)
+        return sorted(
+            results,
+            key=lambda x: (
+                getattr(x, "invoice_date", datetime.min),
+                getattr(x, "created_at", datetime.min),
+            ),
+        )
+
+    def list_overdue_candidates(self, cutoff_date: datetime) -> list[Invoice]:
+        results = []
+        for inv in self._invoices.values():
+            if str(inv.status).lower() in ("unpaid", "partially_paid"):
+                inv_date = inv.invoice_date
+                if inv_date.tzinfo is not None and cutoff_date.tzinfo is None:
+                    cutoff_cmp = cutoff_date.replace(tzinfo=inv_date.tzinfo)
+                elif inv_date.tzinfo is None and cutoff_date.tzinfo is not None:
+                    inv_date_cmp = inv_date.replace(tzinfo=cutoff_date.tzinfo)
+                else:
+                    inv_date_cmp = inv_date
+                    cutoff_cmp = cutoff_date
+                if inv_date_cmp < cutoff_cmp:
+                    results.append(inv)
+        return results
+
     def list_invoices(
         self,
         retailer_id: str | None = None,
@@ -178,6 +256,7 @@ class InMemoryInvoiceRepository(InvoiceRepositoryInterface):
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[Invoice], int]:
+
         results = list(self._invoices.values())
 
         if retailer_id:

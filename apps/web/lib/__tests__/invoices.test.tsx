@@ -125,10 +125,10 @@ describe("GST Invoices & Billing UI", () => {
     render(<InvoicesPage />);
 
     await waitFor(() => {
-      expect(screen.getAllByText("GST Tax Invoices & Billing").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/GST Tax Invoices/i).length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText("Total Invoiced Value")).toBeDefined();
-      expect(screen.getByText("Outstanding Unpaid")).toBeDefined();
-      expect(screen.getByText("Collected Revenue")).toBeDefined();
+      expect(screen.getByText("Outstanding Receivables")).toBeDefined();
+      expect(screen.getByText("Total Payments Collected")).toBeDefined();
       expect(screen.getByText("Active Invoices")).toBeDefined();
       expect(screen.getAllByText("INV/2026-27/0001").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("Apex Wholesale Mart").length).toBeGreaterThanOrEqual(1);
@@ -151,17 +151,14 @@ describe("GST Invoices & Billing UI", () => {
     });
   });
 
-
-
-
   it("opens invoice detail preview modal with GST breakdown and print action", async () => {
     render(<InvoicesPage />);
 
     await waitFor(() => {
-      expect(screen.getAllByText("View & Print").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("View").length).toBeGreaterThanOrEqual(1);
     });
 
-    fireEvent.click(screen.getAllByText("View & Print")[0]);
+    fireEvent.click(screen.getAllByText("View")[0]);
 
     await waitFor(() => {
       expect(screen.getAllByText(/Tax Invoice: INV\/2026-27\/0001/i).length).toBeGreaterThanOrEqual(1);
@@ -174,4 +171,5 @@ describe("GST Invoices & Billing UI", () => {
       expect(screen.getByText(/Print \/ Export PDF/i)).toBeDefined();
     });
   });
+
 });

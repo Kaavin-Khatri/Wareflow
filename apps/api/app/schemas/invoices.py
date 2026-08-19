@@ -42,6 +42,8 @@ class InvoiceResponse(BaseModel):
     subtotal: float
     tax_amount: float
     total_amount: float
+    paid_amount: float = 0.0
+    outstanding_balance: float = 0.0
     status: str
     e_invoice_irn: str | None = None
     e_invoice_ack_no: str | None = None
@@ -49,6 +51,7 @@ class InvoiceResponse(BaseModel):
     e_way_bill_no: str | None = None
     created_at: datetime
     items: list[InvoiceItemResponse] = Field(default_factory=list)
+    payments: list[dict[str, object]] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -66,9 +69,12 @@ class InvoiceListItemResponse(BaseModel):
     subtotal: float
     tax_amount: float
     total_amount: float
+    paid_amount: float = 0.0
+    outstanding_balance: float = 0.0
     status: str
     items_count: int = 0
     created_at: datetime
+
 
     model_config = ConfigDict(from_attributes=True)
 
