@@ -2843,6 +2843,86 @@
 - `codebase_audit.md`
 - `memory.md`
 
+---
+
+## Step 11.3 — Product Inquiries (Easy Inquiry & Staff Response Flow)
+
+**Timestamp:** 2026-08-19T12:00:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Backend Schemas & Models (`apps/api/app/schemas/inquiries.py`)**:
+   - `CreateInquiryRequest`: `{ product_id: str, message: str }`.
+   - `RespondInquiryRequest`: `{ response: str }`.
+   - `ProductInquiryResponse`: Complete schema containing inquiry ID, product details (`product_name`, `product_sku`), retailer information (`retailer_name`), message, lifecycle status (`open` | `responded` | `closed`), staff response, `created_at`, and `responded_at`.
+2. **Persistence Abstraction & Repositories (`apps/api/app/repositories/`)**:
+   - `InquiryRepositoryInterface` and `InquiryRepository` (SQLAlchemy & InMemory implementations for testing/DIP).
+   - `NotificationRepositoryInterface` and `NotificationRepository` (SQLAlchemy & InMemory implementations).
+3. **NotificationService Dispatch (`apps/api/app/services/notification_service.py`)**:
+   - Reused existing `Notification` model to create in-app notification records and emit structured notification event logs to all users linked to the target retailer account upon staff response.
+4. **Inquiry Business Logic Service (`apps/api/app/services/inquiry_service.py`)**:
+   - `create_retailer_inquiry`: Validates product existence, binds `retailer_id` from the caller's verified `CurrentUser`, creates `ProductInquiry` with status `open`.
+   - `list_retailer_inquiries`: Strict tenant data wall scoping inquiries exclusively to the authenticated retailer in chronological order.
+   - `list_staff_inquiries`: Staff inbox queries filterable by `status` (`open`/`responded`) and `product_id`.
+   - `respond_to_inquiry`: Records staff response text, updates status to `responded`, marks `responded_at` timestamp, and triggers `NotificationService.notify_retailer_inquiry_responded`.
+5. **API Endpoints & Router Registration**:
+   - `POST /portal/inquiries`: Guarded by `require_portal_retailer` (201 Created).
+   - `GET /portal/inquiries`: Guarded by `require_portal_retailer` (200 OK).
+   - `GET /inquiries`: Guarded by `require_staff` (200 OK, staff inbox).
+   - `PATCH /inquiries/{inquiry_id}/respond`: Guarded by `require_staff` (200 OK).
+   - Registered `inquiries.router` in `apps/api/app/main.py` and wired DI providers in `apps/api/app/core/di.py`.
+6. **Frontend Web UI (`apps/web`)**:
+   - `apps/web/app/portal/catalog/page.tsx`: Connected `InquiryModal` to `POST /portal/inquiries` with live token auth, loading spinners, and error alerts.
+   - `apps/web/app/admin/inquiries/page.tsx`: Built full staff inquiry inbox using `AppLayout`, `ListViewTemplate`, stat cards (Total Inquiries, Pending Action Open, Responded), search bar, status filter pills, and `GlassModal` response dialog.
+   - `apps/web/lib/nav.ts`: Added "Product Inquiries" navigation item under Wholesale Operations.
+7. **Testing & QA Verification**:
+   - Backend `apps/api/tests/test_inquiries.py`: 5 tests covering submission, 404 validation, strict retailer data wall isolation, staff inbox filtering, staff response + notification dispatch, and HTTP RBAC guards.
+   - Frontend `apps/web/lib/__tests__/inquiries.test.tsx`: 4 tests covering staff inbox rendering, status filtering, staff response mutation, and portal catalog inquiry modal submission.
+   - Test suites: **167 / 167 Pytest tests passing (100% green)**; **129 / 129 Vitest tests passing across 30 test files (100% green)**.
+   - **0 ESLint errors/warnings**; Next.js production build compiled cleanly across 40 routes.
+
+### Decisions
+
+- **NotificationService Reuse (SOLID OCP)**:
+  - Reused the centralized `NotificationService` and `Notification` persistence layer rather than creating bespoke communication channels.
+- **Strict Retailer Tenant Isolation**:
+  - `GET /portal/inquiries` and `POST /portal/inquiries` enforce `current_user.retailer_id` on the server side, ensuring retailers cannot view or submit inquiries on behalf of other accounts.
+
+### Key values for future steps
+
+- Portal Inquiry Submission API: `POST /portal/inquiries`
+- Retailer Inquiries List API: `GET /portal/inquiries`
+- Staff Inquiry Inbox API: `GET /inquiries`
+- Staff Inquiry Response API: `PATCH /inquiries/{id}/respond`
+- Staff Inbox Route: `/admin/inquiries`
+
+### Files Created
+
+- `apps/api/app/schemas/inquiries.py`
+- `apps/api/app/repositories/interfaces/inquiry_repository.py`
+- `apps/api/app/repositories/impl/inquiry_repository.py`
+- `apps/api/app/repositories/interfaces/notification_repository.py`
+- `apps/api/app/repositories/impl/notification_repository.py`
+- `apps/api/app/services/notification_service.py`
+- `apps/api/app/services/inquiry_service.py`
+- `apps/api/app/api/routers/inquiries.py`
+- `apps/api/tests/test_inquiries.py`
+- `apps/web/app/admin/inquiries/page.tsx`
+- `apps/web/lib/__tests__/inquiries.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/core/di.py`
+- `apps/api/app/main.py`
+- `apps/api/app/api/routers/portal.py`
+- `apps/web/app/portal/catalog/page.tsx`
+- `apps/web/lib/nav.ts`
+- `apps/web/lib/__tests__/purchase-returns.test.tsx`
+- `codebase_audit.md`
+- `memory.md`
+
+
 
 
 

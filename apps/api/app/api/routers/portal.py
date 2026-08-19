@@ -4,9 +4,10 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, status
 
-from app.core.di import get_ledger_service, get_portal_auth_service
+from app.core.di import get_inquiry_service, get_ledger_service, get_portal_auth_service
 from app.core.security import CurrentUser, get_current_user_claims, require_portal_retailer
 from app.schemas.billing import RetailerLedgerResponse
+from app.schemas.inquiries import CreateInquiryRequest, ProductInquiryResponse
 from app.schemas.invoices import InvoiceResponse
 from app.schemas.portal import (
     PortalBootstrapRequest,
@@ -17,6 +18,7 @@ from app.schemas.portal import (
     RetailerPortalMeResponse,
 )
 from app.schemas.sales_orders import SalesOrderResponse
+from app.services.inquiry_service import InquiryService
 from app.services.ledger_service import LedgerService
 from app.services.portal_auth_service import PortalAuthService
 
@@ -174,3 +176,36 @@ def get_my_ledger(
     if not current_user.retailer_id:
         raise ValueError("Retailer ID is missing from user context.")
     return ledger_service.get_retailer_ledger(retailer_id=current_user.retailer_id)
+
+
+@router.post(
+    "/inquiries",
+    response_model=ProductInquiryResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Submit a product inquiry or bulk quote request",
+)
+def create_portal_inquiry(
+    body: CreateInquiryRequest,
+    current_user: CurrentUser = Depends(require_portal_retailer),
+    inquiry_service: InquiryService = Depends(get_inquiry_service),
+) -> ProductInquiryResponse:
+    """Create a new product inquiry from the retailer portal."""
+    return inquiry_service.create_retailer_inquiry(
+        current_user=current_user,
+        payload=body,
+    )
+
+
+@router.get(
+    "/inquiries",
+    response_model=list[ProductInquiryResponse],
+    status_code=status.HTTP_200_OK,
+    summary="List inquiries submitted by this retailer",
+)
+def list_my_inquiries(
+    current_user: CurrentUser = Depends(require_portal_retailer),
+    inquiry_service: InquiryService = Depends(get_inquiry_service),
+) -> list[ProductInquiryResponse]:
+    """Retrieve product inquiries strictly scoped to the authenticated retailer."""
+    return inquiry_service.list_retailer_inquiries(current_user=current_user)
+

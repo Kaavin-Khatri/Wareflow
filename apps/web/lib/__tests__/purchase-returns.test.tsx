@@ -165,13 +165,12 @@ describe("PurchaseReturnsPage Frontend Component (Step 7.3)", () => {
       expect(screen.getAllByText("Total Returns").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("Units Returned").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("Vendor Credited").length).toBeGreaterThanOrEqual(1);
+      // Check table rows
+      expect(screen.getAllByText("PO-202608-0001").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Tata Consumer Products").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("15 units").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("CRN-FORTUNE-881").length).toBeGreaterThanOrEqual(1);
     });
-
-    // Check table rows
-    expect(screen.getAllByText("PO-202608-0001").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Tata Consumer Products").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("15 units").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("CRN-FORTUNE-881").length).toBeGreaterThanOrEqual(1);
   });
 
   it("should filter table when search query is entered", async () => {

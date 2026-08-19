@@ -138,7 +138,12 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         icon: "RotateCcw",
         requiredPermission: "orders:view",
       },
-
+      {
+        name: "Product Inquiries",
+        href: "/admin/inquiries",
+        icon: "HelpCircle",
+        requiredPermission: "inventory:view",
+      },
     ],
   },
   {

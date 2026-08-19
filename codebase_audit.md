@@ -506,6 +506,10 @@ wareflow/
 | GET    | `/portal/invoices`                     | List invoices strictly scoped to caller retailer    | Yes (Retailer Portal Only)      |
 | GET    | `/portal/invoices/{id}`                | Get invoice details (strictly scoped data wall)     | Yes (Retailer Portal Only)      |
 | GET    | `/portal/ledger`                       | Get AR ledger statement strictly scoped to retailer | Yes (Retailer Portal Only)      |
+| POST   | `/portal/inquiries`                    | Submit product inquiry or bulk quote request        | Yes (Retailer Portal Only)      |
+| GET    | `/portal/inquiries`                    | List inquiries strictly scoped to caller retailer   | Yes (Retailer Portal Only)      |
+| GET    | `/inquiries`                           | List all product inquiries with status/product filter| Yes (Staff Only)                |
+| PATCH  | `/inquiries/{id}/respond`              | Respond to inquiry & dispatch notification to buyer | Yes (Staff Only)                |
 
 
 

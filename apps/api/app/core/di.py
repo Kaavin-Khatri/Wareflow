@@ -23,9 +23,17 @@ from app.repositories.impl.customer_repository import (
     InMemoryCustomerRepository,
     SqlAlchemyCustomerRepository,
 )
+from app.repositories.impl.inquiry_repository import (
+    InMemoryInquiryRepository,
+    InquiryRepository as SqlAlchemyInquiryRepository,
+)
 from app.repositories.impl.invoice_repository import (
     InMemoryInvoiceRepository,
     SqlAlchemyInvoiceRepository,
+)
+from app.repositories.impl.notification_repository import (
+    InMemoryNotificationRepository,
+    NotificationRepository as SqlAlchemyNotificationRepository,
 )
 from app.repositories.impl.payment_repository import (
     InMemoryPaymentRepository,
@@ -87,8 +95,14 @@ from app.repositories.interfaces.business_settings_repository import (
 from app.repositories.interfaces.customer_repository import (
     CustomerRepositoryInterface,
 )
+from app.repositories.interfaces.inquiry_repository import (
+    InquiryRepositoryInterface,
+)
 from app.repositories.interfaces.invoice_repository import (
     InvoiceRepositoryInterface,
+)
+from app.repositories.interfaces.notification_repository import (
+    NotificationRepositoryInterface,
 )
 from app.repositories.interfaces.payment_repository import (
     PaymentRepositoryInterface,
@@ -122,8 +136,10 @@ from app.services.audit_service import AuditService
 from app.services.business_settings_service import BusinessSettingsService
 from app.services.customer_service import CustomerService
 from app.services.einvoice_service import EinvoiceService
+from app.services.inquiry_service import InquiryService
 from app.services.invoice_service import InvoiceService
 from app.services.ledger_service import LedgerService
+from app.services.notification_service import NotificationService
 from app.services.payment_service import PaymentService
 from app.services.portal_auth_service import PortalAuthService
 from app.services.pricing_strategy import PricingEngineService
@@ -667,4 +683,55 @@ def get_portal_auth_service(
         stock_repo=stock_repo,
         pricing_engine=pricing_engine,
     )
+
+
+@lru_cache
+def get_in_memory_notification_repository() -> NotificationRepositoryInterface:
+    """Factory for in-memory NotificationRepository."""
+    return InMemoryNotificationRepository()
+
+
+def get_notification_repository(
+    db: Session = Depends(get_db_session),
+) -> NotificationRepositoryInterface:
+    """Factory for database-backed NotificationRepository."""
+    return SqlAlchemyNotificationRepository(session=db)
+
+
+def get_notification_service(
+    notif_repo: NotificationRepositoryInterface = Depends(get_notification_repository),
+    retailer_user_repo: RetailerUserRepository = Depends(get_retailer_user_repository),
+) -> NotificationService:
+    """Factory for NotificationService."""
+    return NotificationService(
+        notification_repo=notif_repo,
+        retailer_user_repo=retailer_user_repo,
+    )
+
+
+@lru_cache
+def get_in_memory_inquiry_repository() -> InquiryRepositoryInterface:
+    """Factory for in-memory InquiryRepository."""
+    return InMemoryInquiryRepository()
+
+
+def get_inquiry_repository(
+    db: Session = Depends(get_db_session),
+) -> InquiryRepositoryInterface:
+    """Factory for database-backed InquiryRepository."""
+    return SqlAlchemyInquiryRepository(session=db)
+
+
+def get_inquiry_service(
+    inquiry_repo: InquiryRepositoryInterface = Depends(get_inquiry_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    notif_service: NotificationService = Depends(get_notification_service),
+) -> InquiryService:
+    """Factory for InquiryService with DIP dependencies."""
+    return InquiryService(
+        inquiry_repo=inquiry_repo,
+        product_repo=product_repo,
+        notification_service=notif_service,
+    )
+
 

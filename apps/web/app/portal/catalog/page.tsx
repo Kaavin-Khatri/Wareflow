@@ -174,7 +174,7 @@ export default function PortalCatalogPage() {
         <InquiryModal
           product={inquiryProduct}
           onClose={() => setInquiryProduct(null)}
-          onSubmit={() => {
+          onSuccess={() => {
             setInquiryProduct(null);
             showToast(`Inquiry for ${inquiryProduct.name} submitted successfully!`);
           }}
@@ -500,13 +500,52 @@ function CatalogEmptyState({ onReset }: { onReset: () => void }) {
 function InquiryModal({
   product,
   onClose,
-  onSubmit,
+  onSuccess,
 }: {
   product: CatalogProduct;
   onClose: () => void;
-  onSubmit: (msg: string) => void;
+  onSuccess: () => void;
 }) {
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const currentUser = auth.currentUser;
+      const idToken = currentUser ? await currentUser.getIdToken() : "";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+      const res = await fetch(`${apiUrl}/portal/inquiries`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          product_id: product.id,
+          message: message.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || "Failed to submit inquiry. Please try again.");
+      }
+
+      onSuccess();
+    } catch (err: unknown) {
+      setSubmitError(err instanceof Error ? err.message : "An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
@@ -516,35 +555,53 @@ function InquiryModal({
             <h3 className="text-base font-bold text-white">Ask a Question</h3>
             <p className="text-xs text-slate-400">{product.name} ({product.sku})</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white text-sm">✕</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-sm" disabled={isSubmitting}>✕</button>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-slate-300">Your Inquiry / Question</label>
-          <textarea
-            rows={4}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Ask about bulk volumes, packaging options, or lead times..."
-            className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-          />
-        </div>
+        {submitError && (
+          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs">
+            {submitError}
+          </div>
+        )}
 
-        <div className="flex items-center justify-end gap-2 pt-2">
-          <button
-            onClick={onClose}
-            className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onSubmit(message)}
-            disabled={!message.trim()}
-            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium shadow-md shadow-indigo-600/30"
-          >
-            Send Inquiry
-          </button>
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-slate-300">Your Inquiry / Question</label>
+            <textarea
+              rows={4}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Ask about bulk volumes, packaging options, or lead times..."
+              disabled={isSubmitting}
+              className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/40 disabled:opacity-50"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!message.trim() || isSubmitting}
+              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-medium shadow-md shadow-indigo-600/30 flex items-center gap-1.5"
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Sending...</span>
+                </>
+              ) : (
+                <span>Send Inquiry</span>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
