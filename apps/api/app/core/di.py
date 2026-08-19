@@ -652,6 +652,9 @@ def get_portal_auth_service(
     profile_repo: ProfileRepository = Depends(get_profile_repository),
     order_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
     invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    pricing_engine: PricingEngineService = Depends(get_pricing_engine_service),
 ) -> PortalAuthService:
     """Factory for PortalAuthService with isolated tenant boundaries."""
     return PortalAuthService(
@@ -660,5 +663,8 @@ def get_portal_auth_service(
         profile_repo=profile_repo,
         sales_order_repo=order_repo,
         invoice_repo=invoice_repo,
+        product_repo=product_repo,
+        stock_repo=stock_repo,
+        pricing_engine=pricing_engine,
     )
 

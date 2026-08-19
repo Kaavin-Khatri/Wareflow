@@ -11,17 +11,22 @@ if TYPE_CHECKING:
 from app.models.portal import RetailerUser
 from app.models.retailer import SalesOrder
 from app.repositories.interfaces.invoice_repository import InvoiceRepositoryInterface
+from app.repositories.interfaces.product_repository import ProductRepositoryInterface
 from app.repositories.interfaces.profile_repository import ProfileRepository
 from app.repositories.interfaces.retailer_repository import RetailerRepository
 from app.repositories.interfaces.retailer_user_repository import RetailerUserRepository
 from app.repositories.interfaces.sales_order_repository import (
     SalesOrderRepositoryInterface,
 )
+from app.repositories.interfaces.stock_repository import StockRepositoryInterface
 from app.schemas.portal import (
+    PortalCatalogProductResponse,
+    PortalCategoryResponse,
     PortalInvoiceListItemResponse,
     PortalOrderListItemResponse,
     RetailerPortalMeResponse,
 )
+from app.services.pricing_strategy import PricingEngineService
 
 
 class PortalAuthService:
@@ -34,12 +39,18 @@ class PortalAuthService:
         profile_repo: ProfileRepository,
         sales_order_repo: SalesOrderRepositoryInterface | None = None,
         invoice_repo: InvoiceRepositoryInterface | None = None,
+        product_repo: ProductRepositoryInterface | None = None,
+        stock_repo: StockRepositoryInterface | None = None,
+        pricing_engine: PricingEngineService | None = None,
     ) -> None:
         self._user_repo = retailer_user_repo
         self._retailer_repo = retailer_repo
         self._profile_repo = profile_repo
         self._order_repo = sales_order_repo
         self._invoice_repo = invoice_repo
+        self._product_repo = product_repo
+        self._stock_repo = stock_repo
+        self._pricing_engine = pricing_engine or PricingEngineService()
 
     def bootstrap_retailer_user(
         self,
@@ -251,3 +262,114 @@ class PortalAuthService:
             is_active=retailer.is_active,
             account_type="retailer",
         )
+
+    def _calculate_product_availability(self, product: Any, on_hand: float) -> str:
+        """Compute privacy-preserving availability band without revealing exact inventory counts."""
+        if on_hand <= 0:
+            return "Out"
+        reorder_pt = getattr(product, "reorder_point", 0) if hasattr(product, "reorder_point") else product.get("reorder_point", 0)
+        reorder_val = float(reorder_pt or 0)
+        if reorder_val > 0 and on_hand <= reorder_val:
+            return "Low"
+        if reorder_val <= 0 and on_hand <= 10.0:
+            return "Low"
+        return "Available"
+
+    def _build_catalog_item(
+        self, product: Any, pricing_tier: str, cat_map: dict[str, str]
+    ) -> PortalCatalogProductResponse:
+        """Format product model into tier-priced catalog response with privacy-safe stock band."""
+        base_price = float(getattr(product, "wholesale_price", 0.0) if hasattr(product, "wholesale_price") else product.get("wholesale_price", 0.0))
+        calc = self._pricing_engine.calculate_line_price(pricing_tier, base_price, 1)
+        pid = product.id if hasattr(product, "id") else product.get("id", "")
+        on_hand = float(self._stock_repo.get_on_hand(pid)) if self._stock_repo else 100.0
+        availability = self._calculate_product_availability(product, on_hand)
+        cat_id = getattr(product, "category_id", None) if hasattr(product, "category_id") else product.get("category_id")
+        cat_name = cat_map.get(cat_id or "", None) if cat_id else None
+        if not cat_name and getattr(product, "category", None) and hasattr(product.category, "name"):
+            cat_name = product.category.name
+        unit_name = getattr(product, "unit", "Piece") if hasattr(product, "unit") else product.get("unit", "Piece")
+        if getattr(product, "base_uom", None) and hasattr(product.base_uom, "name"):
+            unit_name = product.base_uom.name
+
+        return PortalCatalogProductResponse(
+            id=pid,
+            sku=getattr(product, "sku", "") if hasattr(product, "sku") else product.get("sku", ""),
+            name=getattr(product, "name", "") if hasattr(product, "name") else product.get("name", ""),
+            description=getattr(product, "description", None) if hasattr(product, "description") else product.get("description"),
+            content_details=getattr(product, "content_details", None) if hasattr(product, "content_details") else product.get("content_details"),
+            image_url=getattr(product, "image_url", None) if hasattr(product, "image_url") else product.get("image_url"),
+            category_id=cat_id,
+            category_name=cat_name,
+            unit=unit_name or "Piece",
+            base_price=base_price,
+            effective_price=calc.effective_unit_price,
+            discount_percentage=calc.discount_percentage,
+            pricing_tier=pricing_tier,
+            availability=availability,
+            hsn_code=getattr(product, "hsn_code", None) if hasattr(product, "hsn_code") else product.get("hsn_code"),
+        )
+
+    def get_retailer_catalog(
+        self,
+        current_user: CurrentUser,
+        category_id: str | None = None,
+        search: str | None = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> list[PortalCatalogProductResponse]:
+        """Fetch wholesale product catalog customized to caller retailer's pricing tier."""
+        if current_user.account_type != "retailer" or not current_user.retailer_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Retailer portal access only.",
+            )
+
+        retailer = self._retailer_repo.get_by_id(current_user.retailer_id)
+        if not retailer or not retailer.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Retailer account is inactive or not found.",
+            )
+
+        if not self._product_repo:
+            return []
+
+        pricing_tier = getattr(retailer, "pricing_tier", "standard") or "standard"
+        products = self._product_repo.list_products(
+            skip=skip,
+            limit=limit,
+            category_id=category_id,
+            search=search,
+            is_active=True,
+        )
+
+        categories = self._product_repo.list_categories() if hasattr(self._product_repo, "list_categories") else []
+        cat_map: dict[str, str] = {}
+        for c in categories:
+            cid = c.id if hasattr(c, "id") else c.get("id", "")
+            cname = c.name if hasattr(c, "name") else c.get("name", "")
+            if cid:
+                cat_map[cid] = cname
+
+        return [self._build_catalog_item(p, pricing_tier, cat_map) for p in products]
+
+    def get_catalog_categories(self, current_user: CurrentUser) -> list[PortalCategoryResponse]:
+        """Fetch product categories available in wholesale catalog."""
+        if current_user.account_type != "retailer" or not current_user.retailer_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Retailer portal access only.",
+            )
+
+        if not self._product_repo or not hasattr(self._product_repo, "list_categories"):
+            return []
+
+        categories = self._product_repo.list_categories()
+        results: list[PortalCategoryResponse] = []
+        for c in categories:
+            cid = c.id if hasattr(c, "id") else c.get("id", "")
+            cname = c.name if hasattr(c, "name") else c.get("name", "")
+            if cid:
+                results.append(PortalCategoryResponse(id=cid, name=cname))
+        return results

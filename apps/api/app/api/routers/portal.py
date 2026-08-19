@@ -10,6 +10,8 @@ from app.schemas.billing import RetailerLedgerResponse
 from app.schemas.invoices import InvoiceResponse
 from app.schemas.portal import (
     PortalBootstrapRequest,
+    PortalCatalogProductResponse,
+    PortalCategoryResponse,
     PortalInvoiceListItemResponse,
     PortalOrderListItemResponse,
     RetailerPortalMeResponse,
@@ -19,6 +21,44 @@ from app.services.ledger_service import LedgerService
 from app.services.portal_auth_service import PortalAuthService
 
 router = APIRouter(prefix="/portal", tags=["Retailer Portal"])
+
+
+@router.get(
+    "/catalog",
+    response_model=list[PortalCatalogProductResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get wholesale product catalog customized to retailer pricing tier",
+)
+def get_retailer_catalog(
+    category_id: str | None = None,
+    search: str | None = None,
+    skip: int = 0,
+    limit: int = 100,
+    current_user: CurrentUser = Depends(require_portal_retailer),
+    service: PortalAuthService = Depends(get_portal_auth_service),
+) -> list[PortalCatalogProductResponse]:
+    """Retrieve tier-priced product catalog with privacy-preserving availability bands."""
+    return service.get_retailer_catalog(
+        current_user=current_user,
+        category_id=category_id,
+        search=search,
+        skip=skip,
+        limit=limit,
+    )
+
+
+@router.get(
+    "/categories",
+    response_model=list[PortalCategoryResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get product categories for catalog filtering",
+)
+def get_catalog_categories(
+    current_user: CurrentUser = Depends(require_portal_retailer),
+    service: PortalAuthService = Depends(get_portal_auth_service),
+) -> list[PortalCategoryResponse]:
+    """Retrieve product categories available in catalog."""
+    return service.get_catalog_categories(current_user=current_user)
 
 
 @router.post(

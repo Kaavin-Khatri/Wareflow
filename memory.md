@@ -2762,6 +2762,8 @@
 - `apps/web/app/portal/invoices/page.tsx`
 - `apps/web/lib/__tests__/portal-auth.test.tsx`
 
+- `apps/web/lib/__tests__/portal-auth.test.tsx`
+
 ### Files Modified
 
 - `apps/api/app/models/__init__.py`
@@ -2774,6 +2776,73 @@
 - `apps/api/app/main.py`
 - `codebase_audit.md`
 - `memory.md`
+
+---
+
+## Step 11.2 — Product Catalog (Tier-Priced, Searchable)
+
+**Timestamp:** 2026-08-19T06:10:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Reused Core Pricing & Stock Services (`apps/api/app/services/portal_auth_service.py`)**:
+   - Extended `PortalAuthService` by injecting `ProductRepository`, `StockRepository`, and `PricingEngineService` (from Phase 5 and Phase 7).
+   - Implemented `_calculate_product_availability(product, on_hand)`: categorizes stock into privacy-preserving bands (`"Out"` if stock <= 0, `"Low"` if stock <= reorder point / 10, `"Available"` otherwise) — avoiding leakage of exact warehouse stock quantities to external retailers.
+   - Implemented `_build_catalog_item(product, pricing_tier, cat_map)`: evaluates the retailer's assigned tier pricing strategy (`Standard` 0%, `Silver` 5%, `Gold` 10%) to compute line discounts and effective unit prices dynamically.
+   - Implemented `get_retailer_catalog(current_user, category_id, search, skip, limit)` and `get_catalog_categories(current_user)`.
+2. **Catalog Schemas (`apps/api/app/schemas/portal.py`)**:
+   - Added `PortalCatalogProductResponse` (fields: `id`, `sku`, `name`, `description`, `content_details`, `image_url`, `category_id`, `category_name`, `unit`, `base_price`, `effective_price`, `discount_percentage`, `pricing_tier`, `availability`, `hsn_code`).
+   - Added `PortalCategoryResponse` (fields: `id`, `name`).
+3. **API Endpoints (`apps/api/app/api/routers/portal.py`)**:
+   - `GET /portal/catalog`: Returns wholesale catalog items with tier-adjusted prices and privacy-safe availability bands. Guarded by `require_portal_retailer`.
+   - `GET /portal/categories`: Returns distinct product categories for client filter tabs. Guarded by `require_portal_retailer`.
+4. **Frontend Wholesale Catalog UI (`apps/web/app/portal/catalog/page.tsx`)**:
+   - Implemented 4.x liquid glass product card grid with light-edge specular refraction, category tags, SKU badges, and HSN codes.
+   - Live effective tier price display with strike-through base wholesale rate and discount chips (e.g. `5% OFF (Silver Tier)`).
+   - Stock availability pills: Emerald `Available` with pulsing green dot, Amber `Low Stock`, Rose `Out of Stock`.
+   - Instant client-side search across SKU, name, description, and category.
+   - Category filter pills, stock status selector tabs, and multiple sorting options (A-Z, Z-A, Price Low-to-High, Price High-to-Low, Highest Discount).
+   - Interactive "Ask a Question" inquiry modal with message input and toast notification.
+   - Interactive "Add to Order" quick order modal with quantity increment/decrement counter and dynamic line total calculation.
+5. **Testing & QA Verification**:
+   - Backend `apps/api/tests/test_portal_catalog.py` (4 tests: tier pricing discount comparison for Gold/Silver/Standard, privacy-safe availability bands without quantity leakage, search/category filtering, and HTTP RBAC guards).
+   - Frontend `apps/web/lib/__tests__/portal-catalog.test.tsx` (7 tests: catalog header rendering, tier price calculations, privacy availability badges, instant search filtering, category filtering, Ask Question modal, and Quick Order modal).
+   - Full test suites: **162 / 162 Pytest tests passing (100% green)**; **125 / 125 Vitest tests passing across 29 test suites (100% green)**.
+   - **0 ESLint errors/warnings**; Next.js production build compiled cleanly.
+
+### Decisions
+
+- **Availability Band Privacy Rule**:
+  - Exact warehouse stock quantities (e.g. `total_on_hand`, batch breakdowns) are strictly obscured from retailers.
+  - Only `"Available" | "Low" | "Out"` status is sent in `PortalCatalogProductResponse.availability` to avoid leaking sensitive warehouse levels externally.
+- **Zero Duplicate Pricing Logic**:
+  - Reused `PricingEngineService.calculate_line_price` directly with the retailer's `pricing_tier` claim, ensuring single source of truth for pricing calculations across both backend sales orders and frontend portal catalog.
+
+### Key values for future steps
+
+- Portal Catalog Endpoint: `GET /portal/catalog` (`apps/api/app/api/routers/portal.py`)
+- Portal Categories Endpoint: `GET /portal/categories` (`apps/api/app/api/routers/portal.py`)
+- Catalog Page: `apps/web/app/portal/catalog/page.tsx`
+- Availability statuses: `"Available" | "Low" | "Out"`
+
+### Files Created
+
+- `apps/api/tests/test_portal_catalog.py`
+- `apps/web/lib/__tests__/portal-catalog.test.tsx`
+
+### Files Modified
+
+- `apps/api/app/schemas/portal.py`
+- `apps/api/app/services/portal_auth_service.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/api/routers/portal.py`
+- `apps/api/app/repositories/impl/stock_repository.py`
+- `apps/web/app/portal/catalog/page.tsx`
+- `apps/web/lib/__tests__/portal-auth.test.tsx`
+- `codebase_audit.md`
+- `memory.md`
+
 
 
 

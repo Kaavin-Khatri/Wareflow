@@ -68,3 +68,34 @@ class PortalInvoiceListItemResponse(BaseModel):
     e_way_bill_no: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PortalCatalogProductResponse(BaseModel):
+    """Tier-priced product entity with privacy-preserving availability band."""
+
+    id: str
+    sku: str
+    name: str
+    description: str | None = None
+    content_details: str | None = None
+    image_url: str | None = None
+    category_id: str | None = None
+    category_name: str | None = None
+    unit: str = "Piece"
+    base_price: float = Field(..., description="Standard wholesale unit price before tier discount")
+    effective_price: float = Field(..., description="Retailer-specific tier-discounted unit price")
+    discount_percentage: float = 0.0
+    pricing_tier: str = "standard"
+    availability: str = Field(..., description="Privacy-preserving stock status: Available, Low, or Out")
+    hsn_code: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PortalCategoryResponse(BaseModel):
+    """Category lookup for portal filter dropdowns."""
+
+    id: str
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)

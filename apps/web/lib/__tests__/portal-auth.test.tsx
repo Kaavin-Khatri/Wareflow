@@ -88,7 +88,7 @@ describe("Retailer Portal Authentication & Scoped Shell (Step 11.1)", () => {
         credit_limit: 500000.0,
         credit_balance: 50000.0,
       }),
-    });
+    } as unknown as Response);
 
     render(
       <PortalLayout>

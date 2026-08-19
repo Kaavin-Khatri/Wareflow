@@ -544,13 +544,43 @@ class InMemoryStockRepository(StockRepositoryInterface):
 
         if warehouses:
             for w in warehouses:
-                self.warehouses[w["id"]] = dict(w)
+                wid = w.id if hasattr(w, "id") else w["id"]
+                self.warehouses[wid] = {
+                    "id": wid,
+                    "name": getattr(w, "name", "") if hasattr(w, "name") else w.get("name", ""),
+                    "location": getattr(w, "location", None) if hasattr(w, "location") else w.get("location"),
+                    "is_active": getattr(w, "is_active", True) if hasattr(w, "is_active") else w.get("is_active", True),
+                }
         if products:
             for p in products:
-                self.products[p["id"]] = dict(p)
+                pid = p.id if hasattr(p, "id") else p["id"]
+                if isinstance(p, dict):
+                    self.products[pid] = dict(p)
+                else:
+                    self.products[pid] = {
+                        "id": p.id,
+                        "sku": getattr(p, "sku", ""),
+                        "name": getattr(p, "name", ""),
+                        "cost_price": float(getattr(p, "cost_price", 0.0) or 0.0),
+                        "wholesale_price": float(getattr(p, "wholesale_price", 0.0) or 0.0),
+                        "reorder_point": getattr(p, "reorder_point", 0),
+                        "reorder_qty": getattr(p, "reorder_qty", 0),
+                    }
         if batches:
             for b in batches:
-                self.batches[b["id"]] = dict(b)
+                bid = b.id if hasattr(b, "id") else b["id"]
+                if isinstance(b, dict):
+                    self.batches[bid] = dict(b)
+                else:
+                    self.batches[bid] = {
+                        "id": b.id,
+                        "product_id": b.product_id,
+                        "warehouse_id": b.warehouse_id,
+                        "batch_no": b.batch_no,
+                        "quantity": float(b.quantity),
+                        "expiry_date": getattr(b, "expiry_date", None),
+                        "received_at": getattr(b, "received_at", datetime.now(UTC)),
+                    }
 
     def _to_batch_model(self, data: dict[str, Any]) -> StockBatch:
         batch = StockBatch(

@@ -499,6 +499,8 @@ wareflow/
 | POST   | `/retailers/{id}/invite-portal-access` | Generate invite link and token for retailer portal  | Yes (`retailers:manage` / Owner)|
 | POST   | `/portal/auth/bootstrap`               | Bind Firebase token & invite to retailer user       | Yes (Firebase Token)            |
 | GET    | `/portal/me`                           | Get authenticated retailer identity & credit line   | Yes (Retailer Portal Only)      |
+| GET    | `/portal/catalog`                      | List catalog with tier pricing & privacy stock bands| Yes (Retailer Portal Only)      |
+| GET    | `/portal/categories`                   | List categories for wholesale catalog filters       | Yes (Retailer Portal Only)      |
 | GET    | `/portal/orders`                       | List sales orders strictly scoped to caller retailer| Yes (Retailer Portal Only)      |
 | GET    | `/portal/orders/{id}`                  | Get order details (strictly scoped data wall)       | Yes (Retailer Portal Only)      |
 | GET    | `/portal/invoices`                     | List invoices strictly scoped to caller retailer    | Yes (Retailer Portal Only)      |
@@ -573,6 +575,8 @@ wareflow/
 | Recall Outbound Ledger Traceability     | `RecallService` automatically traces every affected sales order and buyer via `stock_movements(type=out, reference_type='sales_order')` references, eliminating separate manual recall tracking logs |
 | Unsellable Recalled Stock Isolation     | Recalled batches are dynamically excluded from FIFO sales deductions without deleting historical batch records, keeping complete compliance auditability intact |
 | Notification Engine Zero-Duplication   | Recall broadcasts reuse the existing notification engine / audit log infrastructure with zero new messaging channel code |
+| Availability Band Privacy Rule          | Exact warehouse stock counts are strictly obscured from retailers; `PortalCatalogProductResponse.availability` returns `"Available" \| "Low" \| "Out"` to preserve warehouse confidentiality |
+| Zero Duplicate Catalog Pricing Logic    | `PortalAuthService` reuses `PricingEngineService.calculate_line_price` with the retailer's tier claim directly, guaranteeing identical price computation between catalog browsing and sales order checkout |
 | Invoice Numbering Verbatim Sequence     | Indian financial-year prefixed sequential gap-free numbering (`INV/YYYY-YY/0001`, e.g. `INV/2026-27/0001`) enforced via repository regex sequence parser |
 | Frozen Invoicing Accounting Document    | Invoice is a frozen snapshot where line prices, HSN codes, product names, GST rates (18%), and totals are permanently locked at issuance time, immune to later catalog edits |
 | Idempotent Order Invoicing              | Re-requesting invoice generation for an already-invoiced sales order returns the existing invoice without duplicate creation or sequence number gaps |
