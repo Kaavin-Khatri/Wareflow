@@ -1,22 +1,24 @@
-"""FastAPI router for GST-compliant wholesale invoices."""
-
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, status
 
-from app.core.di import get_invoice_service, get_payment_service
+from app.core.di import get_einvoice_service, get_invoice_service, get_payment_service
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.billing import (
+    EInvoiceConfigResponse,
+    EInvoiceGenerateResponse,
+    EWayBillGenerateRequest,
+    EWayBillResponse,
     OverdueDetectionResponse,
     PaymentCreateRequest,
     PaymentResponse,
 )
 from app.schemas.invoices import InvoiceListResponse, InvoiceResponse
+from app.services.einvoice_service import EinvoiceService
 from app.services.invoice_service import InvoiceService
 from app.services.payment_service import PaymentService
 
 router = APIRouter(tags=["invoices"])
-
 
 
 @router.post(
@@ -65,6 +67,19 @@ def list_invoices(
         page=page,
         page_size=page_size,
     )
+
+
+@router.get(
+    "/invoices/einvoice/config",
+    response_model=EInvoiceConfigResponse,
+    summary="Get E-Invoice and E-Way Bill statutory configuration status",
+)
+def get_einvoice_config(
+    einvoice_service: EinvoiceService = Depends(get_einvoice_service),
+    current_user: CurrentUser = Depends(get_current_user),
+) -> EInvoiceConfigResponse:
+    """Retrieve current E-Invoice and E-Way bill configuration status and turnover guidelines."""
+    return einvoice_service.get_config()
 
 
 @router.get(
@@ -126,7 +141,12 @@ def list_payments_for_invoice(
     summary="Run overdue invoices scan job",
 )
 def detect_overdue_invoices(
-    due_days: int = Query(30, ge=1, le=365, description="Days after invoice date when an unpaid invoice is marked overdue"),
+    due_days: int = Query(
+        30,
+        ge=1,
+        le=365,
+        description="Days after invoice date when an unpaid invoice is marked overdue",
+    ),
     payment_service: PaymentService = Depends(get_payment_service),
     current_user: CurrentUser = Depends(require_permission("orders:manage")),
 ) -> OverdueDetectionResponse:
@@ -136,3 +156,42 @@ def detect_overdue_invoices(
         current_user=current_user,
     )
 
+
+@router.post(
+    "/invoices/{invoice_id}/generate-irn",
+    response_model=EInvoiceGenerateResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Generate or retrieve official GST E-Invoice IRN and signed QR Code",
+)
+def generate_invoice_irn(
+    invoice_id: str,
+    force_sandbox: bool = Query(False, description="Force sandbox generation for testing"),
+    einvoice_service: EinvoiceService = Depends(get_einvoice_service),
+    current_user: CurrentUser = Depends(require_permission("orders:manage")),
+) -> EInvoiceGenerateResponse:
+    """Generate statutory 64-hex IRN, Acknowledgment Number, and signed QR Code."""
+    return einvoice_service.generate_irn(
+        invoice_id=invoice_id,
+        force_sandbox=force_sandbox,
+        current_user=current_user,
+    )
+
+
+@router.post(
+    "/invoices/{invoice_id}/generate-eway-bill",
+    response_model=EWayBillResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Generate 12-digit GST E-Way Bill for goods transit",
+)
+def generate_eway_bill(
+    invoice_id: str,
+    payload: EWayBillGenerateRequest,
+    einvoice_service: EinvoiceService = Depends(get_einvoice_service),
+    current_user: CurrentUser = Depends(require_permission("orders:manage")),
+) -> EWayBillResponse:
+    """Generate statutory 12-digit E-Way Bill Number and validity duration for goods movement."""
+    return einvoice_service.generate_eway_bill(
+        invoice_id=invoice_id,
+        payload=payload,
+        current_user=current_user,
+    )

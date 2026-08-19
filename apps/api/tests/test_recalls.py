@@ -204,7 +204,6 @@ def test_recall_traces_exact_affected_orders(test_data):
     )
     user = CurrentUser(id="admin-1", email="admin@wareflow.io", role="Owner", permissions={"all"})
 
-
     recall_res = service.initiate_recall(req, user)
 
     assert recall_res.batch_id == "batch-defective"
@@ -246,7 +245,6 @@ def test_recalled_batch_excluded_from_new_sales(test_data):
     service = RecallService(recall_repo=recall_repo, stock_repo=stock_repo)
 
     user = CurrentUser(id="admin-1", email="admin@wareflow.io", role="Owner", permissions={"all"})
-
 
     # Before recall, total stock for prod-1 = 50 (batch-defective) + 200 (batch-clean) = 250
     # Deducting 220 units would succeed before recall
@@ -294,7 +292,6 @@ def test_notify_affected_retailers_lifecycle(test_data):
     )
     service = RecallService(recall_repo=recall_repo, stock_repo=stock_repo)
     user = CurrentUser(id="admin-1", email="admin@wareflow.io", role="Owner", permissions={"all"})
-
 
     # Initiate recall
     req = BatchRecallCreateRequest(
@@ -353,6 +350,7 @@ def test_http_recall_endpoints(test_data):
     )
 
     from app.api.routers.stock import get_recall_service
+
     app.dependency_overrides[get_recall_service] = lambda: service
 
     client = TestClient(app)

@@ -306,7 +306,6 @@ class InMemoryTransferRepository(TransferRepositoryInterface):
         # Decrement source
         source_batch_dict["quantity"] = float(source_batch_dict["quantity"]) - qty
 
-
         # Find or create destination batch
         dest_batch_dict = None
         for b in self.batches.values():

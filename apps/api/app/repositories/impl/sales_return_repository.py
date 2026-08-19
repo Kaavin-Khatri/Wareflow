@@ -1,6 +1,5 @@
 """SQLAlchemy and In-Memory implementations for SalesReturnRepositoryInterface."""
 
-
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -56,11 +55,15 @@ class SqlAlchemySalesReturnRepository(SalesReturnRepositoryInterface):
             stmt = stmt.where(SalesReturn.status == status)
         if search:
             q = f"%{search.strip()}%"
-            stmt = stmt.outerjoin(SalesReturn.retailer).outerjoin(SalesReturn.sales_order).where(
-                (SalesReturn.id.ilike(q))
-                | (SalesReturn.reason.ilike(q))
-                | (Retailer.name.ilike(q))
-                | (SalesOrder.so_number.ilike(q))
+            stmt = (
+                stmt.outerjoin(SalesReturn.retailer)
+                .outerjoin(SalesReturn.sales_order)
+                .where(
+                    (SalesReturn.id.ilike(q))
+                    | (SalesReturn.reason.ilike(q))
+                    | (Retailer.name.ilike(q))
+                    | (SalesOrder.so_number.ilike(q))
+                )
             )
 
         stmt = stmt.offset(skip).limit(limit)
@@ -71,9 +74,7 @@ class SqlAlchemySalesReturnRepository(SalesReturnRepositoryInterface):
         self.session.flush()
         return self.get_by_id(sales_return.id) or sales_return
 
-    def update_status(
-        self, return_id: str, status: SalesReturnStatusEnum
-    ) -> SalesReturn | None:
+    def update_status(self, return_id: str, status: SalesReturnStatusEnum) -> SalesReturn | None:
         ret = self.get_by_id(return_id)
         if ret:
             ret.status = status
@@ -132,7 +133,11 @@ class InMemorySalesReturnRepository(SalesReturnRepositoryInterface):
                 for r in results
                 if q in r.id.lower()
                 or (r.reason and q in r.reason.lower())
-                or (hasattr(r, "retailer") and r.retailer and q in getattr(r.retailer, "name", "").lower())
+                or (
+                    hasattr(r, "retailer")
+                    and r.retailer
+                    and q in getattr(r.retailer, "name", "").lower()
+                )
             ]
 
         results.sort(key=lambda r: getattr(r, "requested_at", None) or "", reverse=True)
@@ -142,9 +147,7 @@ class InMemorySalesReturnRepository(SalesReturnRepositoryInterface):
         self._returns[sales_return.id] = sales_return
         return sales_return
 
-    def update_status(
-        self, return_id: str, status: SalesReturnStatusEnum
-    ) -> SalesReturn | None:
+    def update_status(self, return_id: str, status: SalesReturnStatusEnum) -> SalesReturn | None:
         ret = self._returns.get(return_id)
         if ret:
             ret.status = status
@@ -155,7 +158,9 @@ class InMemorySalesReturnRepository(SalesReturnRepositoryInterface):
         for r in self._returns.values():
             if r.sales_order_id == sales_order_id and r.status != SalesReturnStatusEnum.REJECTED:
                 for it in r.items:
-                    prod_id = getattr(it, "product_id", None) or (it.product.id if hasattr(it, "product") and it.product else None)
+                    prod_id = getattr(it, "product_id", None) or (
+                        it.product.id if hasattr(it, "product") and it.product else None
+                    )
                     if prod_id:
                         totals[prod_id] = round(totals.get(prod_id, 0.0) + float(it.qty), 2)
         return totals

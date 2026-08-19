@@ -600,7 +600,11 @@ wareflow/
 | Paired AR Ledger Invariant | Invoice confirmation increases `retailers.credit_balance` by total; payment decreases `retailers.credit_balance` by payment amount (`credit_balance` is balance owed) |
 | Chronological Statement | `LedgerService` dynamically builds statement with running balances matching stored `retailers.credit_balance` |
 | Overdue Detection Window | Configurable due-date window (default 30 days) scans and transitions unpaid/partially paid invoices past due date to `overdue` |
-| General Admin Action Audit Log | `admin_audit_log` records immutable before/after diffs for sensitive actions (price, credit, permissions, staff, payments) |
+| Mandatory HSN Pre-flight | Generating an invoice blocks with HTTP 422 if any product lacks a valid HSN code, preventing GST filing rejections |
+| Statutory E-Invoice (IRN) | Generates 64-hex SHA-256 IRN, 16-digit Ack No, and signed QR code via authorized GSP/IRP sandbox provider |
+| Statutory E-Way Bill | Generates 12-digit E-Way Bill for road transit with distance-based validity (1 day per 200 km) for goods movement |
+| Turnover Threshold Deferral | E-invoicing applies to businesses above ₹5 Cr turnover; full sandbox & zero-cost deferred mode available for smaller businesses |
+| General Admin Action Audit Log | `admin_audit_log` records immutable before/after diffs for sensitive actions (price, credit, permissions, staff, payments, e-invoicing) |
 | Humanized Audit Narratives | `AuditService` synthesizes readable business sentences from raw diffs while preserving JSON diff inspection |
 | SOLID from day one | Prevents spaghetti; makes testing and swapping implementations easy |
 | Application factory | Testable app creation, supports different configs per environment |
@@ -638,6 +642,8 @@ wareflow/
   - `sales_order_status_updated`: Fulfillment status changes (packed, shipped, delivered, cancelled) (`PATCH /sales-orders/{id}/status`)
   - `invoice_generated`: Generation of sequential GST tax invoice for confirmed sales order (`POST /sales-orders/{id}/invoice`)
   - `payment_recorded`: Collection of settlement against tax invoice reducing retailer credit balance (`POST /invoices/{id}/payments`)
+  - `einvoice_irn_generated`: Generation of statutory 64-hex IRN and signed QR code (`POST /invoices/{id}/generate-irn`)
+  - `eway_bill_generated`: Generation of statutory 12-digit E-Way Bill for transit (`POST /invoices/{id}/generate-eway-bill`)
   - `overdue_invoices_flagged`: Batch scan flagging unpaid past-due invoices as overdue (`POST /invoices/detect-overdue`)
   - `retailer_created`: Registration of a new wholesale retailer account (`POST /retailers`)
   - `retailer_updated`: Updates to retailer contact info, pricing tier, or active status (`PATCH /retailers/{id}`)
@@ -648,6 +654,7 @@ wareflow/
   - `staff_role_updated`: Staff member role reassignments (`PATCH /staff/{id}/role`)
   - `staff_status_updated`: Staff member activation / suspension toggles (`PATCH /staff/{id}/status`)
   - `product_deleted`: Product catalog item removals (`DELETE /products/{id}`)
+
 - Firebase ID tokens and session cookies verified server-side by FastAPI via Firebase Admin SDK
 - RFC 6238 TOTP two-factor authentication mandatory for financial and administrative roles (`Owner`, `Manager`, `Accountant`)
 - TOTP secrets and backup codes encrypted at rest with Fernet symmetric cryptography

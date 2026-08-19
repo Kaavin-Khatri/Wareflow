@@ -25,7 +25,12 @@ def sample_data():
         {"id": "wh-2", "name": "West Coast Warehouse", "is_active": True},
     ]
     products = [
-        {"id": "prod-1", "name": "Organic Whole Milk 1L", "sku": "MILK-ORG-001", "reorder_point": 20},
+        {
+            "id": "prod-1",
+            "name": "Organic Whole Milk 1L",
+            "sku": "MILK-ORG-001",
+            "reorder_point": 20,
+        },
         {"id": "prod-2", "name": "Basmati Rice 5kg", "sku": "RIC-BAS-005", "reorder_point": 10},
     ]
     batches = [
@@ -67,7 +72,9 @@ def stock_service(stock_repo, audit_repo):
     return StockService(stock_repo=stock_repo, audit_repo=audit_repo)
 
 
-def test_stock_adjustment_damage_and_loss_decrease(stock_service: StockService, stock_repo: InMemoryStockRepository):
+def test_stock_adjustment_damage_and_loss_decrease(
+    stock_service: StockService, stock_repo: InMemoryStockRepository
+):
     """Warehouse staff records damage adjustment decrements batch and creates movement."""
     user = CurrentUser(
         id="user-staff",
@@ -167,71 +174,75 @@ def test_stock_recount_permission_guard(stock_service: StockService):
     assert res.delta == 10.0
 
 
-def test_stock_movement_ledger_human_labels(stock_service: StockService, stock_repo: InMemoryStockRepository):
+def test_stock_movement_ledger_human_labels(
+    stock_service: StockService, stock_repo: InMemoryStockRepository
+):
     """Verify movements ledger generates accurate human labels for PO, SO, Return, and Adjustment."""
     # Simulate diverse movements
-    stock_repo.movements.extend([
-        {
-            "id": "mov-po",
-            "product_id": "prod-1",
-            "warehouse_id": "wh-1",
-            "batch_id": "batch-1",
-            "type": StockMovementTypeEnum.IN,
-            "quantity": 100.0,
-            "reference_type": "purchase_order",
-            "reference_id": "PO-202608-0001",
-            "created_by": "buyer@wareflow.io",
-            "created_at": datetime(2026, 8, 1, 10, 0, tzinfo=UTC),
-        },
-        {
-            "id": "mov-so",
-            "product_id": "prod-1",
-            "warehouse_id": "wh-1",
-            "batch_id": "batch-1",
-            "type": StockMovementTypeEnum.OUT,
-            "quantity": -20.0,
-            "reference_type": "sales_order",
-            "reference_id": "SO-202608-0002",
-            "created_by": "sales@wareflow.io",
-            "created_at": datetime(2026, 8, 5, 14, 0, tzinfo=UTC),
-        },
-        {
-            "id": "mov-cancel",
-            "product_id": "prod-1",
-            "warehouse_id": "wh-1",
-            "batch_id": "batch-1",
-            "type": StockMovementTypeEnum.ADJUSTMENT,
-            "quantity": 20.0,
-            "reference_type": "sales_order_cancellation",
-            "reference_id": "SO-202608-0002",
-            "created_by": "admin@wareflow.io",
-            "created_at": datetime(2026, 8, 6, 9, 0, tzinfo=UTC),
-        },
-        {
-            "id": "mov-rma",
-            "product_id": "prod-1",
-            "warehouse_id": "wh-1",
-            "batch_id": "batch-1",
-            "type": StockMovementTypeEnum.RETURN_IN,
-            "quantity": 5.0,
-            "reference_type": "sales_return",
-            "reference_id": "RMA-202608-0003",
-            "created_by": "qc@wareflow.io",
-            "created_at": datetime(2026, 8, 10, 11, 0, tzinfo=UTC),
-        },
-        {
-            "id": "mov-adj",
-            "product_id": "prod-1",
-            "warehouse_id": "wh-1",
-            "batch_id": "batch-1",
-            "type": StockMovementTypeEnum.ADJUSTMENT,
-            "quantity": -3.0,
-            "reference_type": "manual_adjustment",
-            "reference_id": "damage:Water leak in aisle 3",
-            "created_by": "staff@wareflow.io",
-            "created_at": datetime(2026, 8, 15, 16, 0, tzinfo=UTC),
-        },
-    ])
+    stock_repo.movements.extend(
+        [
+            {
+                "id": "mov-po",
+                "product_id": "prod-1",
+                "warehouse_id": "wh-1",
+                "batch_id": "batch-1",
+                "type": StockMovementTypeEnum.IN,
+                "quantity": 100.0,
+                "reference_type": "purchase_order",
+                "reference_id": "PO-202608-0001",
+                "created_by": "buyer@wareflow.io",
+                "created_at": datetime(2026, 8, 1, 10, 0, tzinfo=UTC),
+            },
+            {
+                "id": "mov-so",
+                "product_id": "prod-1",
+                "warehouse_id": "wh-1",
+                "batch_id": "batch-1",
+                "type": StockMovementTypeEnum.OUT,
+                "quantity": -20.0,
+                "reference_type": "sales_order",
+                "reference_id": "SO-202608-0002",
+                "created_by": "sales@wareflow.io",
+                "created_at": datetime(2026, 8, 5, 14, 0, tzinfo=UTC),
+            },
+            {
+                "id": "mov-cancel",
+                "product_id": "prod-1",
+                "warehouse_id": "wh-1",
+                "batch_id": "batch-1",
+                "type": StockMovementTypeEnum.ADJUSTMENT,
+                "quantity": 20.0,
+                "reference_type": "sales_order_cancellation",
+                "reference_id": "SO-202608-0002",
+                "created_by": "admin@wareflow.io",
+                "created_at": datetime(2026, 8, 6, 9, 0, tzinfo=UTC),
+            },
+            {
+                "id": "mov-rma",
+                "product_id": "prod-1",
+                "warehouse_id": "wh-1",
+                "batch_id": "batch-1",
+                "type": StockMovementTypeEnum.RETURN_IN,
+                "quantity": 5.0,
+                "reference_type": "sales_return",
+                "reference_id": "RMA-202608-0003",
+                "created_by": "qc@wareflow.io",
+                "created_at": datetime(2026, 8, 10, 11, 0, tzinfo=UTC),
+            },
+            {
+                "id": "mov-adj",
+                "product_id": "prod-1",
+                "warehouse_id": "wh-1",
+                "batch_id": "batch-1",
+                "type": StockMovementTypeEnum.ADJUSTMENT,
+                "quantity": -3.0,
+                "reference_type": "manual_adjustment",
+                "reference_id": "damage:Water leak in aisle 3",
+                "created_by": "staff@wareflow.io",
+                "created_at": datetime(2026, 8, 15, 16, 0, tzinfo=UTC),
+            },
+        ]
+    )
 
     ledger = stock_service.list_movements(page=1, page_size=10)
     assert ledger.total == 5

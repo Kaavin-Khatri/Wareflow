@@ -130,4 +130,3 @@ def get_retailer_ledger(
     and the final running balance exactly matches retailer.credit_balance.
     """
     return ledger_service.get_retailer_ledger(retailer_id=retailer_id)
-

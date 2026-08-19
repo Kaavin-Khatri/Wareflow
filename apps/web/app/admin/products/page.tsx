@@ -471,10 +471,29 @@ export default function ProductsAdminPage() {
       ),
     },
     {
+      key: "hsn_code",
+      header: "HSN / GST",
+      render: (p) =>
+        p.hsn_code && p.hsn_code.trim() !== "" && p.hsn_code !== "N/A" ? (
+          <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+            {p.hsn_code}
+          </span>
+        ) : (
+          <span
+            className="text-[11px] font-medium text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded border border-amber-500/30 flex items-center gap-1 inline-flex"
+            title="Required for GST tax invoicing"
+          >
+            <AlertCircle className="w-3 h-3 text-amber-400" />
+            HSN Missing
+          </span>
+        ),
+    },
+    {
       key: "is_active",
       header: "Status",
       render: (p) => <StatusBadge status={p.is_active ? "active" : "suspended"} size="sm" />,
     },
+
     {
       key: "actions",
       header: "Actions",
@@ -728,7 +747,14 @@ export default function ProductsAdminPage() {
                 value={hsnCode}
                 onChange={(e) => setHsnCode(e.target.value)}
               />
+              {(!hsnCode || hsnCode.trim() === "") && (
+                <p className="text-[11px] text-amber-400 mt-1 flex items-center gap-1 font-mono">
+                  <AlertCircle className="w-3 h-3 shrink-0" />
+                  Mandatory for generating GST tax invoices.
+                </p>
+              )}
             </div>
+
             <div>
               <label className="block text-xs font-semibold text-white/70 mb-1.5 uppercase tracking-wider">
                 Barcode / EAN

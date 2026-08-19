@@ -3,7 +3,6 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import InvoicesPage from "@/app/admin/invoices/page";
 
-
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
@@ -26,6 +25,8 @@ const MOCK_INVOICES_RESPONSE = {
       total_amount: 12980.0,
       status: "unpaid",
       items_count: 2,
+      e_invoice_irn: null,
+      e_way_bill_no: null,
       created_at: "2026-08-18T10:00:00Z",
     },
     {
@@ -36,11 +37,13 @@ const MOCK_INVOICES_RESPONSE = {
       invoice_date: "2026-08-17T10:00:00Z",
       buyer_type: "retailer",
       buyer_name: "Fresh Mart Retail",
-      subtotal: 20000.0,
-      tax_amount: 3600.0,
-      total_amount: 23600.0,
+      subtotal: 55000.0,
+      tax_amount: 9900.0,
+      total_amount: 64900.0,
       status: "paid",
       items_count: 3,
+      e_invoice_irn: "4a8e8f8c2b7d1e0f3a5b9c7d4e6f8a0b2c4d6e8f0a2b4c6d8e0f2a4b6c8d0e2f",
+      e_way_bill_no: "231094857201",
       created_at: "2026-08-17T10:00:00Z",
     },
   ],
@@ -67,6 +70,10 @@ const MOCK_INVOICE_DETAIL = {
   tax_amount: 1980.0,
   total_amount: 12980.0,
   status: "unpaid",
+  e_invoice_irn: null,
+  e_invoice_ack_no: null,
+  e_invoice_qr_code: null,
+  e_way_bill_no: null,
   created_at: "2026-08-18T10:00:00Z",
   items: [
     {
@@ -96,9 +103,21 @@ const MOCK_INVOICE_DETAIL = {
   ],
 };
 
+const MOCK_EINVOICE_CONFIG = {
+  enabled: false,
+  provider: "sandbox",
+  is_sandbox: true,
+  eway_bill_threshold_inr: 50000.0,
+  turnover_threshold_notice: "Mandatory above ₹5 Crore annual turnover. Seamlessly operates in sandbox test mode below threshold.",
+  cost_structure_note: "Sandbox is free.",
+};
+
 vi.mock("@/lib/api-client", () => ({
   apiClient: {
     get: vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/einvoice/config")) {
+        return Promise.resolve(MOCK_EINVOICE_CONFIG);
+      }
       if (url.startsWith("/invoices/inv-101")) {
         return Promise.resolve(MOCK_INVOICE_DETAIL);
       }
@@ -108,6 +127,30 @@ vi.mock("@/lib/api-client", () => ({
       return Promise.resolve([]);
     }),
     post: vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/generate-irn")) {
+        return Promise.resolve({
+          invoice_id: "inv-101",
+          invoice_no: "INV/2026-27/0001",
+          irn: "9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e",
+          ack_no: "2026100984758300",
+          ack_date: "2026-08-19T00:00:00Z",
+          qr_code: "{\"SellerGstin\":\"07AAAAA0000A1Z5\"}",
+          is_sandbox: true,
+          status: "GENERATED",
+        });
+      }
+      if (url.includes("/generate-eway-bill")) {
+        return Promise.resolve({
+          invoice_id: "inv-101",
+          invoice_no: "INV/2026-27/0001",
+          e_way_bill_no: "982374615201",
+          e_way_bill_date: "2026-08-19T00:00:00Z",
+          valid_until: "2026-08-21T00:00:00Z",
+          vehicle_no: "DL01AB1234",
+          distance_km: 120,
+          is_sandbox: true,
+        });
+      }
       if (url.includes("/invoice")) {
         return Promise.resolve(MOCK_INVOICE_DETAIL);
       }
@@ -151,7 +194,7 @@ describe("GST Invoices & Billing UI", () => {
     });
   });
 
-  it("opens invoice detail preview modal with GST breakdown and print action", async () => {
+  it("opens invoice detail preview modal with GST breakdown, HSN codes, and print action", async () => {
     render(<InvoicesPage />);
 
     await waitFor(() => {
@@ -169,7 +212,28 @@ describe("GST Invoices & Billing UI", () => {
       expect(screen.getByText("CGST (9%):")).toBeDefined();
       expect(screen.getByText("SGST (9%):")).toBeDefined();
       expect(screen.getByText(/Print \/ Export PDF/i)).toBeDefined();
+      expect(screen.getByText(/Generate E-Invoice \(IRN\)/i)).toBeDefined();
     });
   });
 
+  it("triggers IRN generation on demand", async () => {
+    render(<InvoicesPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("View").length).toBeGreaterThanOrEqual(1);
+    });
+
+    fireEvent.click(screen.getAllByText("View")[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Generate E-Invoice \(IRN\)/i)).toBeDefined();
+    });
+
+    fireEvent.click(screen.getByText(/Generate E-Invoice \(IRN\)/i));
+
+    await waitFor(() => {
+      expect(screen.getByText(/GOVERNMENT GST E-INVOICE AUTHENTICATED/i)).toBeDefined();
+      expect(screen.getByText(/9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e/i)).toBeDefined();
+    });
+  });
 });

@@ -122,7 +122,10 @@ def list_stock_movements(
     product_id: Annotated[str | None, Query(description="Filter by product ID")] = None,
     warehouse_id: Annotated[str | None, Query(description="Filter by warehouse ID")] = None,
     type: Annotated[
-        str | None, Query(description="Filter by movement type ('in', 'out', 'adjustment', 'return_in', 'return_out')")
+        str | None,
+        Query(
+            description="Filter by movement type ('in', 'out', 'adjustment', 'return_in', 'return_out')"
+        ),
     ] = None,
     start_date: Annotated[datetime | None, Query(description="Start date filter")] = None,
     end_date: Annotated[datetime | None, Query(description="End date filter")] = None,
@@ -177,8 +180,12 @@ def list_stock_transfers(
     page: Annotated[int, Query(ge=1, description="Page number")] = 1,
     page_size: Annotated[int, Query(ge=1, le=200, description="Items per page")] = 50,
     product_id: Annotated[str | None, Query(description="Filter by product ID")] = None,
-    from_warehouse_id: Annotated[str | None, Query(description="Filter by source warehouse")] = None,
-    to_warehouse_id: Annotated[str | None, Query(description="Filter by destination warehouse")] = None,
+    from_warehouse_id: Annotated[
+        str | None, Query(description="Filter by source warehouse")
+    ] = None,
+    to_warehouse_id: Annotated[
+        str | None, Query(description="Filter by destination warehouse")
+    ] = None,
     start_date: Annotated[datetime | None, Query(description="Start date filter")] = None,
     end_date: Annotated[datetime | None, Query(description="End date filter")] = None,
     search: Annotated[str | None, Query(description="Search query")] = None,
@@ -228,8 +235,12 @@ def list_batch_recalls(
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     page: Annotated[int, Query(ge=1, description="Page number")] = 1,
     page_size: Annotated[int, Query(ge=1, le=200, description="Items per page")] = 50,
-    status: Annotated[str | None, Query(description="Filter by recall status (initiated, notifying, resolved)")] = None,
-    severity: Annotated[str | None, Query(description="Filter by severity (low, medium, critical)")] = None,
+    status: Annotated[
+        str | None, Query(description="Filter by recall status (initiated, notifying, resolved)")
+    ] = None,
+    severity: Annotated[
+        str | None, Query(description="Filter by severity (low, medium, critical)")
+    ] = None,
     product_id: Annotated[str | None, Query(description="Filter by product ID")] = None,
     search: Annotated[str | None, Query(description="Search query")] = None,
 ) -> BatchRecallListResponse:
@@ -275,6 +286,3 @@ def resolve_batch_recall(
 ) -> BatchRecallResponse:
     """Mark a batch recall as resolved once all affected retailers are confirmed handled."""
     return service.resolve_recall(recall_id=recall_id, current_user=current_user)
-
-
-

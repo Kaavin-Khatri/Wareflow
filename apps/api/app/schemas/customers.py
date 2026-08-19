@@ -11,7 +11,9 @@ class CustomerCreateRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=255, description="Customer name")
     phone: str | None = Field(None, max_length=50, description="Contact phone number")
     email: EmailStr | None = Field(None, description="Contact email address")
-    address: str | None = Field(None, max_length=1000, description="Customer billing/delivery address")
+    address: str | None = Field(
+        None, max_length=1000, description="Customer billing/delivery address"
+    )
     notes: str | None = Field(None, max_length=1000, description="Internal customer notes")
 
 

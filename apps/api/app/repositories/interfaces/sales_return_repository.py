@@ -29,9 +29,7 @@ class SalesReturnRepositoryInterface(Protocol):
         """Persist a new Sales Return and its line items."""
         ...
 
-    def update_status(
-        self, return_id: str, status: SalesReturnStatusEnum
-    ) -> SalesReturn | None:
+    def update_status(self, return_id: str, status: SalesReturnStatusEnum) -> SalesReturn | None:
         """Update lifecycle status of a Sales Return."""
         ...
 

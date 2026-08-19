@@ -49,7 +49,6 @@ class InvoiceService:
         self.audit_repo = audit_repo
         self.payment_repo = payment_repo
 
-
     def get_financial_year(self, dt: datetime | None = None) -> str:
         """Calculate Indian Financial Year (April 1 - March 31)."""
         if dt is None:
@@ -114,18 +113,35 @@ class InvoiceService:
             product = self.product_repo.get_by_id(item.product_id)
             if isinstance(product, dict):
                 product_name = product.get("name") or f"Product {item.product_id}"
-                hsn_code = product.get("hsn_code") or "N/A"
+                sku = product.get("sku") or "N/A"
+                hsn_code = product.get("hsn_code")
             elif product:
                 product_name = getattr(product, "name", None) or f"Product {item.product_id}"
-                hsn_code = getattr(product, "hsn_code", None) or "N/A"
+                sku = getattr(product, "sku", None) or "N/A"
+                hsn_code = getattr(product, "hsn_code", None)
             else:
                 product_name = f"Product {item.product_id}"
-                hsn_code = "N/A"
+                sku = "N/A"
+                hsn_code = None
+
+            # Statutory GST Validation (Step 10.3): Every line's product MUST have a valid HSN code
+            if (
+                not hsn_code
+                or not str(hsn_code).strip()
+                or str(hsn_code).strip().upper() in {"N/A", "NONE", "NULL"}
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=(
+                        f"Cannot generate GST tax invoice: Product '{product_name}' (SKU: {sku}) "
+                        "is missing a mandatory HSN code. Please configure the HSN code in the "
+                        "product catalog before issuing a tax invoice."
+                    ),
+                )
 
             qty = float(item.qty)
             unit_price = float(item.unit_price)
             line_subtotal = round(qty * unit_price, 2)
-
 
             tax_rate = 18.00  # Default standard GST rate
             line_tax = round(line_subtotal * (tax_rate / 100.0), 2)
@@ -250,6 +266,8 @@ class InvoiceService:
                     paid_amount=paid,
                     outstanding_balance=outstanding,
                     status=inv.status.value if hasattr(inv.status, "value") else str(inv.status),
+                    e_invoice_irn=inv.e_invoice_irn,
+                    e_way_bill_no=inv.e_way_bill_no,
                     items_count=len(inv.items) if hasattr(inv, "items") and inv.items else 0,
                     created_at=inv.created_at,
                 )
@@ -325,7 +343,9 @@ class InvoiceService:
                         "id": p.id,
                         "amount": float(p.amount),
                         "method": str(p.method.value if hasattr(p.method, "value") else p.method),
-                        "paid_at": p.paid_at.isoformat() if hasattr(p.paid_at, "isoformat") else str(p.paid_at),
+                        "paid_at": p.paid_at.isoformat()
+                        if hasattr(p.paid_at, "isoformat")
+                        else str(p.paid_at),
                         "note": p.note,
                     }
                 )
@@ -351,7 +371,9 @@ class InvoiceService:
             total_amount=float(invoice.total_amount),
             paid_amount=paid_amount,
             outstanding_balance=outstanding_balance,
-            status=invoice.status.value if hasattr(invoice.status, "value") else str(invoice.status),
+            status=invoice.status.value
+            if hasattr(invoice.status, "value")
+            else str(invoice.status),
             e_invoice_irn=invoice.e_invoice_irn,
             e_invoice_ack_no=invoice.e_invoice_ack_no,
             e_invoice_qr_code=invoice.e_invoice_qr_code,
@@ -360,4 +382,3 @@ class InvoiceService:
             items=items_resp,
             payments=payment_list,
         )
-

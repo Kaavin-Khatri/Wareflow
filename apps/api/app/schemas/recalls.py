@@ -11,7 +11,9 @@ class BatchRecallCreateRequest(BaseModel):
     """Payload for initiating a batch quality recall."""
 
     batch_id: str = Field(..., description="ID of the defective or contaminated stock batch")
-    reason: str = Field(..., min_length=5, description="Root cause or defect description for the recall")
+    reason: str = Field(
+        ..., min_length=5, description="Root cause or defect description for the recall"
+    )
     severity: RecallSeverityEnum = Field(
         default=RecallSeverityEnum.MEDIUM,
         description="Severity classification (low, medium, critical)",

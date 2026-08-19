@@ -169,5 +169,3 @@ class StockRepositoryInterface(Protocol):
         Returns (list_of_movement_dicts, total_count).
         """
         ...
-
-

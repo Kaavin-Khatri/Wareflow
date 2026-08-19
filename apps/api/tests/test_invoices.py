@@ -96,14 +96,12 @@ def mock_invoice_dependencies():
     so_repo.create(sales_order)
     invoice_repo.set_sales_order(sales_order)
 
-
     user = CurrentUser(
         id="user-admin-1",
         email="admin@wareflow.io",
         role="Admin",
         permissions={"orders:manage", "orders:view"},
     )
-
 
     return {
         "service": service,
@@ -139,7 +137,9 @@ def test_generating_invoice_twice_for_same_order_is_idempotent(mock_invoice_depe
     assert inv2.id == inv1.id
     assert inv2.invoice_no == inv1.invoice_no
     assert inv2.total_amount == inv1.total_amount
-    assert len(deps["invoice_repo"]._invoices) == 1, "Only 1 invoice record must exist in repository"
+    assert len(deps["invoice_repo"]._invoices) == 1, (
+        "Only 1 invoice record must exist in repository"
+    )
 
 
 def test_invoice_pricing_and_totals_match_sales_order_and_are_frozen(mock_invoice_dependencies):
@@ -252,7 +252,6 @@ def test_cannot_generate_invoice_for_draft_or_cancelled_order(mock_invoice_depen
     )
     so_repo.create(draft_so)
     invoice_repo.set_sales_order(draft_so)
-
 
     with pytest.raises(Exception) as exc_info:
         service.generate_invoice_for_sales_order("so-draft-1", user)

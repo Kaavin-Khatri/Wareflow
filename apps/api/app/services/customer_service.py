@@ -45,7 +45,6 @@ class CustomerService:
             created_at=datetime.now(UTC),
         )
 
-
         saved = self.customer_repo.create(customer)
         self._audit_log(
             action="customer_created",
@@ -160,9 +159,7 @@ class CustomerService:
 
         if self.so_repo:
             orders, _ = self.so_repo.list_all(limit=1000, buyer_type="customer")
-            customer_orders = [
-                o for o in orders if getattr(o, "customer_id", None) == customer.id
-            ]
+            customer_orders = [o for o in orders if getattr(o, "customer_id", None) == customer.id]
             total_orders = len(customer_orders)
             total_spend = sum(
                 float(o.total_amount)
@@ -211,4 +208,3 @@ class CustomerService:
             before_value=before,
             after_value=after,
         )
-

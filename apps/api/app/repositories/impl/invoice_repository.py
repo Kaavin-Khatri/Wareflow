@@ -77,11 +77,28 @@ class SqlAlchemyInvoiceRepository(InvoiceRepositoryInterface):
         self.session.flush()
         return invoice
 
-    def update_invoice(self, invoice: Invoice) -> Invoice:
-        """Update existing invoice state."""
-        self.session.merge(invoice)
+    def update_invoice(
+        self,
+        invoice_or_id: Invoice | str,
+        **kwargs: object,
+    ) -> Invoice:
+        """Update existing invoice state or specific fields."""
+        if isinstance(invoice_or_id, str):
+            inv = self.get_by_id(invoice_or_id)
+            if not inv:
+                raise ValueError(f"Invoice '{invoice_or_id}' not found.")
+            for k, v in kwargs.items():
+                if hasattr(inv, k):
+                    setattr(inv, k, v)
+            self.session.flush()
+            return inv
+
+        for k, v in kwargs.items():
+            if hasattr(invoice_or_id, k):
+                setattr(invoice_or_id, k, v)
+        self.session.merge(invoice_or_id)
         self.session.flush()
-        return invoice
+        return invoice_or_id
 
     def list_by_retailer_id(self, retailer_id: str) -> list[Invoice]:
         """Fetch all invoices issued to a specific retailer chronologically."""
@@ -146,11 +163,12 @@ class SqlAlchemyInvoiceRepository(InvoiceRepositoryInterface):
         total = self.session.execute(count_stmt).scalar_one()
 
         # Paginated results
-        query = query.order_by(desc(Invoice.created_at)).offset((page - 1) * page_size).limit(page_size)
+        query = (
+            query.order_by(desc(Invoice.created_at)).offset((page - 1) * page_size).limit(page_size)
+        )
         items = list(self.session.execute(query).scalars().all())
 
         return items, total
-
 
 
 class InMemoryInvoiceRepository(InvoiceRepositoryInterface):
@@ -206,10 +224,24 @@ class InMemoryInvoiceRepository(InvoiceRepositoryInterface):
             invoice.sales_order = self._sales_orders[invoice.sales_order_id]
         return invoice
 
-    def update_invoice(self, invoice: Invoice) -> Invoice:
-        self._invoices[invoice.id] = invoice
-        return invoice
+    def update_invoice(
+        self,
+        invoice_or_id: Invoice | str,
+        **kwargs: object,
+    ) -> Invoice:
+        """Update in-memory invoice state or specific fields."""
+        if isinstance(invoice_or_id, str):
+            inv = self._invoices.get(invoice_or_id)
+            if not inv:
+                raise ValueError(f"Invoice '{invoice_or_id}' not found.")
+            for k, v in kwargs.items():
+                setattr(inv, k, v)
+            return inv
 
+        for k, v in kwargs.items():
+            setattr(invoice_or_id, k, v)
+        self._invoices[invoice_or_id.id] = invoice_or_id
+        return invoice_or_id
 
     def list_by_retailer_id(self, retailer_id: str) -> list[Invoice]:
         results = []

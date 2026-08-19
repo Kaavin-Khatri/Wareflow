@@ -116,6 +116,7 @@ from app.services.alert_engine_service import AlertEngineService, ExpiringLicens
 from app.services.audit_service import AuditService
 from app.services.business_settings_service import BusinessSettingsService
 from app.services.customer_service import CustomerService
+from app.services.einvoice_service import EinvoiceService
 from app.services.invoice_service import InvoiceService
 from app.services.ledger_service import LedgerService
 from app.services.payment_service import PaymentService
@@ -280,8 +281,6 @@ def get_transfer_service(
 ) -> TransferService:
     """Factory for TransferService with atomic transfer repository and audit logging."""
     return TransferService(transfer_repo=transfer_repo, audit_repo=audit_repo)
-
-
 
 
 def get_stock_analytics_repository(
@@ -615,7 +614,14 @@ def get_ledger_service(
     )
 
 
-
-
-
-
+def get_einvoice_service(
+    invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
+    business_repo: BusinessSettingsRepositoryInterface = Depends(get_business_settings_repository),
+    audit_repo: AuditRepository = Depends(get_audit_repository),
+) -> EinvoiceService:
+    """Factory for EinvoiceService with DIP dependencies."""
+    return EinvoiceService(
+        invoice_repo=invoice_repo,
+        business_repo=business_repo,
+        audit_repo=audit_repo,
+    )

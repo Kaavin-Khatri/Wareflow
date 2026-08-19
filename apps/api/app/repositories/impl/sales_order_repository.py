@@ -137,7 +137,6 @@ class InMemorySalesOrderRepository(SalesOrderRepositoryInterface):
                 else:
                     self.orders[o["id"]] = dict(o)
 
-
     def _to_model(self, data: dict[str, Any]) -> SalesOrder:
         so = SalesOrder(
             id=data["id"],
@@ -164,7 +163,6 @@ class InMemorySalesOrderRepository(SalesOrderRepositoryInterface):
                 email=r_data.get("email"),
                 address=r_data.get("address"),
             )
-
 
         items: list[SalesOrderItem] = []
         for item_data in data.get("items", []):

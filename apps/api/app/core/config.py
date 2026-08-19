@@ -34,6 +34,13 @@ class Settings(BaseSettings):
     # Security & 2FA
     totp_encryption_key: str = ""
 
+    # GST Compliance & E-Invoicing (Step 10.3)
+    einvoice_enabled: bool = False
+    gsp_provider: str = "sandbox"
+    gsp_api_key: str = ""
+    gsp_api_secret: str = ""
+    eway_bill_threshold_inr: float = 50000.0
+
     @field_validator("allowed_origins", mode="after")
     @classmethod
     def parse_allowed_origins(cls, value: str | list[str]) -> list[str]:

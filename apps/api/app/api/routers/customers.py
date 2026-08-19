@@ -23,9 +23,7 @@ router = APIRouter(prefix="/customers", tags=["Customers"])
 def list_customers(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=200),
-    search: str | None = Query(
-        None, description="Search query by name, phone, email, or notes"
-    ),
+    search: str | None = Query(None, description="Search query by name, phone, email, or notes"),
     current_user: CurrentUser = Depends(get_current_user),
     service: CustomerService = Depends(get_customer_service),
 ) -> list[CustomerResponse]:
@@ -77,7 +75,9 @@ def update_customer(
     service: CustomerService = Depends(get_customer_service),
 ) -> CustomerResponse:
     """Update contact information or internal notes for a direct customer."""
-    return service.update_customer(customer_id=customer_id, payload=payload, current_user=current_user)
+    return service.update_customer(
+        customer_id=customer_id, payload=payload, current_user=current_user
+    )
 
 
 @router.delete(

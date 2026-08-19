@@ -2608,6 +2608,88 @@
 - `codebase_audit.md`
 - `memory.md`
 
+---
+
+## Step 10.3 — GST Compliance: HSN Codes & E-Invoice / E-Way Bill Integration
+
+**Timestamp:** 2026-08-19T02:00:00Z
+**Status:** COMPLETE
+
+### What was done
+
+1. **Mandatory HSN Code Enforcement (`apps/api/app/services/invoice_service.py`)**:
+   - Enforced strict validation during invoice generation from sales orders.
+   - If any line item's product lacks an HSN code (None, empty, or "N/A"), invoice generation is blocked with HTTP 422, explicitly naming the product and SKU (`Product '{name}' (SKU: {sku}) is missing a mandatory HSN code. Please update the product catalog with a valid HSN code before generating a GST tax invoice.`).
+   - For valid products, the HSN code is permanently captured in the immutable `invoice_items.hsn_code` snapshot.
+2. **Statutory E-Invoice (IRN) & E-Way Bill Engine (`apps/api/app/services/einvoice_service.py`)**:
+   - Built `EinvoiceService` following DIP with `EInvoiceProviderInterface` protocol.
+   - Implemented `SandboxGspProvider` providing realistic, deterministic GST IRP simulation:
+     - Generates 64-character SHA-256 hexadecimal IRN from `SellerGSTIN + DocType + DocNo + DocDate + TotInvVal`.
+     - Generates 16-digit timestamped Acknowledgment Number and signed QR code containing essential B2B tax payload (Seller GSTIN, Buyer GSTIN, Doc No, Tot Val, Item HSNs).
+     - Generates 12-digit statutory E-Way Bill Number and calculates validity duration based on transit distance (1 day per 200 km).
+   - Ensured idempotency: repeating IRN generation on an existing invoice immediately returns the persisted statutory identifiers without duplicates.
+   - Integrated with `AdminAuditLog` to track IRN and E-Way Bill generation events.
+3. **API Endpoints & Configuration (`apps/api/app/api/routers/invoices.py`, `apps/api/app/core/config.py`, `apps/api/app/core/di.py`)**:
+   - `GET /invoices/einvoice/config`: Exposes current statutory threshold guidelines, sandbox status, and GSP provider settings.
+   - `POST /invoices/{invoice_id}/generate-irn`: Generates or retrieves statutory IRN and signed QR code.
+   - `POST /invoices/{invoice_id}/generate-eway-bill`: Generates 12-digit E-Way Bill for road transit.
+   - Environment variables documented in `.env.example`: `EINVOICE_ENABLED`, `GSP_PROVIDER`, `GSP_API_KEY`, `GSP_API_SECRET`, `EWAY_BILL_THRESHOLD_INR`.
+4. **Frontend UI Enhancements (`apps/web/app/admin/products/page.tsx`, `apps/web/app/admin/invoices/page.tsx`)**:
+   - **Product Catalog**: Added `HSN / GST` column displaying green code badge or amber `HSN Missing` warning badge; added live warning notice below HSN input in product create/edit modal.
+   - **Invoices Dashboard & Preview**:
+     - Added statutory threshold banner (explaining ₹5 Cr annual turnover requirement & sandbox availability).
+     - Rendered Government GST E-Invoice container in invoice preview modal displaying 64-hex IRN with one-click copy, Acknowledgment number, and Signed QR code badge.
+     - Added "Generate E-Invoice (IRN)" on-demand action.
+     - Added E-Way Bill status badge and "Generate E-Way Bill" modal form (Vehicle No, Transporter Name, Distance in km).
+     - Rendered HSN/SAC column in invoice line items table.
+5. **Automated Testing & QA Verification**:
+   - Backend `apps/api/tests/test_einvoice_and_hsn.py` (5 tests passing: missing HSN blocking with 422, valid HSN snapshot, 64-hex IRN generation, E-Way Bill validity duration, and HTTP API endpoints).
+   - Frontend `apps/web/lib/__tests__/invoices.test.tsx` (4 tests passing: invoice list rendering, status filtering, HSN display & print action, on-demand IRN generation).
+   - Full test suites: **152 / 152 Pytest tests passing (100% green)**; **115 / 115 Vitest tests passing across 27 test suites (100% green)**.
+   - **0 errors on Ruff and ESLint**; Next.js production build cleanly compiled with 35 static/dynamic routes.
+
+### Decisions
+
+- **Statutory Turnover Threshold & Deferral Policy**:
+  - E-invoicing is legally required in India only above the government-mandated turnover threshold (currently ₹5 Crore+ annual B2B turnover).
+  - For businesses below the threshold, the system operates seamlessly in sandbox mode or can be completely deferred (`EINVOICE_ENABLED=false`) with zero runtime overhead or recurring costs.
+- **GSP Choice & Cost Structure**:
+  - Real-world production GST e-invoicing requires registration with an authorized GST Suvidha Provider (e.g. Masters India, ClearTax, IRIS) with recurring per-invoice or monthly subscription fees.
+  - WareFlow isolates this behind `EInvoiceProviderInterface`, allowing instant switching between Sandbox, Direct IRP, or GSP APIs.
+- **Strict HSN Pre-flight Validation**:
+  - Invoices cannot be generated if any item lacks an HSN code, preventing downstream GST filing rejections and invalid tax returns.
+
+### Key values for future steps
+
+- E-Invoice Domain Service: `EinvoiceService` (`apps/api/app/services/einvoice_service.py`)
+- GSP Sandbox Provider: `SandboxGspProvider` (`apps/api/app/services/einvoice_service.py`)
+- E-Invoice Endpoints: `GET /invoices/einvoice/config`, `POST /invoices/{id}/generate-irn`, `POST /invoices/{id}/generate-eway-bill`
+- Product HSN Column: `apps/web/app/admin/products/page.tsx`
+- Invoice E-Invoice/E-Way Bill Preview & Modal: `apps/web/app/admin/invoices/page.tsx`
+
+### Files Created
+
+- `apps/api/app/services/einvoice_service.py`
+- `apps/api/tests/test_einvoice_and_hsn.py`
+
+### Files Modified
+
+- `apps/api/.env.example`
+- `apps/api/app/core/config.py`
+- `apps/api/app/core/di.py`
+- `apps/api/app/schemas/billing.py`
+- `apps/api/app/schemas/invoices.py`
+- `apps/api/app/repositories/interfaces/invoice_repository.py`
+- `apps/api/app/repositories/impl/invoice_repository.py`
+- `apps/api/app/services/invoice_service.py`
+- `apps/api/app/api/routers/invoices.py`
+- `apps/web/app/admin/products/page.tsx`
+- `apps/web/app/admin/invoices/page.tsx`
+- `apps/web/lib/__tests__/invoices.test.tsx`
+- `codebase_audit.md`
+- `memory.md`
+
+
 
 
 

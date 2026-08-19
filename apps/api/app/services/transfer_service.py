@@ -48,17 +48,21 @@ class TransferService:
                 detail="Source and destination warehouses cannot be the same.",
             )
 
-        actor = getattr(current_user, "email", None) or getattr(current_user, "id", None) or "system"
+        actor = (
+            getattr(current_user, "email", None) or getattr(current_user, "id", None) or "system"
+        )
 
         try:
-            transfer_id, src_batch, dest_batch, out_mov, in_mov = self.transfer_repo.execute_transfer(
-                product_id=payload.product_id,
-                batch_id=payload.batch_id,
-                from_warehouse_id=payload.from_warehouse_id,
-                to_warehouse_id=payload.to_warehouse_id,
-                quantity=payload.quantity,
-                notes=payload.notes,
-                created_by=actor,
+            transfer_id, src_batch, dest_batch, out_mov, in_mov = (
+                self.transfer_repo.execute_transfer(
+                    product_id=payload.product_id,
+                    batch_id=payload.batch_id,
+                    from_warehouse_id=payload.from_warehouse_id,
+                    to_warehouse_id=payload.to_warehouse_id,
+                    quantity=payload.quantity,
+                    notes=payload.notes,
+                    created_by=actor,
+                )
             )
         except ValueError as e:
             err_msg = str(e)

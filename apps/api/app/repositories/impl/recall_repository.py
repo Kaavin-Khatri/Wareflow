@@ -367,7 +367,9 @@ class InMemoryRecallRepository(RecallRepositoryInterface):
             ):
                 so_id = m.get("reference_id")
                 if so_id:
-                    affected_so_ids[so_id] = affected_so_ids.get(so_id, 0.0) + abs(float(m.get("quantity", 0)))
+                    affected_so_ids[so_id] = affected_so_ids.get(so_id, 0.0) + abs(
+                        float(m.get("quantity", 0))
+                    )
 
         results: list[dict[str, Any]] = []
         for so_id, qty in affected_so_ids.items():

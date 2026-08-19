@@ -382,4 +382,3 @@ def test_payment_and_ledger_api_endpoints_via_test_client(mock_billing_environme
     overdue_res = client.post("/invoices/detect-overdue?due_days=30")
     assert overdue_res.status_code == 200
     assert "overdue_count" in overdue_res.json()
-

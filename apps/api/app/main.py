@@ -80,7 +80,6 @@ def create_app() -> FastAPI:
     application.include_router(business_settings.router)
     application.include_router(alerts.router)
 
-
     return application
 
 

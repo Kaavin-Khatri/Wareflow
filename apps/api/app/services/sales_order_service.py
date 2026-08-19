@@ -200,7 +200,11 @@ class SalesOrderService:
                 )
             return retailer
 
-        if payload.buyer_type == BuyerTypeEnum.CUSTOMER and payload.customer_id and self.customer_repo:
+        if (
+            payload.buyer_type == BuyerTypeEnum.CUSTOMER
+            and payload.customer_id
+            and self.customer_repo
+        ):
             customer = self.customer_repo.get_by_id(payload.customer_id)
             if not customer:
                 raise HTTPException(
@@ -208,8 +212,6 @@ class SalesOrderService:
                     detail=f"Customer '{payload.customer_id}' not found.",
                 )
         return None
-
-
 
     def _build_order_item(
         self, item_in: SalesOrderItemCreateRequest, pricing_tier: str
@@ -397,4 +399,3 @@ class SalesOrderService:
             created_at=order.created_at,
             items=item_responses,
         )
-

@@ -29,7 +29,11 @@ class InvoiceRepositoryInterface(Protocol):
         """Persist a new invoice with its frozen line items atomically."""
         ...
 
-    def update_invoice(self, invoice: Invoice) -> Invoice:
+    def update_invoice(
+        self,
+        invoice_or_id: Invoice | str,
+        **kwargs: object,
+    ) -> Invoice:
         """Update an existing invoice's status or metadata."""
         ...
 
@@ -52,5 +56,3 @@ class InvoiceRepositoryInterface(Protocol):
     ) -> tuple[list[Invoice], int]:
         """Fetch paginated, filterable invoice records."""
         ...
-
-

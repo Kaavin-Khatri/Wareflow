@@ -226,7 +226,9 @@ def test_create_sales_return_accounts_for_previous_returns(sales_return_setup, d
     assert "maximum returnable quantity on order 'SO-202608-0001' is 8.0" in exc_info.value.detail
 
 
-def test_approve_resellable_return_increases_stock_by_exact_qty(sales_return_setup, dummy_admin_user):
+def test_approve_resellable_return_increases_stock_by_exact_qty(
+    sales_return_setup, dummy_admin_user
+):
     """QA: Approving a resellable return increases on-hand stock by exactly the returned quantity."""
     service: SalesReturnService = sales_return_setup["service"]
     stock_repo: InMemoryStockRepository = sales_return_setup["stock_repo"]
@@ -271,7 +273,9 @@ def test_approve_resellable_return_increases_stock_by_exact_qty(sales_return_set
     assert return_in_movements[0]["reference_type"] == "sales_return"
 
 
-def test_approve_damaged_return_does_not_increase_sellable_stock(sales_return_setup, dummy_admin_user):
+def test_approve_damaged_return_does_not_increase_sellable_stock(
+    sales_return_setup, dummy_admin_user
+):
     """QA: A damaged-condition return does NOT increase sellable stock, but is visible in return record."""
     service: SalesReturnService = sales_return_setup["service"]
     stock_repo: InMemoryStockRepository = sales_return_setup["stock_repo"]

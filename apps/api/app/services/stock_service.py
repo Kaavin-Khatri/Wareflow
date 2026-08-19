@@ -45,7 +45,6 @@ class StockService:
         self.uom_service = uom_service or (UomService(uom_repo=uom_repo) if uom_repo else None)
         self.audit_repo = audit_repo
 
-
     @staticmethod
     def calculate_stock_status(
         on_hand: float, reorder_point: float
@@ -399,7 +398,6 @@ class StockService:
                 },
             )
 
-
         return StockAdjustmentResponse(
             movement_id=movement.id,
             product_id=payload.product_id,
@@ -495,4 +493,3 @@ class StockService:
             page_size=page_size,
             pages=pages,
         )
-

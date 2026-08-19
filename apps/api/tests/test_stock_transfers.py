@@ -22,7 +22,12 @@ def sample_data():
         {"id": "wh-north", "name": "North Logistics Hub", "is_active": True},
     ]
     products = [
-        {"id": "prod-1", "name": "Organic Whole Milk 1L", "sku": "MILK-ORG-001", "reorder_point": 20},
+        {
+            "id": "prod-1",
+            "name": "Organic Whole Milk 1L",
+            "sku": "MILK-ORG-001",
+            "reorder_point": 20,
+        },
         {"id": "prod-2", "name": "Basmati Rice 5kg", "sku": "RIC-BAS-005", "reorder_point": 10},
     ]
     batches = [
@@ -64,7 +69,9 @@ def transfer_service(transfer_repo, audit_repo):
     return TransferService(transfer_repo=transfer_repo, audit_repo=audit_repo)
 
 
-def test_transfer_insufficient_source_stock_blocked(transfer_service: TransferService, transfer_repo: InMemoryTransferRepository):
+def test_transfer_insufficient_source_stock_blocked(
+    transfer_service: TransferService, transfer_repo: InMemoryTransferRepository
+):
     """A transfer exceeding source stock is blocked with 422 and creates zero movements."""
     user = CurrentUser(
         id="user-admin",
@@ -120,7 +127,9 @@ def test_transfer_same_warehouse_blocked(transfer_service: TransferService):
 
 
 def test_successful_transfer_atomic_source_and_destination_quantities(
-    transfer_service: TransferService, transfer_repo: InMemoryTransferRepository, audit_repo: InMemoryAuditRepository
+    transfer_service: TransferService,
+    transfer_repo: InMemoryTransferRepository,
+    audit_repo: InMemoryAuditRepository,
 ):
     """A successful transfer decreases source total and increases destination total by exactly the same quantity."""
     user = CurrentUser(
@@ -149,7 +158,8 @@ def test_successful_transfer_atomic_source_and_destination_quantities(
 
     # Destination batch created in wh-north with 40.0
     dest_batches = [
-        b for b in transfer_repo.batches.values()
+        b
+        for b in transfer_repo.batches.values()
         if b["warehouse_id"] == "wh-north" and b["product_id"] == "prod-1"
     ]
     assert len(dest_batches) == 1

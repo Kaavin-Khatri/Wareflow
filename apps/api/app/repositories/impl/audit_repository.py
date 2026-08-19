@@ -137,4 +137,3 @@ class InMemoryAuditRepository(AuditRepository):
         total = len(filtered)
         paged = filtered[skip : skip + limit]
         return paged, total
-

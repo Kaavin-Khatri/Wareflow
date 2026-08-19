@@ -15,16 +15,19 @@ class AdjustmentReasonEnum(enum.StrEnum):
     OTHER = "other"
 
 
-
 class StockAdjustmentCreateRequest(BaseModel):
     """Payload for submitting a manual stock adjustment."""
 
     product_id: str = Field(..., description="ID of the product being adjusted")
     warehouse_id: str = Field(..., description="Warehouse where adjustment occurs")
     batch_id: str = Field(..., description="Target stock batch ID to adjust")
-    delta: float = Field(..., description="Quantity delta to apply (positive or negative, non-zero)")
+    delta: float = Field(
+        ..., description="Quantity delta to apply (positive or negative, non-zero)"
+    )
     reason: AdjustmentReasonEnum = Field(..., description="Mandatory adjustment reason category")
-    notes: str | None = Field(None, max_length=500, description="Optional free-text notes detailing the adjustment")
+    notes: str | None = Field(
+        None, max_length=500, description="Optional free-text notes detailing the adjustment"
+    )
 
 
 class StockAdjustmentResponse(BaseModel):

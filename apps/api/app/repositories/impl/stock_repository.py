@@ -277,7 +277,6 @@ class SqlAlchemyStockRepository(StockRepositoryInterface):
         if target_qty <= 0:
             return []
 
-
         from app.models.recalls import BatchRecall, RecallStatusEnum
 
         recalled_subq = select(BatchRecall.batch_id).where(
@@ -290,7 +289,6 @@ class SqlAlchemyStockRepository(StockRepositoryInterface):
             b for b in batches if float(b.quantity) > 0 and b.id not in recalled_batch_ids
         ]
         total_available = round(sum(float(b.quantity) for b in active_batches), 2)
-
 
         if total_available < target_qty:
             shortfall = round(target_qty - total_available, 2)
@@ -470,13 +468,10 @@ class SqlAlchemyStockRepository(StockRepositoryInterface):
         end_date: Any | None = None,
         search: str | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
-        stmt = (
-            select(StockMovement)
-            .options(
-                joinedload(StockMovement.product),
-                joinedload(StockMovement.warehouse),
-                joinedload(StockMovement.batch),
-            )
+        stmt = select(StockMovement).options(
+            joinedload(StockMovement.product),
+            joinedload(StockMovement.warehouse),
+            joinedload(StockMovement.batch),
         )
         if product_id:
             stmt = stmt.where(StockMovement.product_id == product_id)
@@ -501,34 +496,38 @@ class SqlAlchemyStockRepository(StockRepositoryInterface):
         count_stmt = select(func.count()).select_from(stmt.subquery())
         total = self.session.execute(count_stmt).scalar() or 0
 
-        stmt = stmt.order_by(StockMovement.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
+        stmt = (
+            stmt.order_by(StockMovement.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
         movements = list(self.session.execute(stmt).scalars().all())
 
         results = []
         for m in movements:
-            results.append({
-                "id": m.id,
-                "product_id": m.product_id,
-                "product_name": m.product.name if m.product else "Unknown Product",
-                "product_sku": m.product.sku if m.product else "",
-                "warehouse_id": m.warehouse_id,
-                "warehouse_name": m.warehouse.name if m.warehouse else "Unknown Warehouse",
-                "batch_id": m.batch_id,
-                "batch_no": m.batch.batch_no if m.batch else None,
-                "type": m.type.value if hasattr(m.type, "value") else str(m.type),
-                "quantity": float(m.quantity),
-                "reference_type": m.reference_type,
-                "reference_id": m.reference_id,
-                "created_by": m.created_by,
-                "created_at": m.created_at,
-            })
+            results.append(
+                {
+                    "id": m.id,
+                    "product_id": m.product_id,
+                    "product_name": m.product.name if m.product else "Unknown Product",
+                    "product_sku": m.product.sku if m.product else "",
+                    "warehouse_id": m.warehouse_id,
+                    "warehouse_name": m.warehouse.name if m.warehouse else "Unknown Warehouse",
+                    "batch_id": m.batch_id,
+                    "batch_no": m.batch.batch_no if m.batch else None,
+                    "type": m.type.value if hasattr(m.type, "value") else str(m.type),
+                    "quantity": float(m.quantity),
+                    "reference_type": m.reference_type,
+                    "reference_id": m.reference_id,
+                    "created_by": m.created_by,
+                    "created_at": m.created_at,
+                }
+            )
 
         return results, total
 
 
 class InMemoryStockRepository(StockRepositoryInterface):
-
-
     """In-Memory implementation of StockRepositoryInterface for isolated unit tests."""
 
     def __init__(
@@ -542,7 +541,6 @@ class InMemoryStockRepository(StockRepositoryInterface):
         self.batches: dict[str, dict[str, Any]] = {}
         self.movements: list[dict[str, Any]] = []
         self.recalled_batch_ids: set[str] = set()
-
 
         if warehouses:
             for w in warehouses:
@@ -854,11 +852,8 @@ class InMemoryStockRepository(StockRepositoryInterface):
 
         batches = self.get_batches_by_product(product_id, warehouse_id)
         recalled_ids = getattr(self, "recalled_batch_ids", set())
-        active_batches = [
-            b for b in batches if float(b.quantity) > 0 and b.id not in recalled_ids
-        ]
+        active_batches = [b for b in batches if float(b.quantity) > 0 and b.id not in recalled_ids]
         total_available = round(sum(float(b.quantity) for b in active_batches), 2)
-
 
         if total_available < target_qty:
             shortfall = round(target_qty - total_available, 2)
@@ -1112,7 +1107,9 @@ class InMemoryStockRepository(StockRepositoryInterface):
                 == movement_type
             ]
         if start_date:
-            filtered = [m for m in filtered if m.get("created_at") and m["created_at"] >= start_date]
+            filtered = [
+                m for m in filtered if m.get("created_at") and m["created_at"] >= start_date
+            ]
         if end_date:
             filtered = [m for m in filtered if m.get("created_at") and m["created_at"] <= end_date]
         if search:
@@ -1125,7 +1122,9 @@ class InMemoryStockRepository(StockRepositoryInterface):
                 or s in str(m.get("reference_id", "")).lower()
             ]
 
-        filtered.sort(key=lambda m: m.get("created_at", datetime.min.replace(tzinfo=UTC)), reverse=True)
+        filtered.sort(
+            key=lambda m: m.get("created_at", datetime.min.replace(tzinfo=UTC)), reverse=True
+        )
         total = len(filtered)
         start_idx = (page - 1) * page_size
         paged = filtered[start_idx : start_idx + page_size]
@@ -1155,5 +1154,3 @@ class InMemoryStockRepository(StockRepositoryInterface):
                 }
             )
         return results, total
-
-

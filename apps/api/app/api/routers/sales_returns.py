@@ -104,6 +104,4 @@ def reject_sales_return(
 ) -> SalesReturnResponse:
     """Reject an RMA return request without inventory restocking."""
     reason = payload.rejection_reason if payload else None
-    return service.reject_return(
-        return_id=return_id, reason=reason, current_user=current_user
-    )
+    return service.reject_return(return_id=return_id, reason=reason, current_user=current_user)

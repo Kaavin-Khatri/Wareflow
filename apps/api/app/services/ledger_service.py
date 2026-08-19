@@ -63,7 +63,11 @@ class LedgerService:
         # 2. Map Payments as Credit settlements (-)
         for p in payments:
             pay_date = p.paid_at or p.created_at
-            method_label = p.method.value.replace("_", " ").upper() if hasattr(p.method, "value") else str(p.method).upper()
+            method_label = (
+                p.method.value.replace("_", " ").upper()
+                if hasattr(p.method, "value")
+                else str(p.method).upper()
+            )
             desc = f"Payment received via {method_label}"
             if p.note:
                 desc += f" — {p.note}"

@@ -217,7 +217,6 @@ def test_customer_sales_order_cancellation_restores_stock(clean_repos):
     assert stock_repo.batches["batch-oil-001"]["quantity"] == 20.0
 
 
-
 def test_create_order_invalid_customer_rejected(clean_repos):
     so_service = clean_repos["so_service"]
     prod_repo = clean_repos["prod_repo"]

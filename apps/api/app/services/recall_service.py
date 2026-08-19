@@ -154,9 +154,7 @@ class RecallService:
             notified_at=now,
         )
 
-    def resolve_recall(
-        self, recall_id: str, current_user: Any = None
-    ) -> BatchRecallResponse:
+    def resolve_recall(self, recall_id: str, current_user: Any = None) -> BatchRecallResponse:
         """Mark a batch recall as resolved once all affected buyers are confirmed handled."""
         recall = self.recall_repo.get_recall_by_id(recall_id)
         if not recall:
@@ -190,7 +188,6 @@ class RecallService:
                     "resolved_by": user_email,
                 },
             )
-
 
         return self.get_recall_details(recall_id)
 

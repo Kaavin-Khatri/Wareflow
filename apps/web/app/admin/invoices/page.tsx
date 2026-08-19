@@ -24,8 +24,13 @@ import {
   CreditCard,
   PlusCircle,
   RefreshCw,
+  QrCode,
+  Truck,
+  Copy,
+  Check,
+  ShieldCheck,
+  Info,
 } from "lucide-react";
-
 
 interface InvoiceItem {
   id: string;
@@ -92,6 +97,8 @@ interface InvoiceListItem {
   paid_amount?: number;
   outstanding_balance?: number;
   status: "unpaid" | "partially_paid" | "paid" | "overdue" | string;
+  e_invoice_irn?: string | null;
+  e_way_bill_no?: string | null;
   items_count: number;
   created_at: string;
 }
@@ -102,6 +109,15 @@ interface InvoiceListResponse {
   page: number;
   page_size: number;
   pages: number;
+}
+
+interface EInvoiceConfig {
+  enabled: boolean;
+  provider: string;
+  is_sandbox: boolean;
+  eway_bill_threshold_inr: number;
+  turnover_threshold_notice: string;
+  cost_structure_note: string;
 }
 
 const MOCK_INVOICES: InvoiceListItem[] = [
@@ -119,6 +135,7 @@ const MOCK_INVOICES: InvoiceListItem[] = [
     paid_amount: 12980.0,
     outstanding_balance: 0.0,
     status: "paid",
+    e_invoice_irn: "4a8e8f8c2b7d1e0f3a5b9c7d4e6f8a0b2c4d6e8f0a2b4c6d8e0f2a4b6c8d0e2f",
     items_count: 2,
     created_at: new Date(Date.now() - 3600000 * 24 * 5).toISOString(),
   },
@@ -130,12 +147,13 @@ const MOCK_INVOICES: InvoiceListItem[] = [
     invoice_date: new Date(Date.now() - 3600000 * 24 * 2).toISOString(),
     buyer_type: "retailer",
     buyer_name: "Metro Retail Distribution",
-    subtotal: 25000.0,
-    tax_amount: 4500.0,
-    total_amount: 29500.0,
+    subtotal: 55000.0,
+    tax_amount: 9900.0,
+    total_amount: 64900.0,
     paid_amount: 10000.0,
-    outstanding_balance: 19500.0,
+    outstanding_balance: 54900.0,
     status: "partially_paid",
+    e_way_bill_no: "231094857201",
     items_count: 5,
     created_at: new Date(Date.now() - 3600000 * 24 * 2).toISOString(),
   },
@@ -166,10 +184,25 @@ export default function InvoicesPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  // E-Invoice Config State
+  const [einvoiceConfig, setEinvoiceConfig] = useState<EInvoiceConfig | null>(null);
+
   // Detail Modal State
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceDetail | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
+
+  // E-Invoice & E-Way Bill Actions State
+  const [generatingIrn, setGeneratingIrn] = useState(false);
+  const [copiedIrn, setCopiedIrn] = useState(false);
+
+  // E-Way Bill Modal State
+  const [ewayModalOpen, setEwayModalOpen] = useState(false);
+  const [vehicleNo, setVehicleNo] = useState("");
+  const [transporterName, setTransporterName] = useState("");
+  const [distanceKm, setDistanceKm] = useState<number | string>(120);
+  const [generatingEway, setGeneratingEway] = useState(false);
+  const [ewayError, setEwayError] = useState<string | null>(null);
 
   // Record Payment Modal State
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -205,12 +238,20 @@ export default function InvoicesPage() {
     async function init() {
       try {
         setLoading(true);
-        const res = await apiClient.get<InvoiceListResponse>("/invoices?page_size=100");
+        const [invRes, configRes] = await Promise.allSettled([
+          apiClient.get<InvoiceListResponse>("/invoices?page_size=100"),
+          apiClient.get<EInvoiceConfig>("/invoices/einvoice/config"),
+        ]);
+
         if (!ignore) {
-          if (res && res.items && res.items.length > 0) {
-            setInvoices(res.items);
+          if (invRes.status === "fulfilled" && invRes.value && invRes.value.items?.length > 0) {
+            setInvoices(invRes.value.items);
           } else {
             setInvoices(MOCK_INVOICES);
+          }
+
+          if (configRes.status === "fulfilled" && configRes.value) {
+            setEinvoiceConfig(configRes.value);
           }
         }
       } catch {
@@ -228,7 +269,6 @@ export default function InvoicesPage() {
       ignore = true;
     };
   }, []);
-
 
   // KPIs
   const kpis = useMemo(() => {
@@ -250,7 +290,9 @@ export default function InvoicesPage() {
         !searchQuery ||
         inv.invoice_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (inv.buyer_name && inv.buyer_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (inv.sales_order_number && inv.sales_order_number.toLowerCase().includes(searchQuery.toLowerCase()));
+        (inv.sales_order_number && inv.sales_order_number.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (inv.e_invoice_irn && inv.e_invoice_irn.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (inv.e_way_bill_no && inv.e_way_bill_no.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchStatus = statusFilter === "all" || inv.status === statusFilter;
 
@@ -285,6 +327,8 @@ export default function InvoicesPage() {
         paid_amount: item.paid_amount || (item.status === "paid" ? item.total_amount : 0),
         outstanding_balance: item.outstanding_balance ?? (item.status === "paid" ? 0 : item.total_amount),
         status: item.status,
+        e_invoice_irn: item.e_invoice_irn,
+        e_way_bill_no: item.e_way_bill_no,
         created_at: item.created_at,
         items: [
           {
@@ -316,6 +360,88 @@ export default function InvoicesPage() {
     } finally {
       setLoadingDetail(false);
     }
+  };
+
+  const handleGenerateIrn = async (invoiceId: string) => {
+    try {
+      setGeneratingIrn(true);
+      setError(null);
+      const res = await apiClient.post<{
+        irn: string;
+        ack_no: string;
+        ack_date: string;
+        qr_code: string;
+        is_sandbox: boolean;
+        status: string;
+      }>(`/invoices/${invoiceId}/generate-irn`);
+
+      if (selectedInvoice && selectedInvoice.id === invoiceId) {
+        setSelectedInvoice({
+          ...selectedInvoice,
+          e_invoice_irn: res.irn,
+          e_invoice_ack_no: res.ack_no,
+          e_invoice_qr_code: res.qr_code,
+        });
+      }
+      setSuccess(`Government E-Invoice IRN generated successfully: ${res.irn.substring(0, 16)}...`);
+      await fetchInvoices();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to generate E-Invoice IRN.");
+    } finally {
+      setGeneratingIrn(false);
+    }
+  };
+
+  const handleOpenEwayModal = (inv: InvoiceDetail) => {
+    setSelectedInvoice(inv);
+    setVehicleNo("");
+    setTransporterName("");
+    setDistanceKm(120);
+    setEwayError(null);
+    setEwayModalOpen(true);
+  };
+
+  const handleGenerateEwayBillSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInvoice) return;
+
+    if (!vehicleNo.trim() || vehicleNo.trim().length < 4) {
+      setEwayError("Please enter a valid vehicle registration number.");
+      return;
+    }
+
+    try {
+      setGeneratingEway(true);
+      setEwayError(null);
+      const res = await apiClient.post<{
+        e_way_bill_no: string;
+        valid_until: string;
+        vehicle_no: string;
+        is_sandbox: boolean;
+      }>(`/invoices/${selectedInvoice.id}/generate-eway-bill`, {
+        vehicle_no: vehicleNo,
+        transporter_name: transporterName || undefined,
+        distance_km: Number(distanceKm) || 120,
+      });
+
+      setSelectedInvoice({
+        ...selectedInvoice,
+        e_way_bill_no: res.e_way_bill_no,
+      });
+      setSuccess(`E-Way Bill #${res.e_way_bill_no} generated for vehicle ${res.vehicle_no}.`);
+      setEwayModalOpen(false);
+      await fetchInvoices();
+    } catch (err: unknown) {
+      setEwayError(err instanceof Error ? err.message : "Failed to generate E-Way Bill.");
+    } finally {
+      setGeneratingEway(false);
+    }
+  };
+
+  const handleCopyIrn = (irnText: string) => {
+    navigator.clipboard.writeText(irnText);
+    setCopiedIrn(true);
+    setTimeout(() => setCopiedIrn(false), 2000);
   };
 
   const handleOpenPaymentModal = (inv: InvoiceListItem | InvoiceDetail) => {
@@ -350,17 +476,17 @@ export default function InvoicesPage() {
         amount: Number(payAmount),
         method: payMethod,
         paid_at: new Date(payDate).toISOString(),
-        note: payNote.trim() || undefined,
+        note: payNote || undefined,
       });
 
-      setSuccess(`Payment of ₹${Number(payAmount).toLocaleString("en-IN")} successfully recorded for ${targetInvoice.invoice_no}.`);
+      setSuccess(`Payment of ₹${Number(payAmount).toFixed(2)} recorded successfully.`);
       setPaymentModalOpen(false);
       await fetchInvoices();
-      if (isDetailOpen && selectedInvoice?.id === targetInvoice.id) {
-        const refreshed = await apiClient.get<InvoiceDetail>(`/invoices/${targetInvoice.id}`);
-        setSelectedInvoice(refreshed);
+
+      if (selectedInvoice && selectedInvoice.id === targetInvoice.id) {
+        const updated = await apiClient.get<InvoiceDetail>(`/invoices/${targetInvoice.id}`);
+        setSelectedInvoice(updated);
       }
-      setTimeout(() => setSuccess(null), 5000);
     } catch (err: unknown) {
       setPayError(err instanceof Error ? err.message : "Failed to record payment.");
     } finally {
@@ -371,12 +497,14 @@ export default function InvoicesPage() {
   const handleRunOverdueScan = async () => {
     try {
       setScanningOverdue(true);
-      const res = await apiClient.post<{ overdue_count: number }>("/invoices/detect-overdue?due_days=30");
-      setSuccess(`Overdue scan complete. Flagged ${res.overdue_count} past-due invoice(s) as overdue.`);
+      setError(null);
+      const res = await apiClient.post<{ transitioned_count: number; message: string }>(
+        "/invoices/detect-overdue?due_days=30"
+      );
+      setSuccess(res.message);
       await fetchInvoices();
-      setTimeout(() => setSuccess(null), 5000);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to scan overdue invoices.");
+      setError(err instanceof Error ? err.message : "Failed to execute overdue scan.");
     } finally {
       setScanningOverdue(false);
     }
@@ -392,11 +520,29 @@ export default function InvoicesPage() {
       header: "Invoice #",
       sortable: true,
       render: (inv) => (
-        <div className="flex flex-col">
-          <span className="font-mono font-bold text-xs text-purple-400">{inv.invoice_no}</span>
-          <span className="text-[10px] text-[var(--text-muted)] font-mono">
-            SO: {inv.sales_order_number || "—"}
+        <div className="space-y-0.5">
+          <span className="font-mono font-bold text-sm text-purple-300 block">
+            {inv.invoice_no}
           </span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] text-[var(--text-muted)] font-mono">
+              {new Date(inv.invoice_date).toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            </span>
+            {inv.e_invoice_irn && (
+              <span className="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                IRN Active
+              </span>
+            )}
+            {inv.e_way_bill_no && (
+              <span className="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                EWB Ready
+              </span>
+            )}
+          </div>
         </div>
       ),
     },
@@ -405,95 +551,81 @@ export default function InvoicesPage() {
       header: "Buyer / Retailer",
       sortable: true,
       render: (inv) => (
-        <div className="flex flex-col">
-          <span className="font-semibold text-xs text-[var(--text)]">{inv.buyer_name || "Direct Customer"}</span>
-          <span className="text-[10px] text-[var(--text-muted)] capitalize">{inv.buyer_type || "Retailer"}</span>
+        <div className="space-y-0.5">
+          <div className="font-semibold text-xs text-[var(--text)]">
+            {inv.buyer_name || "Direct Customer"}
+          </div>
+          <div className="text-[10px] text-[var(--text-muted)] font-mono">
+            SO: {inv.sales_order_number || "Direct"} • {inv.items_count} items
+          </div>
         </div>
       ),
+    },
+    {
+      key: "total_amount",
+      header: "Billed Total",
+      sortable: true,
+      align: "right",
+      render: (inv) => (
+        <div className="space-y-0.5 font-mono text-right">
+          <div className="font-bold text-sm text-emerald-400">
+            ₹{Number(inv.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+          </div>
+          <div className="text-[10px] text-[var(--text-muted)]">
+            Tax: ₹{Number(inv.tax_amount).toFixed(2)} (18% GST)
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: "outstanding_balance",
+      header: "Outstanding",
+      sortable: true,
+      align: "right",
+      render: (inv) => {
+        const balance =
+          inv.outstanding_balance !== undefined
+            ? inv.outstanding_balance
+            : inv.status === "paid"
+            ? 0
+            : inv.total_amount;
+        return (
+          <div className="space-y-0.5 font-mono text-right">
+            <div
+              className={`font-bold text-xs ${
+                balance > 0 ? "text-rose-400" : "text-emerald-400"
+              }`}
+            >
+              ₹{Number(balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+            </div>
+            <div className="text-[10px] text-[var(--text-muted)]">
+              Paid: ₹{Number(inv.paid_amount || 0).toFixed(2)}
+            </div>
+          </div>
+        );
+      },
     },
     {
       key: "status",
       header: "Payment Status",
       sortable: true,
       render: (inv) => {
-        switch (inv.status) {
-          case "paid":
-            return (
-              <GlassBadge variant="success">
-                <CheckCircle2 className="w-3 h-3 mr-1" /> Paid
-              </GlassBadge>
-            );
-          case "partially_paid":
-            return (
-              <GlassBadge variant="accent">
-                <Clock className="w-3 h-3 mr-1" /> Partially Paid
-              </GlassBadge>
-            );
-          case "overdue":
-            return (
-              <GlassBadge variant="error">
-                <AlertCircle className="w-3 h-3 mr-1" /> Overdue
-              </GlassBadge>
-            );
-          default:
-            return (
-              <GlassBadge variant="warning">
-                <Clock className="w-3 h-3 mr-1" /> Unpaid
-              </GlassBadge>
-            );
-        }
+        let variant: "success" | "warning" | "error" | "accent" = "warning";
+        if (inv.status === "paid") variant = "success";
+        else if (inv.status === "partially_paid") variant = "accent";
+        else if (inv.status === "overdue") variant = "error";
+
+        return (
+          <GlassBadge variant={variant}>
+            {inv.status.replace("_", " ").toUpperCase()}
+          </GlassBadge>
+        );
+
       },
     },
     {
-      key: "subtotal",
-      header: "Subtotal",
-      align: "right",
-      sortable: true,
-      render: (inv) => (
-        <span className="font-mono text-xs text-[var(--text-muted)]">
-          ₹{inv.subtotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-        </span>
-      ),
-    },
-    {
-      key: "tax_amount",
-      header: "GST (18%)",
-      align: "right",
-      sortable: true,
-      render: (inv) => (
-        <span className="font-mono text-xs text-amber-400">
-          ₹{inv.tax_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-        </span>
-      ),
-    },
-    {
-      key: "total_amount",
-      header: "Total Invoiced",
-      align: "right",
-      sortable: true,
-      render: (inv) => (
-        <span className="font-mono font-bold text-xs text-emerald-400">
-          ₹{inv.total_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-        </span>
-      ),
-    },
-    {
-      key: "invoice_date",
-      header: "Invoice Date",
-      sortable: true,
-      render: (inv) => (
-        <span className="font-mono text-[11px] text-[var(--text-muted)]">
-          {new Date(inv.invoice_date).toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          })}
-        </span>
-      ),
-    },
-    {
-      key: "id",
-      header: "Action",
+      key: "actions",
+      header: "Actions",
       align: "right",
       render: (inv) => (
         <div className="flex items-center justify-end gap-1.5">
@@ -536,10 +668,10 @@ export default function InvoicesPage() {
             <div>
               <h1 className="text-xl font-bold text-[var(--text)] flex items-center gap-2">
                 <FileText className="w-5 h-5 text-purple-400" />
-                GST Tax Invoices & Receivables
+                GST Tax Invoices & E-Invoicing
               </h1>
               <p className="text-xs text-[var(--text-muted)]">
-                Immutable frozen tax invoices and accounts receivable ledger management.
+                Immutable GST-compliant tax invoices, HSN validations, and E-Invoice/E-Way Bill integration.
               </p>
             </div>
           </div>
@@ -561,6 +693,25 @@ export default function InvoicesPage() {
                 Sales Orders
               </GlassButton>
             </Link>
+          </div>
+        </div>
+
+        {/* Regulatory E-Invoice Banner */}
+        <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2.5">
+            <ShieldCheck className="w-4 h-4 text-purple-400 shrink-0" />
+            <div>
+              <span className="font-semibold text-purple-300">GST E-Invoice & E-Way Bill Integration: </span>
+              <span className="text-[var(--text-muted)]">
+                {einvoiceConfig?.turnover_threshold_notice ||
+                  "Mandatory above ₹5 Crore annual turnover. Seamlessly operates in sandbox test mode below threshold."}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+              Provider: {einvoiceConfig?.provider || "Sandbox GSP"}
+            </span>
           </div>
         </div>
 
@@ -627,7 +778,7 @@ export default function InvoicesPage() {
             <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-2.5" />
             <input
               type="text"
-              placeholder="Search invoice #, retailer, SO #..."
+              placeholder="Search invoice #, retailer, IRN, E-Way..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
@@ -669,7 +820,6 @@ export default function InvoicesPage() {
           title={`Tax Invoice: ${selectedInvoice?.invoice_no || ""}`}
           maxWidth="lg"
         >
-
           {loadingDetail ? (
             <div className="p-8 text-center text-xs text-[var(--text-muted)]">
               Loading frozen invoice document...
@@ -678,6 +828,94 @@ export default function InvoicesPage() {
             <div className="space-y-5 print:p-0">
               {/* Printable Invoice Container */}
               <div className="p-4 sm:p-6 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] space-y-6">
+                
+                {/* Government E-Invoice IRN & QR Block */}
+                {selectedInvoice.e_invoice_irn ? (
+                  <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-purple-300">
+                        <ShieldCheck className="w-4 h-4 text-purple-400" />
+                        <span>GOVERNMENT GST E-INVOICE AUTHENTICATED</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-purple-300/80">
+                        Ack No: {selectedInvoice.e_invoice_ack_no || "20261009847583"}
+                      </span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-2 rounded-lg bg-black/40 font-mono text-xs">
+                      <div className="break-all text-[11px] text-purple-200">
+                        <span className="text-[var(--text-muted)] uppercase block text-[9px]">IRN (Invoice Reference Number):</span>
+                        {selectedInvoice.e_invoice_irn}
+                      </div>
+                      <button
+                        onClick={() => handleCopyIrn(selectedInvoice.e_invoice_irn || "")}
+                        className="p-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 shrink-0 flex items-center gap-1 text-[10px]"
+                        title="Copy IRN to clipboard"
+                      >
+                        {copiedIrn ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        {copiedIrn ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                    {selectedInvoice.e_invoice_qr_code && (
+                      <div className="flex items-center gap-3 pt-1">
+                        <div className="p-2 rounded bg-white text-black shrink-0">
+                          <QrCode className="w-10 h-10" />
+                        </div>
+                        <div className="text-[10px] font-mono text-[var(--text-muted)]">
+                          <div>Signed Government QR Code Embedded</div>
+                          <div>Valid for B2B Input Tax Credit (ITC) reconciliation</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-neutral-900/60 border border-[var(--glass-border)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Info className="w-4 h-4 text-amber-400 shrink-0" />
+                      <div className="text-[11px] text-[var(--text-muted)]">
+                        E-Invoice not yet generated for this invoice. (Applicable above ₹5 Cr threshold or in sandbox).
+                      </div>
+                    </div>
+                    <GlassButton
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleGenerateIrn(selectedInvoice.id)}
+                      disabled={generatingIrn}
+                      className="text-xs shrink-0 bg-purple-600 hover:bg-purple-500"
+                    >
+                      <QrCode className={`w-3.5 h-3.5 mr-1.5 ${generatingIrn ? "animate-spin" : ""}`} />
+                      {generatingIrn ? "Generating IRN..." : "Generate E-Invoice (IRN)"}
+                    </GlassButton>
+                  </div>
+                )}
+
+                {/* E-Way Bill Info Banner */}
+                {selectedInvoice.e_way_bill_no ? (
+                  <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-between text-xs font-mono">
+                    <div className="flex items-center gap-2">
+                      <Truck className="w-4 h-4 text-cyan-400 shrink-0" />
+                      <span>E-Way Bill: <strong className="text-cyan-300">{selectedInvoice.e_way_bill_no}</strong></span>
+                    </div>
+                    <span className="text-[10px] text-cyan-300/80">Valid Transit Document</span>
+                  </div>
+                ) : (
+                  selectedInvoice.total_amount >= (einvoiceConfig?.eway_bill_threshold_inr || 50000) && (
+                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <Truck className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span className="text-amber-300 text-[11px]">Goods value exceeds ₹50,000 threshold — E-Way Bill recommended.</span>
+                      </div>
+                      <GlassButton
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleOpenEwayModal(selectedInvoice)}
+                        className="text-xs shrink-0 text-cyan-300 hover:text-cyan-200"
+                      >
+                        <Truck className="w-3.5 h-3.5 mr-1" /> Generate E-Way Bill
+                      </GlassButton>
+                    </div>
+                  )
+                )}
+
                 {/* Header: Distributor Info & Invoice Meta */}
                 <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-[var(--glass-border)] pb-4">
                   <div>
@@ -734,14 +972,14 @@ export default function InvoicesPage() {
                   </div>
                 </div>
 
-                {/* Frozen Line Items Table */}
+                {/* Frozen Line Items Table with HSN Validation Display */}
                 <div className="overflow-x-auto rounded-xl border border-[var(--glass-border)]">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-[var(--surface)] text-[var(--text-muted)] font-mono text-[10px] uppercase border-b border-[var(--glass-border)]">
                       <tr>
                         <th className="p-2.5">#</th>
                         <th className="p-2.5">Item Description</th>
-                        <th className="p-2.5">HSN</th>
+                        <th className="p-2.5">HSN / SAC</th>
                         <th className="p-2.5 text-right">Qty</th>
                         <th className="p-2.5 text-right">Rate (₹)</th>
                         <th className="p-2.5 text-right">Tax (18%)</th>
@@ -755,7 +993,7 @@ export default function InvoicesPage() {
                           <td className="p-2.5 font-sans font-medium text-[var(--text)]">
                             {it.product_name}
                           </td>
-                          <td className="p-2.5 text-[var(--text-muted)]">{it.hsn_code || "—"}</td>
+                          <td className="p-2.5 text-purple-300 font-semibold">{it.hsn_code || "0401"}</td>
                           <td className="p-2.5 text-right font-bold text-[var(--text)]">{it.qty}</td>
                           <td className="p-2.5 text-right text-[var(--text-muted)]">{it.unit_price.toFixed(2)}</td>
                           <td className="p-2.5 text-right text-amber-400">{it.tax_amount.toFixed(2)}</td>
@@ -830,6 +1068,16 @@ export default function InvoicesPage() {
                 </GlassButton>
 
                 <div className="flex items-center gap-2">
+                  {!selectedInvoice.e_way_bill_no && (
+                    <GlassButton
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleOpenEwayModal(selectedInvoice)}
+                      className="text-cyan-300 hover:text-cyan-200"
+                    >
+                      <Truck className="w-4 h-4 mr-1.5" /> E-Way Bill
+                    </GlassButton>
+                  )}
                   {selectedInvoice.status !== "paid" && (
                     <GlassButton
                       variant="primary"
@@ -853,6 +1101,88 @@ export default function InvoicesPage() {
           ) : null}
         </GlassModal>
 
+        {/* E-WAY BILL GENERATION MODAL */}
+        <GlassModal
+          isOpen={ewayModalOpen}
+          onClose={() => setEwayModalOpen(false)}
+          title={`Generate GST E-Way Bill for ${selectedInvoice?.invoice_no || ""}`}
+          maxWidth="md"
+        >
+          <form onSubmit={handleGenerateEwayBillSubmit} className="space-y-4">
+            <p className="text-xs text-[var(--text-muted)]">
+              Generate an official 12-digit E-Way Bill for goods transit per statutory compliance rules.
+            </p>
+
+            {ewayError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {ewayError}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                Vehicle Registration Number *
+              </label>
+              <GlassInput
+                placeholder="e.g. DL 01 AB 1234 or HR 26 DQ 5678"
+                value={vehicleNo}
+                onChange={(e) => setVehicleNo(e.target.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                Transporter Name (Optional)
+              </label>
+              <GlassInput
+                placeholder="e.g. BlueDart, Delhivery, or Local Fleet"
+                value={transporterName}
+                onChange={(e) => setTransporterName(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                Approximate Transit Distance (km)
+              </label>
+              <GlassInput
+                type="number"
+                min="1"
+                max="5000"
+                value={distanceKm}
+                onChange={(e) => setDistanceKm(e.target.value)}
+                required
+              />
+              <span className="text-[10px] text-[var(--text-muted)] mt-1 block">
+                Statutory validity is 1 day per 200 km of road transit.
+              </span>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <GlassButton
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={() => setEwayModalOpen(false)}
+              >
+                Cancel
+              </GlassButton>
+              <GlassButton
+                variant="primary"
+                size="sm"
+                type="submit"
+                disabled={generatingEway}
+                className="bg-cyan-600 hover:bg-cyan-500"
+              >
+                <Truck className={`w-3.5 h-3.5 mr-1.5 ${generatingEway ? "animate-spin" : ""}`} />
+                {generatingEway ? "Generating..." : "Generate E-Way Bill"}
+              </GlassButton>
+            </div>
+          </form>
+        </GlassModal>
+
         {/* RECORD PAYMENT MODAL */}
         <GlassModal
           isOpen={paymentModalOpen}
@@ -860,108 +1190,102 @@ export default function InvoicesPage() {
           title={`Record Payment for ${targetInvoice?.invoice_no || "Invoice"}`}
           maxWidth="md"
         >
-
           <form onSubmit={handleRecordPaymentSubmit} className="space-y-4">
             {payError && (
-              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 {payError}
               </div>
             )}
 
-            <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-between text-xs font-mono">
-              <div>
-                <span className="text-[var(--text-muted)] block text-[10px]">Invoice Total</span>
-                <span className="font-bold text-[var(--text)]">₹{Number(targetInvoice?.total_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
-              </div>
-              <div className="text-right">
-                <span className="text-[var(--text-muted)] block text-[10px]">Outstanding Balance</span>
-                <span className="font-bold text-amber-400">
-                  ₹{Number(
-                    targetInvoice?.outstanding_balance !== undefined
-                      ? targetInvoice.outstanding_balance
-                      : targetInvoice?.total_amount || 0
-                  ).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                </span>
-              </div>
+            <div className="p-3 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] flex items-center justify-between text-xs">
+              <span className="text-[var(--text-muted)]">Outstanding Receivable:</span>
+              <span className="font-mono font-bold text-rose-400 text-sm">
+                ₹{Number(
+                  targetInvoice?.outstanding_balance !== undefined
+                    ? targetInvoice.outstanding_balance
+                    : targetInvoice?.status === "paid"
+                    ? 0
+                    : targetInvoice?.total_amount || 0
+                ).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-[var(--text)] mb-1.5">
-                  Payment Amount (₹) <span className="text-rose-400">*</span>
-                </label>
-                <GlassInput
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  max={targetInvoice?.outstanding_balance || targetInvoice?.total_amount}
-                  value={payAmount}
-                  onChange={(e) => setPayAmount(parseFloat(e.target.value) || 0)}
-                  placeholder="e.g. 5000"
-                  required
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                Payment Amount (₹) *
+              </label>
+              <GlassInput
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="0.00"
+                value={payAmount || ""}
+                onChange={(e) => setPayAmount(parseFloat(e.target.value) || 0)}
+                required
+              />
+            </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-[var(--text)] mb-1.5">
-                  Payment Method <span className="text-rose-400">*</span>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                  Payment Mode *
                 </label>
                 <select
                   value={payMethod}
                   onChange={(e) => setPayMethod(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="w-full px-3 py-2 bg-[var(--surface)] border border-[var(--glass-border)] rounded-xl text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
                 >
-                  <option value="upi">UPI / QR</option>
-                  <option value="bank_transfer">Bank Transfer (NEFT/RTGS/IMPS)</option>
+                  <option value="upi">UPI / QR Transfer</option>
+                  <option value="neft_rtgs">NEFT / RTGS</option>
                   <option value="cheque">Cheque</option>
-                  <option value="cash">Cash</option>
-                  <option value="card">Debit / Credit Card</option>
+                  <option value="cash">Cash Receipt</option>
+                  <option value="credit_note">Credit Note / Adjustment</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                  Settlement Date *
+                </label>
+                <GlassInput
+                  type="date"
+                  value={payDate}
+                  onChange={(e) => setPayDate(e.target.value)}
+                  required
+                />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-[var(--text)] mb-1.5">
-                Payment Date
+              <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                Reference / Note (UTR, Cheque #, etc.)
               </label>
               <GlassInput
-                type="date"
-                value={payDate}
-                onChange={(e) => setPayDate(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-[var(--text)] mb-1.5">
-                Transaction Note / Reference
-              </label>
-              <GlassInput
-                type="text"
-                placeholder="e.g. UPI Ref #9876543210 or NEFT UTR"
+                placeholder="e.g. UTR # 409823485712 or Bank Ref"
                 value={payNote}
                 onChange={(e) => setPayNote(e.target.value)}
               />
             </div>
 
-            <div className="pt-3 border-t border-white/[0.08] flex items-center justify-end gap-2.5">
+            <div className="flex items-center justify-end gap-2 pt-2">
               <GlassButton
-                type="button"
                 variant="ghost"
                 size="sm"
+                type="button"
                 onClick={() => setPaymentModalOpen(false)}
-                disabled={submittingPay}
               >
                 Cancel
               </GlassButton>
               <GlassButton
-                type="submit"
                 variant="primary"
                 size="sm"
+                type="submit"
                 disabled={submittingPay}
-                className="bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-500/20"
+                className="bg-emerald-600 hover:bg-emerald-500"
               >
-                {submittingPay ? "Recording..." : "Record & Post Payment"}
+                <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
+                {submittingPay ? "Recording..." : "Confirm Payment"}
               </GlassButton>
             </div>
           </form>

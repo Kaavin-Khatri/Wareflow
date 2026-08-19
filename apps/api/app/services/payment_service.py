@@ -98,7 +98,6 @@ class PaymentService:
         )
         created_payment = self.payment_repo.create(payment)
 
-
         # Update invoice payment status
         new_cumulative_paid = round(prior_paid + payload.amount, 2)
         if new_cumulative_paid >= total_inv_amount - 0.001:
@@ -184,7 +183,6 @@ class PaymentService:
                 after_value={"flagged_count": len(overdue_ids), "flagged_ids": overdue_ids},
             )
 
-
         return OverdueDetectionResponse(
             due_window_days=due_days,
             scanned_count=len(candidates),
@@ -193,7 +191,9 @@ class PaymentService:
             overdue_invoices=overdue_summaries,
         )
 
-    def _to_payment_response(self, payment: Payment, invoice: Invoice | None = None) -> PaymentResponse:
+    def _to_payment_response(
+        self, payment: Payment, invoice: Invoice | None = None
+    ) -> PaymentResponse:
         inv_no = invoice.invoice_no if invoice else None
         ret_name = None
         if invoice and invoice.sales_order and invoice.sales_order.retailer:
@@ -212,4 +212,3 @@ class PaymentService:
             note=payment.note,
             created_at=payment.created_at or datetime.now(UTC),
         )
-
