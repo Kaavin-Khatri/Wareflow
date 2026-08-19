@@ -248,7 +248,7 @@ wareflow/
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
 │       ├── .env.example
-│       ├── tests/                  # Pytest test suite (82 tests, 100% green)
+│       ├── tests/                  # Pytest test suite (205 tests, 100% green)
 │       │   ├── test_appearance_preferences.py
 │       │   ├── test_di_and_health.py
 │       │   ├── test_models.py
@@ -264,7 +264,9 @@ wareflow/
 │       │   ├── test_stock.py
 │       │   ├── test_analytics_stock.py
 │       │   ├── test_suppliers.py
-│       │   └── test_purchase_orders.py
+│       │   ├── test_purchase_orders.py
+│       │   ├── test_whatsapp_channel.py
+│       │   └── test_stock_subscriptions_and_restock.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
@@ -673,9 +675,10 @@ wareflow/
 | Notification Channel Strategy (OCP) | `NotificationService` coordinates pluggable `BaseNotificationChannel` implementations (`InAppChannel`, `EmailChannel`, `WhatsAppChannel`), allowing new delivery channels with zero modifications to calling code |
 | WhatsApp Cloud API Channel (Meta) | Meta Cloud API provides outbound B2B messaging with pre-approved message templates (`wareflow_stock_available`, `wareflow_goods_ready`); free tier capped at 1,000 service conversations/month with always-free email fallback |
 | Narrow-Scope Firestore Realtime Mirror | Firestore is used narrowly for realtime notification delivery only (`notifications/{uid}/items/{id}`) with `onSnapshot` in Topbar bell, while Postgres stays the system of record for everything, including history & pagination |
-| Smart Alert Rule Engine (OCP) | `BaseAlertRule` strategy implementations (`LowStockRule`, `CriticalStockRule`, `ExpiringBatchRule`, `OverdueInvoiceRule`) can be added independently without modifying `AlertEngineService` |
+| Smart Alert Rule Engine (OCP) | `BaseAlertRule` strategy implementations (`LowStockRule`, `CriticalStockRule`, `ExpiringBatchRule`, `OverdueInvoiceRule`, `RestockAlertRule`) can be added independently without modifying `AlertEngineService` |
 | 24-Hour Alert Deduplication Guard | `AlertLog` table and `AlertLogRepository.has_recent_alert` suppress repeated notifications for identical rule/entity combinations within a 24-hour window |
-| Hybrid Periodic & Inline Alert Triggers | APScheduler executes background rule sweeps on a 30-minute timer, while inline hooks on `confirm_order` and `adjust_stock` trigger immediate evaluations within seconds |
+| Hybrid Periodic & Inline Alert Triggers | APScheduler executes background rule sweeps on a 30-minute timer, while inline hooks on `confirm_order`, `receive_stock`, and `adjust_stock` trigger immediate evaluations within seconds |
+| Restock Availability Subscriptions (Auto-Unsubscribe) | `RestockAlertRule` delivers back-in-stock alerts via subscriber's preferred channel (WhatsApp/Email) when stock arrives, automatically setting `is_active=False` upon fulfillment to eliminate repeat spam |
 
 ## Security & Audit Log Coverage
 

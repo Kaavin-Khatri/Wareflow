@@ -29,6 +29,8 @@ class AlertEvaluationContext:
     invoice_repo: Any
     retailer_repo: Any = None
     supplier_repo: Any = None
+    stock_subscription_repo: Any = None
+    notification_service: Any = None
 
 
 class BaseAlertRule(ABC):

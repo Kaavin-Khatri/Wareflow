@@ -3219,6 +3219,51 @@
 - Registered Templates: `wareflow_stock_available`, `wareflow_goods_ready`
 - Env Vars: `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_BUSINESS_ACCOUNT_ID`
 
+---
+
+## Step 13.4 — Retailer Restock Subscriptions & Availability Alerts
+**Timestamp:** 2026-08-19T11:05:00Z
+**Status:** COMPLETE
+
+### What was done
+- **Stock Subscription Repository & Domain Service**:
+  - Implemented `StockSubscriptionRepositoryInterface` and implementations (`SqlAlchemyStockSubscriptionRepository`, `InMemoryStockSubscriptionRepository`).
+  - Created `StockSubscriptionService` managing subscribe, unsubscribe, active subscriber listing, and per-retailer subscription count aggregation.
+- **Smart Alert Engine Strategy (`RestockAlertRule`)**:
+  - Built `RestockAlertRule` implementing `BaseAlertRule`.
+  - Evaluates active subscriptions for products crossing from zero/low stock to available (`current_stock > 0`).
+  - Dispatches targeted notifications via `NotificationService` across subscriber's preferred channel (`whatsapp`, `email`, or `both`) using `wareflow_stock_available` template.
+  - Automatically deactivates fulfilled subscriptions (`is_active=False`, `notified_at=now`) to prevent spamming until re-subscription.
+  - Suppressed duplicate staff broadcasts for subscriber-directed restock alerts in `AlertEngineService`.
+- **Inline Stock Replenishment Trigger**:
+  - Connected inline restock alert evaluation to `StockService.receive_stock` and `adjust_stock` after inbound stock movements.
+- **REST Endpoints & Dependency Injection**:
+  - `POST /products/{product_id}/subscribe` (creates or reactivates subscription).
+  - `DELETE /products/{product_id}/subscribe?retailer_id=...` (deactivates subscription).
+  - `GET /products/{product_id}/subscribers` (staff-visible demand insight).
+  - `GET /retailers/{retailer_id}/subscriptions` (retailer subscription list).
+  - `GET /retailers/subscriptions/counts` (map of retailer_id -> count of active subscriptions).
+  - Wired factories in `apps/api/app/core/di.py`.
+- **Web UI Quick-Actions & Badges**:
+  - `apps/web/app/admin/products/page.tsx`: Added "Alert" quick-action button in the product catalog table, opening a `GlassModal` enabling staff to subscribe a retailer on their behalf during phone calls with channel selector (WhatsApp, Email, Both) and manage active product subscribers.
+  - `apps/web/app/admin/retailers/page.tsx`: Added "Restock Alerts" column with active subscription counts badge.
+- **Tests & Verification**:
+  - Added backend test suite in `apps/api/tests/test_stock_subscriptions_and_restock.py` (lifecycle, restock notification & auto-deactivation, HTTP endpoints, inline `StockService.receive_stock` trigger).
+  - Added frontend test suite in `apps/web/lib/__tests__/stock-subscriptions-ui.test.tsx` (product catalog alert button, retailer subscriptions badge, channel preference selectors).
+  - All 205 backend Pytest tests, 149 frontend Vitest tests, and Next.js build pass 100% green.
+
+### Decisions
+- **Auto-Unsubscribe on Fulfillment**: Once restock alert is delivered to a retailer, `is_active` is set to `False` with timestamp in `notified_at`. A retailer resubscribes if they want back-in-stock alerts for future depletion cycles.
+- **Targeted Notification Channel Routing**: Subscriber's preference (`whatsapp`, `email`, `both`) is strictly respected during dispatch.
+- **Phone Call Quick-Action Support**: Internal staff can search and subscribe retailers directly from the product catalog table during incoming phone queries.
+
+### Key values for future steps
+- Stock Subscription Repo: `StockSubscriptionRepositoryInterface` (`apps/api/app/repositories/interfaces/stock_subscription_repository.py`)
+- Stock Subscription Service: `StockSubscriptionService` (`apps/api/app/services/stock_subscription_service.py`)
+- Restock Alert Rule: `RestockAlertRule` (`apps/api/app/services/alert_rules/restock_alert_rule.py`)
+- Endpoints: `POST/DELETE /products/{id}/subscribe`, `GET /products/{id}/subscribers`, `GET /retailers/{id}/subscriptions`, `GET /retailers/subscriptions/counts`
+
+
 
 
 

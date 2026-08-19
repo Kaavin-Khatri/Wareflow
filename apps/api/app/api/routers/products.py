@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
-from app.core.di import get_product_service
+from app.core.di import get_product_service, get_stock_subscription_service
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.products import (
     ProductCreateRequest,
@@ -11,7 +11,12 @@ from app.schemas.products import (
     ProductResponse,
     ProductUpdateRequest,
 )
+from app.schemas.stock_subscriptions import (
+    RetailerSubscribeRequest,
+    StockSubscriptionResponse,
+)
 from app.services.product_service import ProductService
+from app.services.stock_subscription_service import StockSubscriptionService
 
 router = APIRouter(prefix="/products", tags=["Product Catalog"])
 
@@ -174,3 +179,54 @@ def delete_product(
 ) -> None:
     """Permanently delete a product record."""
     service.delete_product(product_id, actor_id=current_user.id)
+
+
+@router.post(
+    "/{product_id}/subscribe",
+    response_model=StockSubscriptionResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Subscribe retailer to product restock alerts",
+)
+def subscribe_retailer_to_product(
+    product_id: str,
+    payload: RetailerSubscribeRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: StockSubscriptionService = Depends(get_stock_subscription_service),
+) -> StockSubscriptionResponse:
+    """Subscribe or reactivate a retailer's standing back-in-stock alert subscription."""
+    return service.subscribe(
+        product_id=product_id,
+        retailer_id=payload.retailer_id,
+        channel_preference=payload.channel_preference,
+    )
+
+
+@router.delete(
+    "/{product_id}/subscribe",
+    status_code=status.HTTP_200_OK,
+    summary="Unsubscribe retailer from product restock alerts",
+)
+def unsubscribe_retailer_from_product(
+    product_id: str,
+    retailer_id: str = Query(..., description="Retailer UUID to unsubscribe"),
+    current_user: CurrentUser = Depends(get_current_user),
+    service: StockSubscriptionService = Depends(get_stock_subscription_service),
+) -> dict[str, bool]:
+    """Unsubscribe a retailer by deactivating their standing subscription."""
+    service.unsubscribe(product_id=product_id, retailer_id=retailer_id)
+    return {"success": True}
+
+
+@router.get(
+    "/{product_id}/subscribers",
+    response_model=list[StockSubscriptionResponse],
+    status_code=status.HTTP_200_OK,
+    summary="List active restock subscribers for a product",
+)
+def list_product_subscribers(
+    product_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: StockSubscriptionService = Depends(get_stock_subscription_service),
+) -> list[StockSubscriptionResponse]:
+    """Staff-visible list of active restock subscribers for demand insight."""
+    return service.list_subscribers_for_product(product_id=product_id)

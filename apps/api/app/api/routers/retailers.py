@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, Query, status
 
-from app.core.di import get_ledger_service, get_retailer_service
+from app.core.di import get_ledger_service, get_retailer_service, get_stock_subscription_service
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.billing import RetailerLedgerResponse
 from app.schemas.retailers import (
@@ -13,8 +13,10 @@ from app.schemas.retailers import (
     RetailerResponse,
     RetailerUpdateRequest,
 )
+from app.schemas.stock_subscriptions import StockSubscriptionResponse
 from app.services.ledger_service import LedgerService
 from app.services.retailer_service import RetailerService
+from app.services.stock_subscription_service import StockSubscriptionService
 
 router = APIRouter(prefix="/retailers", tags=["Retailers"])
 
@@ -156,4 +158,33 @@ def invite_retailer_portal_access(
         payload=payload,
         actor_id=current_user.id,
     )
+
+
+@router.get(
+    "/subscriptions/counts",
+    response_model=dict[str, int],
+    status_code=status.HTTP_200_OK,
+    summary="Get active subscription counts for all retailers",
+)
+def get_retailer_subscription_counts(
+    current_user: CurrentUser = Depends(get_current_user),
+    service: StockSubscriptionService = Depends(get_stock_subscription_service),
+) -> dict[str, int]:
+    """Return map of retailer_id -> count of active restock alert subscriptions."""
+    return service.get_retailer_subscription_counts()
+
+
+@router.get(
+    "/{retailer_id}/subscriptions",
+    response_model=list[StockSubscriptionResponse],
+    status_code=status.HTTP_200_OK,
+    summary="List restock subscriptions for a retailer",
+)
+def list_retailer_subscriptions(
+    retailer_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: StockSubscriptionService = Depends(get_stock_subscription_service),
+) -> list[StockSubscriptionResponse]:
+    """Retrieve standing and fulfilled restock subscriptions for a wholesale retailer."""
+    return service.list_subscriptions_for_retailer(retailer_id=retailer_id)
 

@@ -22,6 +22,7 @@ from app.services.alert_rules.critical_stock_rule import CriticalStockRule
 from app.services.alert_rules.expiring_batch_rule import ExpiringBatchRule
 from app.services.alert_rules.low_stock_rule import LowStockRule
 from app.services.alert_rules.overdue_invoice_rule import OverdueInvoiceRule
+from app.services.alert_rules.restock_alert_rule import RestockAlertRule
 from app.services.notification_service import NotificationService
 
 logger = logging.getLogger(__name__)
@@ -77,7 +78,7 @@ class ExpiringLicenseRule:
                             rule_name=self.name,
                             alert_type=AlertTypeEnum.FSSAI_EXPIRED,
                             severity=AlertSeverityEnum.CRITICAL,
-                            title="CRITICAL: Distributor FSSAI License Expired",
+                            title=f"CRITICAL: Distributor FSSAI License Expired",
                             message=(
                                 f"Your distributor FSSAI license ({lic}) expired on "
                                 f"{business.fssai_expiry_date} ({abs(days)} days ago). "
@@ -219,7 +220,7 @@ class ExpiringLicenseRule:
 class AlertEngineService:
     """
     Central alert orchestration engine (Step 7.4 & Step 13.2).
-    Evaluates operational (stock, batches, invoices) and regulatory rules with 24-hour deduplication.
+    Evaluates operational (stock, batches, invoices, restocks) and regulatory rules with 24-hour deduplication.
     """
 
     def __init__(
@@ -231,6 +232,7 @@ class AlertEngineService:
         invoice_repo: Any = None,
         profile_repo: Any = None,
         retailer_repo: Any = None,
+        stock_subscription_repo: Any = None,
         supplier_repo: SupplierRepositoryInterface | None = None,
         business_repo: BusinessSettingsRepositoryInterface | None = None,
         rules: list[Any] | None = None,
@@ -243,6 +245,7 @@ class AlertEngineService:
         self.invoice_repo = invoice_repo
         self.profile_repo = profile_repo
         self.retailer_repo = retailer_repo
+        self.stock_subscription_repo = stock_subscription_repo
         self._supplier_repo = supplier_repo
         self._business_repo = business_repo
         self.dedup_window_hours = dedup_window_hours
@@ -253,6 +256,7 @@ class AlertEngineService:
             self._rules = [
                 CriticalStockRule(),
                 LowStockRule(),
+                RestockAlertRule(),
                 ExpiringBatchRule(),
                 OverdueInvoiceRule(),
                 ExpiringLicenseRule(business_repo=business_repo, supplier_repo=supplier_repo),
@@ -273,6 +277,8 @@ class AlertEngineService:
             invoice_repo=self.invoice_repo,
             retailer_repo=self.retailer_repo,
             supplier_repo=self._supplier_repo,
+            stock_subscription_repo=self.stock_subscription_repo,
+            notification_service=self.notification_service,
         )
 
     def evaluate_all(self, reference_date: date | None = None) -> list[Any]:
@@ -300,11 +306,11 @@ class AlertEngineService:
         return all_alerts
 
     def evaluate_product_stock_inline(self, product_id: str) -> list[AlertResult]:
-        """Fast inline trigger: Evaluates stock rules immediately after inventory deduction."""
+        """Fast inline trigger: Evaluates stock rules immediately after inventory deduction or addition."""
         context = self._build_context()
         fired_alerts: list[AlertResult] = []
 
-        stock_rules = [r for r in self._rules if isinstance(r, (CriticalStockRule, LowStockRule))]
+        stock_rules = [r for r in self._rules if isinstance(r, (CriticalStockRule, LowStockRule, RestockAlertRule))]
         for rule in stock_rules:
             try:
                 candidates = rule.evaluate_entity(product_id, context)
@@ -313,6 +319,23 @@ class AlertEngineService:
                         fired_alerts.append(res)
             except Exception as exc:
                 logger.error("Error evaluating inline stock rule for product %s: %s", product_id, exc)
+
+        return fired_alerts
+
+    def evaluate_restock_inline(self, product_id: str) -> list[AlertResult]:
+        """Fast inline trigger: Evaluates restock subscriber rules immediately after goods receipt/inbound movement."""
+        context = self._build_context()
+        fired_alerts: list[AlertResult] = []
+
+        restock_rules = [r for r in self._rules if isinstance(r, RestockAlertRule)]
+        for rule in restock_rules:
+            try:
+                candidates = rule.evaluate_entity(product_id, context)
+                for res in candidates:
+                    if self._process_alert_result(res):
+                        fired_alerts.append(res)
+            except Exception as exc:
+                logger.error("Error evaluating inline restock rule for product %s: %s", product_id, exc)
 
         return fired_alerts
 
@@ -364,6 +387,10 @@ class AlertEngineService:
 
     def _dispatch_notifications(self, result: AlertResult) -> None:
         """Route alert to permitted users via NotificationService (in-app & email)."""
+        if result.rule_name == "restock_alert":
+            # RestockAlertRule dispatches directly to targeted subscribers
+            return
+
         recipients: list[tuple[str, str | None]] = []
 
         if self.profile_repo:

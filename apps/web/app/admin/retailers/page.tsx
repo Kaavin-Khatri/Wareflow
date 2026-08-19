@@ -23,6 +23,7 @@ import {
   AlertCircle,
   IndianRupee,
   ReceiptText,
+  Bell,
 } from "lucide-react";
 
 
@@ -45,6 +46,7 @@ export interface RetailerItem {
 
 export default function RetailersAdminPage() {
   const [retailers, setRetailers] = useState<RetailerItem[]>([]);
+  const [subscriptionCounts, setSubscriptionCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
@@ -72,8 +74,12 @@ export default function RetailersAdminPage() {
   const fetchRetailers = async () => {
     try {
       setLoading(true);
-      const data = await apiClient.get<RetailerItem[]>("/retailers");
+      const [data, counts] = await Promise.all([
+        apiClient.get<RetailerItem[]>("/retailers"),
+        apiClient.get<Record<string, number>>("/retailers/subscriptions/counts").catch(() => ({})),
+      ]);
       setRetailers(data);
+      setSubscriptionCounts(counts || {});
       setError(null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load retailers.");
@@ -86,9 +92,13 @@ export default function RetailersAdminPage() {
     let ignore = false;
     async function loadData() {
       try {
-        const data = await apiClient.get<RetailerItem[]>("/retailers");
+        const [data, counts] = await Promise.all([
+          apiClient.get<RetailerItem[]>("/retailers"),
+          apiClient.get<Record<string, number>>("/retailers/subscriptions/counts").catch(() => ({})),
+        ]);
         if (!ignore) {
           setRetailers(data);
+          setSubscriptionCounts(counts || {});
         }
       } catch (err: unknown) {
         if (!ignore) {
@@ -337,6 +347,22 @@ export default function RetailersAdminPage() {
             No GSTIN
           </span>
         ),
+    },
+    {
+      key: "subscriptions",
+      header: "Restock Alerts",
+      sortable: true,
+      render: (row) => {
+        const count = subscriptionCounts[row.id] || 0;
+        return count > 0 ? (
+          <span className="px-2.5 py-0.5 rounded-lg text-xs font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 w-fit">
+            <Bell className="w-3 h-3 text-amber-400" />
+            {count} Subscribed
+          </span>
+        ) : (
+          <span className="text-xs text-[var(--text-muted)] font-mono pl-1">0</span>
+        );
+      },
     },
     {
       key: "is_active",

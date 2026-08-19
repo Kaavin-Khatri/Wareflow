@@ -139,6 +139,9 @@ from app.repositories.interfaces.stock_analytics_repository import (
     StockAnalyticsRepositoryInterface,
 )
 from app.repositories.interfaces.stock_repository import StockRepositoryInterface
+from app.repositories.interfaces.stock_subscription_repository import (
+    StockSubscriptionRepositoryInterface,
+)
 from app.repositories.interfaces.supplier_repository import SupplierRepositoryInterface
 from app.repositories.interfaces.transfer_repository import TransferRepositoryInterface
 from app.repositories.interfaces.uom_repository import UomRepositoryInterface
@@ -162,6 +165,10 @@ from app.repositories.impl.delivery_repository import (
     InMemoryDeliveryRepository,
     SqlAlchemyDeliveryRepository,
 )
+from app.repositories.impl.stock_subscription_repository import (
+    InMemoryStockSubscriptionRepository,
+    SqlAlchemyStockSubscriptionRepository,
+)
 from app.repositories.interfaces.delivery_repository import (
     DeliveryRepositoryInterface,
 )
@@ -178,6 +185,7 @@ from app.services.sales_return_service import SalesReturnService
 from app.services.staff_service import StaffService
 from app.services.stock_analytics_service import StockAnalyticsService
 from app.services.stock_service import StockService
+from app.services.stock_subscription_service import StockSubscriptionService
 from app.services.storage_service import StorageServiceInterface, SupabaseStorageService
 from app.services.supplier_service import SupplierService
 from app.services.transfer_service import TransferService
@@ -848,6 +856,26 @@ def get_alert_log_repository(
     return SQLAlchemyAlertLogRepository(db=db)
 
 
+def get_stock_subscription_repository(
+    db: Session = Depends(get_db_session),
+) -> StockSubscriptionRepositoryInterface:
+    """Factory for database-backed StockSubscriptionRepository."""
+    return SqlAlchemyStockSubscriptionRepository(session=db)
+
+
+def get_stock_subscription_service(
+    subscription_repo: StockSubscriptionRepositoryInterface = Depends(get_stock_subscription_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    retailer_repo: RetailerRepository = Depends(get_retailer_repository),
+) -> StockSubscriptionService:
+    """Factory for StockSubscriptionService."""
+    return StockSubscriptionService(
+        subscription_repo=subscription_repo,
+        product_repo=product_repo,
+        retailer_repo=retailer_repo,
+    )
+
+
 def get_alert_engine_service(
     alert_log_repo: AlertLogRepositoryInterface = Depends(get_alert_log_repository),
     notification_service: NotificationService = Depends(get_notification_service),
@@ -856,6 +884,7 @@ def get_alert_engine_service(
     invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
     profile_repo: ProfileRepository = Depends(get_profile_repository),
     retailer_repo: RetailerRepository = Depends(get_retailer_repository),
+    stock_subscription_repo: StockSubscriptionRepositoryInterface = Depends(get_stock_subscription_repository),
     supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
 ) -> AlertEngineService:
     """Factory for AlertEngineService coordinating rules and deduplication."""
@@ -867,6 +896,7 @@ def get_alert_engine_service(
         invoice_repo=invoice_repo,
         profile_repo=profile_repo,
         retailer_repo=retailer_repo,
+        stock_subscription_repo=stock_subscription_repo,
         supplier_repo=supplier_repo,
     )
 
@@ -904,6 +934,7 @@ def get_alert_scheduler() -> AlertScheduler:
                 from app.repositories.impl.invoice_repository import SqlAlchemyInvoiceRepository
                 from app.repositories.impl.profile_repository import SqlAlchemyProfileRepository
                 from app.repositories.impl.retailer_repository import SqlAlchemyRetailerRepository
+                from app.repositories.impl.stock_subscription_repository import SqlAlchemyStockSubscriptionRepository
                 from app.repositories.impl.supplier_repository import SqlAlchemySupplierRepository
 
                 return AlertEngineService(
@@ -914,16 +945,16 @@ def get_alert_scheduler() -> AlertScheduler:
                     invoice_repo=SqlAlchemyInvoiceRepository(session=db),
                     profile_repo=SqlAlchemyProfileRepository(session=db),
                     retailer_repo=SqlAlchemyRetailerRepository(session=db),
+                    stock_subscription_repo=SqlAlchemyStockSubscriptionRepository(session=db),
                     supplier_repo=SqlAlchemySupplierRepository(session=db),
                 )
             finally:
                 db.close()
 
-        _global_alert_scheduler = AlertScheduler(alert_engine_factory=alert_engine_factory)
+        _global_alert_scheduler = AlertScheduler(
+            alert_engine_factory=alert_engine_factory,
+            interval_minutes=30,
+        )
     return _global_alert_scheduler
-
-
-
-
 
 

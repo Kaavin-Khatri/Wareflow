@@ -22,8 +22,31 @@ import {
   Calculator,
   Trash2,
   ArrowRight,
+  Bell,
+  MessageSquare,
+  Mail,
+  Users,
 } from "lucide-react";
 import Image from "next/image";
+
+export interface StockSubscriberItem {
+  id: string;
+  retailer_id: string;
+  product_id: string;
+  product_name?: string | null;
+  retailer_name?: string | null;
+  channel_preference: string;
+  is_active: boolean;
+  created_at: string;
+  notified_at?: string | null;
+}
+
+export interface RetailerOptionItem {
+  id: string;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+}
 
 export interface CategorySummary {
   id: string;
@@ -123,6 +146,18 @@ export default function ProductsAdminPage() {
   const [calcToUom, setCalcToUom] = useState("");
   const [calcResult, setCalcResult] = useState<number | null>(null);
   const [calcLoading, setCalcLoading] = useState(false);
+
+  // Restock Notification Quick-Action Modal State (Step 13.4)
+  const [notifyModalOpen, setNotifyModalOpen] = useState(false);
+  const [selectedProductForNotify, setSelectedProductForNotify] = useState<ProductItem | null>(null);
+  const [retailersList, setRetailersList] = useState<RetailerOptionItem[]>([]);
+  const [subscribersList, setSubscribersList] = useState<StockSubscriberItem[]>([]);
+  const [selectedRetailerId, setSelectedRetailerId] = useState("");
+  const [selectedChannelPref, setSelectedChannelPref] = useState<"both" | "whatsapp" | "email">("both");
+  const [notifySubmitting, setNotifySubmitting] = useState(false);
+  const [loadingSubscribers, setLoadingSubscribers] = useState(false);
+  const [notifyError, setNotifyError] = useState<string | null>(null);
+  const [notifySuccess, setNotifySuccess] = useState<string | null>(null);
 
   const fetchCatalogData = async () => {
     try {
@@ -399,6 +434,77 @@ export default function ProductsAdminPage() {
     }
   };
 
+  const handleOpenNotifyModal = async (prod: ProductItem) => {
+    setSelectedProductForNotify(prod);
+    setNotifyError(null);
+    setNotifySuccess(null);
+    setNotifyModalOpen(true);
+    setLoadingSubscribers(true);
+
+    try {
+      const [subsData, retsData] = await Promise.all([
+        apiClient.get<StockSubscriberItem[]>(`/products/${prod.id}/subscribers`),
+        retailersList.length === 0
+          ? apiClient.get<RetailerOptionItem[]>("/retailers")
+          : Promise.resolve(retailersList),
+      ]);
+      setSubscribersList(subsData);
+      if (retailersList.length === 0) {
+        setRetailersList(retsData);
+        if (retsData.length > 0) {
+          setSelectedRetailerId(retsData[0].id);
+        }
+      } else if (!selectedRetailerId && retailersList.length > 0) {
+        setSelectedRetailerId(retailersList[0].id);
+      }
+    } catch (err: unknown) {
+      setNotifyError(err instanceof Error ? err.message : "Failed to load subscribers.");
+    } finally {
+      setLoadingSubscribers(false);
+    }
+  };
+
+  const handleSubscribeRetailer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProductForNotify || !selectedRetailerId) return;
+
+    setNotifySubmitting(true);
+    setNotifyError(null);
+    setNotifySuccess(null);
+
+    try {
+      await apiClient.post<StockSubscriberItem>(
+        `/products/${selectedProductForNotify.id}/subscribe`,
+        {
+          retailer_id: selectedRetailerId,
+          channel_preference: selectedChannelPref,
+        }
+      );
+      setNotifySuccess(`Subscribed retailer for restock alerts via ${selectedChannelPref}.`);
+      const subs = await apiClient.get<StockSubscriberItem[]>(
+        `/products/${selectedProductForNotify.id}/subscribers`
+      );
+      setSubscribersList(subs);
+    } catch (err: unknown) {
+      setNotifyError(err instanceof Error ? err.message : "Failed to subscribe retailer.");
+    } finally {
+      setNotifySubmitting(false);
+    }
+  };
+
+  const handleUnsubscribeRetailer = async (retailerId: string) => {
+    if (!selectedProductForNotify) return;
+    try {
+      await apiClient.delete(
+        `/products/${selectedProductForNotify.id}/subscribe?retailer_id=${retailerId}`
+      );
+      setSubscribersList((prev) => prev.filter((s) => s.retailer_id !== retailerId));
+      setNotifySuccess("Unsubscribed retailer from restock notifications.");
+    } catch (err: unknown) {
+      setNotifyError(err instanceof Error ? err.message : "Failed to unsubscribe.");
+    }
+  };
+
   const filteredProducts = products.filter((p) => {
     const matchesSearch =
       searchQuery === "" ||
@@ -500,6 +606,15 @@ export default function ProductsAdminPage() {
       align: "right",
       render: (p) => (
         <div className="flex items-center justify-end gap-1.5">
+          <GlassButton
+            onClick={() => handleOpenNotifyModal(p)}
+            variant="secondary"
+            size="sm"
+            className="px-2 py-1 text-xs text-amber-300 hover:text-amber-200"
+            title="Notify Retailer When Available"
+          >
+            <Bell className="w-3.5 h-3.5 mr-1" /> Alert
+          </GlassButton>
           <GlassButton
             onClick={() => handleOpenUomModal(p)}
             variant="secondary"
@@ -1066,6 +1181,174 @@ export default function ProductsAdminPage() {
             </GlassButton>
           </div>
         </form>
+      </GlassModal>
+
+      {/* Restock Notification Quick-Action Modal (Step 13.4) */}
+      <GlassModal
+        isOpen={notifyModalOpen}
+        onClose={() => setNotifyModalOpen(false)}
+        title={`Restock Alert — ${selectedProductForNotify?.name || "Product"}`}
+        description="Notify wholesale retailers immediately via WhatsApp/Email when this product is replenished."
+      >
+        <div className="space-y-5">
+          {notifySuccess && (
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{notifySuccess}</span>
+            </div>
+          )}
+
+          {notifyError && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{notifyError}</span>
+            </div>
+          )}
+
+          {/* Product Snapshot Card */}
+          {selectedProductForNotify && (
+            <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                  <Package className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-white">{selectedProductForNotify.name}</div>
+                  <div className="text-xs text-purple-400 font-mono">{selectedProductForNotify.sku}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-white/60">Wholesale Price</div>
+                <div className="text-sm font-mono font-semibold text-white">
+                  ₹{Number(selectedProductForNotify.wholesale_price).toFixed(2)}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Phone Call Quick Subscription Form */}
+          <form onSubmit={handleSubscribeRetailer} className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-4">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-purple-300">
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Standing Restock Alert</span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-white/70 mb-1.5">Select Wholesale Retailer</label>
+              <select
+                value={selectedRetailerId}
+                onChange={(e) => setSelectedRetailerId(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/50"
+                required
+              >
+                <option value="" disabled className="bg-slate-900 text-white">
+                  Select a registered retailer...
+                </option>
+                {retailersList.map((r) => (
+                  <option key={r.id} value={r.id} className="bg-slate-900 text-white">
+                    {r.name} {r.phone ? `(${r.phone})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-white/70 mb-1.5">Notification Channel</label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedChannelPref("whatsapp")}
+                  className={`px-3 py-2 rounded-xl text-xs font-medium border flex items-center justify-center gap-1.5 transition-all ${
+                    selectedChannelPref === "whatsapp"
+                      ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-sm"
+                      : "bg-white/5 border-white/10 text-white/60 hover:text-white"
+                  }`}
+                >
+                  <MessageSquare className="w-3.5 h-3.5" /> WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedChannelPref("email")}
+                  className={`px-3 py-2 rounded-xl text-xs font-medium border flex items-center justify-center gap-1.5 transition-all ${
+                    selectedChannelPref === "email"
+                      ? "bg-blue-500/20 border-blue-500/40 text-blue-300 shadow-sm"
+                      : "bg-white/5 border-white/10 text-white/60 hover:text-white"
+                  }`}
+                >
+                  <Mail className="w-3.5 h-3.5" /> Email
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedChannelPref("both")}
+                  className={`px-3 py-2 rounded-xl text-xs font-medium border flex items-center justify-center gap-1.5 transition-all ${
+                    selectedChannelPref === "both"
+                      ? "bg-purple-500/20 border-purple-500/40 text-purple-300 shadow-sm"
+                      : "bg-white/5 border-white/10 text-white/60 hover:text-white"
+                  }`}
+                >
+                  <Bell className="w-3.5 h-3.5" /> Both
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <GlassButton
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={!selectedRetailerId || notifySubmitting}
+                className="w-full sm:w-auto"
+              >
+                {notifySubmitting ? "Subscribing..." : "Add Restock Alert"}
+              </GlassButton>
+            </div>
+          </form>
+
+          {/* Current Active Subscribers List */}
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between text-xs font-semibold text-white/80">
+              <span className="flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-purple-400" />
+                Active Standing Subscriptions ({subscribersList.length})
+              </span>
+            </div>
+
+            {loadingSubscribers ? (
+              <div className="text-center py-6 text-xs text-white/40">Loading subscribers...</div>
+            ) : subscribersList.length === 0 ? (
+              <div className="text-center py-6 text-xs text-white/40 rounded-xl bg-white/[0.02] border border-white/5">
+                No active restock subscriptions for this product.
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {subscribersList.map((sub) => (
+                  <div
+                    key={sub.id}
+                    className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <div className="font-medium text-white">{sub.retailer_name || "Wholesale Retailer"}</div>
+                      <div className="text-[11px] text-white/40 flex items-center gap-2 mt-0.5">
+                        <span className="capitalize text-purple-300 font-mono">{sub.channel_preference}</span>
+                        <span>•</span>
+                        <span>{new Date(sub.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    <GlassButton
+                      onClick={() => handleUnsubscribeRetailer(sub.retailer_id)}
+                      variant="destructive"
+                      size="sm"
+                      className="px-2 py-1 text-xs"
+                      title="Unsubscribe Retailer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </GlassButton>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </GlassModal>
     </AppLayout>
   );

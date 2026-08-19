@@ -325,6 +325,13 @@ class StockService:
             created_by=actor_id,
         )
 
+        # Inline smart alert trigger (restock notification to subscribers & stock health)
+        if self.alert_engine:
+            try:
+                self.alert_engine.evaluate_product_stock_inline(product_id)
+            except Exception:
+                pass
+
         return batch, movement
 
     def adjust_stock(
