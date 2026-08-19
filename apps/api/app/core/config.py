@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     twilio_auth_token: str = ""
     twilio_from_number: str = ""
 
+    # Demand Forecasting (Step 14.1)
+    forecast_strategy: str = "moving_average"  # 'moving_average' | 'exponential_smoothing'
+    forecast_cache_ttl_hours: int = 24
+
     @field_validator("allowed_origins", mode="after")
     @classmethod
     def parse_allowed_origins(cls, value: str | list[str]) -> list[str]:

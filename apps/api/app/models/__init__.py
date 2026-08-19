@@ -5,8 +5,9 @@ from app.models.auth_rbac import Permission, Role, RolePermission
 from app.models.billing import Invoice, InvoiceItem, InvoiceStatusEnum, Payment, PaymentMethodEnum
 from app.models.catalog import Category, Product
 from app.models.delivery import Delivery, DeliveryStatusEnum
+from app.models.forecast import Forecast
 from app.models.inventory import StockMovement, StockMovementTypeEnum
-from app.models.notification import AlertLog, Notification
+from app.models.notification import AlertLog, Notification, NotificationPreference
 from app.models.portal import (
     ChannelPreferenceEnum,
     Customer,
@@ -100,6 +101,8 @@ __all__ = [
     "StockMovementTypeEnum",
     "Notification",
     "AlertLog",
+    "NotificationPreference",
+    "Forecast",
     # Audit & Business Settings
     "AdminAuditLog",
     "BusinessSettings",

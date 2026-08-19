@@ -3332,6 +3332,51 @@
 - Notification Preference Service: `NotificationPreferenceService` (`apps/api/app/services/notification_preference_service.py`)
 - Preference Endpoints: `GET /notifications/preferences`, `PUT /notifications/preferences`, `GET/PUT /notifications/preferences/{entity_type}/{entity_id}`
 
+---
+
+## Step 14.1 — Demand Forecasting Service (pluggable strategy)
+**Timestamp:** 2026-08-19T13:20:00Z
+**Status:** COMPLETE
+
+### What was done
+- **ForecastStrategy Interface & Pluggable Algorithms (OCP)**:
+  - Created `ForecastStrategy` interface and `ForecastResult` dataclass (`apps/api/app/services/forecasting/base.py`).
+  - Implemented `MovingAverageForecast` (`apps/api/app/services/forecasting/moving_average.py`): default strategy bucketing outbound movements into trailing 4 weekly windows with linearly increasing weights (1, 2, 3, 4) and statistical confidence scoring.
+  - Implemented `ExponentialSmoothingForecast` (`apps/api/app/services/forecasting/exponential_smoothing.py`): second concrete strategy with recursive smoothing ($\alpha = 0.35$).
+  - Created package exports in `apps/api/app/services/forecasting/__init__.py`.
+- **Forecast Model & 24h Caching Repository Layer**:
+  - Created `Forecast` model (`apps/api/app/models/forecast.py`) in `forecasts` table with `expires_at` column for 24-hour cache TTL and trend telemetry.
+  - Created `ForecastRepositoryInterface` (`apps/api/app/repositories/interfaces/forecast_repository.py`).
+  - Implemented `SqlAlchemyForecastRepository` and `InMemoryForecastRepository` (`apps/api/app/repositories/impl/forecast_repository.py`).
+- **Forecasting Domain Service**:
+  - Implemented `ForecastingService` (`apps/api/app/services/forecasting_service.py`) coordinating strategy execution, caching lookups, and catalog-wide top/slow mover summary aggregation.
+  - Added DI container wiring in `apps/api/app/core/di.py` (`get_forecast_repository`, `get_forecasting_service`).
+- **Pydantic Schemas & REST Endpoints**:
+  - Created `ProductForecastResponse`, `ForecastSummaryItem`, `ForecastSummaryResponse` (`apps/api/app/schemas/forecast.py`).
+  - Added endpoint `GET /products/{id}/forecast` in `apps/api/app/api/routers/products.py` supporting `horizon_days`, `strategy` override, and `force_refresh`.
+  - Added endpoint `GET /analytics/forecast-summary` in `apps/api/app/api/routers/analytics.py` returning top movers and slow movers.
+  - Registered `analytics` router in `apps/api/app/main.py`.
+- **Configuration & Environment**:
+  - Added `forecast_strategy` (default `"moving_average"`) and `forecast_cache_ttl_hours` (default `24`) to `Settings` (`apps/api/app/core/config.py`) and `.env.example`.
+- **Testing & Verification**:
+  - Created `apps/api/tests/test_forecasting.py` with 6 comprehensive test cases verifying exact mathematical accuracy against hand-computed values on 2 products, OCP strategy swapping without touching caller code, honest insufficient data handling on brand new items with 0 history, 24-hour caching behavior, and API endpoints.
+  - Full test suite: 222/222 backend Pytest tests pass (100% green), 154/154 frontend Vitest tests pass (100% green).
+
+### Decisions
+- **Pluggable Statistical Strategy over External AI API**: Chose pure mathematical algorithms (Weighted Moving Average & Exponential Smoothing) behind a Strategy interface instead of external paid ML APIs. This delivers instant, zero-latency, explainable, cost-free forecasting with zero cloud lock-in while preserving seamless drop-in extensibility for future models.
+- **24-Hour Database Cache TTL**: Forecasting runs over historical stock movements which change incrementally; caching results per product in the `forecasts` table for 24h ensures sub-millisecond API response times while `force_refresh=True` allows instant recalculation when needed.
+- **Honest Insufficient Data Response**: Products without outbound history return `status="insufficient_data"` with 0.0 confidence and a clear diagnostic message rather than fabricating misleading numbers.
+
+### Key values for future steps
+- Strategy Interface: `ForecastStrategy` (`apps/api/app/services/forecasting/base.py`)
+- Moving Average Strategy: `MovingAverageForecast` (`apps/api/app/services/forecasting/moving_average.py`)
+- Exponential Smoothing Strategy: `ExponentialSmoothingForecast` (`apps/api/app/services/forecasting/exponential_smoothing.py`)
+- Forecasting Service: `ForecastingService` (`apps/api/app/services/forecasting_service.py`)
+- Forecast Repo Interface: `ForecastRepositoryInterface` (`apps/api/app/repositories/interfaces/forecast_repository.py`)
+- Cache TTL: 24 hours (`FORECAST_CACHE_TTL_HOURS=24`)
+- Endpoints: `GET /products/{id}/forecast`, `GET /analytics/forecast-summary`
+
+
 
 
 

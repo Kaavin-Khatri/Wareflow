@@ -2,8 +2,13 @@
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
-from app.core.di import get_product_service, get_stock_subscription_service
+from app.core.di import (
+    get_forecasting_service,
+    get_product_service,
+    get_stock_subscription_service,
+)
 from app.core.security import CurrentUser, get_current_user, require_permission
+from app.schemas.forecast import ProductForecastResponse
 from app.schemas.products import (
     ProductCreateRequest,
     ProductImageUploadResponse,
@@ -15,6 +20,7 @@ from app.schemas.stock_subscriptions import (
     RetailerSubscribeRequest,
     StockSubscriptionResponse,
 )
+from app.services.forecasting_service import ForecastingService
 from app.services.product_service import ProductService
 from app.services.stock_subscription_service import StockSubscriptionService
 
@@ -230,3 +236,29 @@ def list_product_subscribers(
 ) -> list[StockSubscriptionResponse]:
     """Staff-visible list of active restock subscribers for demand insight."""
     return service.list_subscribers_for_product(product_id=product_id)
+
+
+@router.get(
+    "/{id}/forecast",
+    response_model=ProductForecastResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get statistical demand forecast for a product",
+)
+def get_product_demand_forecast(
+    id: str,
+    horizon_days: int = Query(30, ge=1, le=365, description="Prediction horizon in days"),
+    strategy: str | None = Query(
+        None, description="Forecasting strategy override ('moving_average', 'exponential_smoothing')"
+    ),
+    force_refresh: bool = Query(False, description="Bypass 24h cache and recompute immediately"),
+    current_user: CurrentUser = Depends(get_current_user),
+    service: ForecastingService = Depends(get_forecasting_service),
+) -> ProductForecastResponse:
+    """Predict demand for the product based on movement history using pluggable strategy with 24h cache."""
+    return service.get_product_forecast(
+        product_id=id,
+        horizon_days=horizon_days,
+        strategy_name=strategy,
+        force_refresh=force_refresh,
+    )
+

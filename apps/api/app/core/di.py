@@ -168,6 +168,16 @@ from app.repositories.impl.notification_preference_repository import (
 from app.repositories.interfaces.notification_preference_repository import (
     NotificationPreferenceRepositoryInterface,
 )
+from app.repositories.impl.forecast_repository import (
+    InMemoryForecastRepository,
+    SqlAlchemyForecastRepository,
+)
+from app.repositories.interfaces.forecast_repository import (
+    ForecastRepositoryInterface,
+)
+from app.services.forecasting.exponential_smoothing import ExponentialSmoothingForecast
+from app.services.forecasting.moving_average import MovingAverageForecast
+from app.services.forecasting_service import ForecastingService
 from app.services.payment_service import PaymentService
 from app.services.portal_auth_service import PortalAuthService
 from app.repositories.impl.delivery_repository import (
@@ -896,6 +906,36 @@ def get_supplier_portal_service(
         profile_repo=profile_repo,
         notification_service=notif_service,
         audit_service=audit_service,
+    )
+
+
+@lru_cache
+def get_in_memory_forecast_repository() -> ForecastRepositoryInterface:
+    """Factory for in-memory ForecastRepository."""
+    return InMemoryForecastRepository()
+
+
+def get_forecast_repository(db: Session = Depends(get_db_session)) -> ForecastRepositoryInterface:
+    """Factory for database-backed ForecastRepository."""
+    return SqlAlchemyForecastRepository(session=db)
+
+
+def get_forecasting_service(
+    forecast_repo: ForecastRepositoryInterface = Depends(get_forecast_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+) -> ForecastingService:
+    """Factory for ForecastingService registering MovingAverage and ExponentialSmoothing strategies."""
+    settings = get_settings()
+    moving_avg = MovingAverageForecast()
+    exp_smooth = ExponentialSmoothingForecast()
+    return ForecastingService(
+        forecast_repo=forecast_repo,
+        stock_repo=stock_repo,
+        product_repo=product_repo,
+        strategies=[moving_avg, exp_smooth],
+        default_strategy=settings.forecast_strategy,
+        cache_ttl_hours=settings.forecast_cache_ttl_hours,
     )
 
 

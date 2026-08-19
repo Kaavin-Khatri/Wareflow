@@ -535,6 +535,8 @@ wareflow/
 | GET    | `/notifications`                       | List paginated notifications with unread count      | Yes (Authenticated User)        |
 | PATCH  | `/notifications/{id}/read`             | Mark single notification as read                    | Yes (Authenticated User)        |
 | PATCH  | `/notifications/read-all`              | Mark all unread notifications as read               | Yes (Authenticated User)        |
+| GET    | `/products/{id}/forecast`              | Statistical demand forecast for a product (24h cache)| Yes (Authenticated User)       |
+| GET    | `/analytics/forecast-summary`          | Catalog-wide demand forecast summary & top/slow movers| Yes (`inventory:view`)         |
 
 ## Architecture Layers
 
@@ -686,6 +688,9 @@ wareflow/
 | 24-Hour Alert Deduplication Guard | `AlertLog` table and `AlertLogRepository.has_recent_alert` suppress repeated notifications for identical rule/entity combinations within a 24-hour window |
 | Hybrid Periodic & Inline Alert Triggers | APScheduler executes background rule sweeps on a 30-minute timer, while inline hooks on `confirm_order`, `receive_stock`, and `adjust_stock` trigger immediate evaluations within seconds |
 | Restock Availability Subscriptions (Auto-Unsubscribe) | `RestockAlertRule` delivers back-in-stock alerts via subscriber's preferred channel (WhatsApp/Email) when stock arrives, automatically setting `is_active=False` upon fulfillment to eliminate repeat spam |
+| Pluggable Forecast Strategy Engine (OCP) | `ForecastStrategy` interface abstracts statistical demand forecasting algorithms (`MovingAverageForecast`, `ExponentialSmoothingForecast`), allowing new mathematical models without altering service orchestration or API routers |
+| 24-Hour Forecast Database Caching | Forecast calculations cache historical outbound demand predictions per product in `forecasts` table with `expires_at` (24h TTL), guaranteeing sub-millisecond response latency with instant `force_refresh` support |
+| Honest Zero-History Diagnostic Guard | Products with zero historical outbound movements return explicit `insufficient_data` status with 0.0 confidence rather than fabricating synthetic demand projections |
 
 ## Security & Audit Log Coverage
 
