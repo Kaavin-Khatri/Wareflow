@@ -1,7 +1,7 @@
 """Tests for Step 13.6 SMS Notification Channel (Fallback & Opt-in Preferences)."""
 
 from typing import Any
-import pytest
+
 from fastapi.testclient import TestClient
 
 from app.core.di import (
@@ -10,7 +10,6 @@ from app.core.di import (
 )
 from app.core.security import CurrentUser, get_current_user
 from app.main import app
-from app.models.notification import NotificationPreference
 from app.repositories.impl.notification_preference_repository import (
     InMemoryNotificationPreferenceRepository,
 )

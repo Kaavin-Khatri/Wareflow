@@ -1,11 +1,9 @@
 """Smart Alert Rule Engine and Compliance Monitoring Service (Step 7.4 & Step 13.2)."""
 
-from datetime import UTC, date, datetime
 import logging
+from datetime import date
 from typing import Any, Protocol, runtime_checkable
 
-from app.models.audit_and_settings import BusinessSettings
-from app.models.supplier import Supplier
 from app.repositories.interfaces.alert_log_repository import AlertLogRepositoryInterface
 from app.repositories.interfaces.business_settings_repository import (
     BusinessSettingsRepositoryInterface,
@@ -78,7 +76,7 @@ class ExpiringLicenseRule:
                             rule_name=self.name,
                             alert_type=AlertTypeEnum.FSSAI_EXPIRED,
                             severity=AlertSeverityEnum.CRITICAL,
-                            title=f"CRITICAL: Distributor FSSAI License Expired",
+                            title="CRITICAL: Distributor FSSAI License Expired",
                             message=(
                                 f"Your distributor FSSAI license ({lic}) expired on "
                                 f"{business.fssai_expiry_date} ({abs(days)} days ago). "

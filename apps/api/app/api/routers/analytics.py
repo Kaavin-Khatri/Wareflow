@@ -1,22 +1,28 @@
-"""General analytics, demand forecasting, reorder suggestions, and dead-stock detection router."""
+"""General analytics, demand forecasting, reorder suggestions, dead-stock, anomalies, and AI executive briefing router."""
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.di import (
+    get_anomaly_detection_service,
     get_dead_stock_service,
     get_forecasting_service,
+    get_insight_narrator_service,
     get_reorder_suggestion_service,
 )
-from app.core.security import CurrentUser, require_permission
+from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.analytics import (
     CreatePOFromSuggestionsRequest,
     DeadStockResponse,
+    OrderAnomalyReportResponse,
     ReorderSuggestionsResponse,
+    WeeklyInsightResponse,
 )
 from app.schemas.forecast import ForecastSummaryResponse
 from app.schemas.purchase_orders import PurchaseOrderResponse
+from app.services.anomaly_detection_service import AnomalyDetectionService
 from app.services.dead_stock_service import DeadStockService
 from app.services.forecasting_service import ForecastingService
+from app.services.insight_narrator import InsightNarratorService
 from app.services.reorder_suggestion_service import ReorderSuggestionService
 
 router = APIRouter(prefix="/analytics", tags=["Analytics & AI"])
@@ -95,3 +101,39 @@ def get_dead_stock(
         window_days=window_days,
         category_id=category_id,
     )
+
+
+@router.get(
+    "/anomalies/order/{order_id}",
+    response_model=OrderAnomalyReportResponse,
+    summary="Detect statistical quantity anomalies for a specific sales order",
+)
+def get_order_anomalies(
+    order_id: str,
+    service: AnomalyDetectionService = Depends(get_anomaly_detection_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> OrderAnomalyReportResponse:
+    """Evaluate line items of a sales order against historical ordering patterns (3σ threshold)."""
+    report = service.detect_anomalies_for_order_id(order_id=order_id)
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Sales order '{order_id}' not found.",
+        )
+    return report
+
+
+@router.get(
+    "/weekly-insight",
+    response_model=WeeklyInsightResponse,
+    summary="Get 7-day executive intelligence briefing summarizing sales velocity and inventory risks",
+)
+def get_weekly_insight(
+    force_refresh: bool = Query(
+        False, description="Force recalculation bypassing 7-day cache"
+    ),
+    service: InsightNarratorService = Depends(get_insight_narrator_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> WeeklyInsightResponse:
+    """Synthesize demand forecasts, reorder alerts, dead stock, and sales into a grounded executive narrative."""
+    return service.get_weekly_insight(force_refresh=force_refresh)

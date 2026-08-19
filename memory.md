@@ -3424,6 +3424,46 @@
   - `GET /analytics/dead-stock`
 
 
+## [Step 14.3] — Anomaly Detection & Owner Insight Narratives
+
+### What was done
+- **Statistical Order Anomaly Detection ($3\sigma$)**: Implemented `AnomalyDetectionService` which flags sales order lines as `is_unusual` if the quantity exceeds $\text{mean} + 3\sigma$ of that buyer's (retailer/customer) historical orders for that product.
+- **Advisory UI Badging (Non-Blocking)**: Flagged orders surface an amber `⚠️ Unusual Size` badge in the Sales Orders DataTable and an anomaly review advisory card inside the Order Detail modal with line-item 3σ badges and explanation reasons. High order sizes never block draft creation or confirmation.
+- **Weekly Executive Insight Narrative Engine**: Implemented `InsightNarratorService` generating grounded weekly executive briefs summarizing trailing 7-day revenue, confirmed orders, velocity leaders, and tied-up dead stock capital. Uses Groq LLM when `GROQ_API_KEY` is present, with deterministic template fallback when unset or timing out.
+- **7-Day Token Discipline & Caching**: Weekly insights are cached for 7 days in memory with `is_cached=True` and `expires_at`, with on-demand cache bypass using `?force_refresh=true`.
+- **REST Endpoints**:
+  - `GET /analytics/weekly-insight`
+  - `GET /analytics/anomalies/order/{order_id}`
+- **Owner Dashboard UI**: Added a glassmorphic AI Executive Intelligence Briefing card on `/dashboard` showcasing headline, grounded 2-3 sentence brief, quantitative verified metrics, and on-demand refresh trigger.
+- **Test Suites**:
+  - Backend: `apps/api/tests/test_anomaly_detection_and_insights.py` (6 tests covering 10x order spike, edge cases, deterministic grounding, 7-day caching, and API routes).
+  - Frontend: `apps/web/lib/__tests__/anomaly-and-insights-ui.test.tsx` (3 tests covering table badge, modal advisory banner, and dashboard executive card).
+
+### SOLID Principles Applied
+- **SRP (Single Responsibility Principle)**: `AnomalyDetectionService` owns statistical $z$-score evaluation; `InsightNarratorService` owns KPI metric compilation and LLM/template prompting.
+- **DIP (Dependency Inversion Principle)**: `AnomalyDetectionService` depends strictly on `SalesOrderRepositoryInterface.get_historical_order_quantities(...)`.
+- **OCP (Open/Closed Principle)**: Pluggable AI generation with deterministic fallback ensures identical dashboard functionality without hard external API lock-in.
+
+### Files Created/Modified
+- Created: `apps/api/tests/test_anomaly_detection_and_insights.py`
+- Created: `apps/web/lib/__tests__/anomaly-and-insights-ui.test.tsx`
+- Modified: `apps/api/app/schemas/analytics.py`
+- Modified: `apps/api/app/services/anomaly_detection_service.py`
+- Modified: `apps/api/app/services/insight_narrator.py`
+- Modified: `apps/api/app/api/routers/analytics.py`
+- Modified: `apps/api/app/core/di.py`
+- Modified: `apps/api/app/repositories/impl/sales_order_repository.py`
+- Modified: `apps/web/app/admin/sales-orders/page.tsx`
+- Modified: `apps/web/app/dashboard/page.tsx`
+
+### Key values for future steps
+- Anomaly Detection Service: `AnomalyDetectionService` (`apps/api/app/services/anomaly_detection_service.py`)
+- Insight Narrator Service: `InsightNarratorService` (`apps/api/app/services/insight_narrator.py`)
+- Endpoints:
+  - `GET /analytics/weekly-insight`
+  - `GET /analytics/anomalies/order/{order_id}`
+
+
 
 
 

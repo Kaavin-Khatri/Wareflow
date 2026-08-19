@@ -1,6 +1,7 @@
 """Pydantic schemas for Stock Subscriptions (Step 13.4)."""
 
 from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 from app.models.portal import ChannelPreferenceEnum

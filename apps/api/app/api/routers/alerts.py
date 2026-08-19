@@ -1,12 +1,12 @@
 """Alert engine and compliance monitoring API router."""
 
-from fastapi import APIRouter, Depends
-
 from typing import Any
+
+from fastapi import APIRouter, Depends
 
 from app.core.di import get_alert_engine_service
 from app.core.security import CurrentUser, get_current_user
-from app.schemas.alerts import AlertItemResponse, ComplianceSummaryResponse, SmartAlertItemResponse
+from app.schemas.alerts import ComplianceSummaryResponse
 from app.services.alert_engine_service import AlertEngineService
 
 router = APIRouter(prefix="/alerts", tags=["Alerts & Compliance"])

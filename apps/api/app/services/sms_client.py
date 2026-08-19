@@ -2,9 +2,9 @@
 
 import base64
 import logging
-from typing import Any
 import urllib.parse
 import urllib.request
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class SmsClient:
         """Execute HTTP POST request to Twilio Messages endpoint."""
         url = f"https://api.twilio.com/2010-04-01/Accounts/{self.account_sid}/Messages.json"
         data = urllib.parse.urlencode({"To": recipient, "From": self.from_number, "Body": body_text}).encode("utf-8")
-        auth_header = "Basic " + base64.b64encode(f"{self.account_sid}:{self.auth_token}".encode("utf-8")).decode("utf-8")
+        auth_header = "Basic " + base64.b64encode(f"{self.account_sid}:{self.auth_token}".encode()).decode("utf-8")
 
         req = urllib.request.Request(url, data=data, method="POST")
         req.add_header("Authorization", auth_header)

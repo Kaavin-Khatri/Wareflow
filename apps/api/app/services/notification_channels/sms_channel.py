@@ -1,7 +1,6 @@
 """SMS Notification Channel implementing Strategy pattern for critical text alerts."""
 
 import logging
-from typing import Any
 
 from app.services.notification_channels.base import BaseNotificationChannel, NotificationPayload
 from app.services.sms_client import SmsClient, truncate_sms_text

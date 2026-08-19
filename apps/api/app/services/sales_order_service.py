@@ -18,6 +18,7 @@ from app.schemas.sales_orders import (
     SalesOrderResponse,
     SalesOrderStatusUpdateRequest,
 )
+from app.services.anomaly_detection_service import AnomalyDetectionService
 from app.services.audit_service import AuditService
 from app.services.pricing_strategy import PricingEngineService
 from app.services.uom_service import UomService
@@ -46,6 +47,7 @@ class SalesOrderService:
         uom_service: UomService | None = None,
         audit_service: AuditService | None = None,
         alert_engine: Any = None,
+        anomaly_detector: AnomalyDetectionService | None = None,
     ):
         self.so_repo = so_repo
         self.retailer_repo = retailer_repo
@@ -56,6 +58,7 @@ class SalesOrderService:
         self.uom_service = uom_service
         self.audit_service = audit_service
         self.alert_engine = alert_engine
+        self.anomaly_detector = anomaly_detector
 
     def create_order(
         self, payload: SalesOrderCreateRequest, current_user: Any = None
@@ -360,12 +363,46 @@ class SalesOrderService:
             "total_amount": float(order.total_amount),
         }
 
+    def get_order_anomalies(self, order_id: str):
+        """Evaluate order line items for unusual quantities."""
+        order = self._get_order_or_404(order_id)
+        if self.anomaly_detector:
+            return self.anomaly_detector.evaluate_order(order)
+        return None
+
     def _to_response(self, order: SalesOrder) -> SalesOrderResponse:
         item_responses: list[SalesOrderItemResponse] = []
+        retailer_id = getattr(order, "retailer_id", None)
+        customer_id = getattr(order, "customer_id", None)
+        order_id = getattr(order, "id", None)
+
         for it in order.items:
             prod_name = it.product.name if getattr(it, "product", None) else None
             prod_sku = it.product.sku if getattr(it, "product", None) else None
             uom_code = it.uom.code if getattr(it, "uom", None) else None
+
+            is_unusual = False
+            anomaly_reason = None
+            h_mean = None
+            h_stddev = None
+
+            if self.anomaly_detector:
+                try:
+                    report = self.anomaly_detector.evaluate_line_item(
+                        product_id=it.product_id,
+                        qty=float(it.qty),
+                        retailer_id=retailer_id,
+                        customer_id=customer_id,
+                        exclude_order_id=order_id,
+                        product_name=prod_name,
+                        product_sku=prod_sku,
+                    )
+                    is_unusual = report.is_unusual
+                    anomaly_reason = report.anomaly_reason
+                    h_mean = report.historical_mean
+                    h_stddev = report.historical_stddev
+                except Exception:
+                    pass
 
             item_responses.append(
                 SalesOrderItemResponse(
@@ -379,6 +416,10 @@ class SalesOrderService:
                     line_total=round(float(it.qty) * float(it.unit_price), 2),
                     uom_id=it.uom_id,
                     uom_code=uom_code,
+                    is_unusual=is_unusual,
+                    anomaly_reason=anomaly_reason,
+                    historical_mean=h_mean,
+                    historical_stddev=h_stddev,
                 )
             )
 
@@ -395,6 +436,9 @@ class SalesOrderService:
             if cust:
                 customer_name = cust.name
 
+        unusual_items = [it for it in item_responses if it.is_unusual]
+        anomaly_warnings = [it.anomaly_reason for it in unusual_items if it.anomaly_reason]
+
         return SalesOrderResponse(
             id=order.id,
             so_number=order.so_number,
@@ -409,4 +453,7 @@ class SalesOrderService:
             total_amount=float(order.total_amount),
             created_at=order.created_at,
             items=item_responses,
+            has_unusual_items=len(unusual_items) > 0,
+            unusual_items_count=len(unusual_items),
+            anomaly_warnings=anomaly_warnings,
         )

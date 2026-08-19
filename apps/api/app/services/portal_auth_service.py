@@ -24,7 +24,6 @@ from app.schemas.portal import (
     PortalCategoryResponse,
     PortalCreateOrderRequest,
     PortalInvoiceListItemResponse,
-    PortalOrderItemRequest,
     PortalOrderListItemResponse,
     PortalOrderPlacementResponse,
     RetailerPortalMeResponse,
@@ -378,7 +377,7 @@ class PortalAuthService:
         on_hand = float(self._stock_repo.get_on_hand(pid)) if self._stock_repo else 100.0
         availability = self._calculate_product_availability(product, on_hand)
         cat_id = getattr(product, "category_id", None) if hasattr(product, "category_id") else product.get("category_id")
-        cat_name = cat_map.get(cat_id or "", None) if cat_id else None
+        cat_name = cat_map.get(cat_id or "") if cat_id else None
         if not cat_name and getattr(product, "category", None) and hasattr(product.category, "name"):
             cat_name = product.category.name
         unit_name = getattr(product, "unit", "Piece") if hasattr(product, "unit") else product.get("unit", "Piece")

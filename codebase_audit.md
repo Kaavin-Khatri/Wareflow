@@ -540,6 +540,8 @@ wareflow/
 | GET    | `/analytics/reorder-suggestions`       | Actionable low-stock suggestions with lead time buffer| Yes (Authenticated User)       |
 | POST   | `/analytics/reorder-suggestions/create-po` | Auto-generate pre-filled draft PO from suggestions  | Yes (Authenticated User)       |
 | GET    | `/analytics/dead-stock`                | Stagnant/dead stock detection ranked by tied-up capital| Yes (Authenticated User)       |
+| GET    | `/analytics/anomalies/order/{order_id}`| Detect 3σ statistical anomalies for sales order lines | Yes (Authenticated User)        |
+| GET    | `/analytics/weekly-insight`            | 7-day executive AI intelligence narrative (7d cache)  | Yes (Authenticated User)        |
 
 ## Architecture Layers
 
@@ -616,6 +618,8 @@ wareflow/
 | Idempotent Order Invoicing              | Re-requesting invoice generation for an already-invoiced sales order returns the existing invoice without duplicate creation or sequence number gaps |
 | Invoice Status Guardrail                | Invoicing is strictly limited to sales orders in status `confirmed` or later (`confirmed`, `packed`, `shipped`, `delivered`). Draft or cancelled orders are rejected |
 | InvoiceRepository Protocol (DIP)        | `InvoiceService` depends exclusively on `InvoiceRepositoryInterface` Protocol, guaranteeing zero DB coupling |
+| Non-Blocking Advisory 3σ Anomaly Guard  | `AnomalyDetectionService` flags unusual sales order line quantities exceeding historical $\text{mean} + 3\sigma$ as an advisory warning badge for staff review, but never automatically blocks order creation or confirmation |
+| Grounded Weekly AI Insight & Fallback   | `InsightNarratorService` generates 2-3 sentence executive summaries grounded strictly on verified trailing numbers with 7-day cache and a deterministic rule-based template fallback when `GROQ_API_KEY` is unset |
 | Cloud Storage Validation & Upload | Supabase Storage `product-images` bucket handles catalog media with strict <=5MB and JPEG/PNG/WebP validation |
 | Universal DataTable Rule | All future list and ledger screens must use `DataTable`; responsive mobile card-view is automatic below 768px |
 | Low-Power Glass Degradation | Low memory (<4GB), cores (<=4), or reduced-transparency drops expensive blurs to flat translucency at 60fps |

@@ -1,16 +1,12 @@
 """Tests for Notification Engine and Strategy Pattern Channels (Step 13.1)."""
 
-from datetime import UTC, datetime
-from typing import Any
 from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
-import pytest
 
 from app.core.di import get_notification_service
 from app.core.security import CurrentUser, get_current_user
 from app.main import app
-from app.models.notification import Notification
 from app.repositories.impl.notification_repository import InMemoryNotificationRepository
 from app.services.notification_channels.base import BaseNotificationChannel, NotificationPayload
 from app.services.notification_channels.email_channel import EmailChannel

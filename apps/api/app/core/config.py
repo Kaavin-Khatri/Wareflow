@@ -29,8 +29,11 @@ class Settings(BaseSettings):
     # Resend
     resend_api_key: str = ""
 
-    # Groq
+    # Groq (Step 0.3 / Step 14.3)
     groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
+    insight_cache_ttl_days: int = 7
+    anomaly_stddev_multiplier: float = 3.0
 
     # Security & 2FA
     totp_encryption_key: str = ""

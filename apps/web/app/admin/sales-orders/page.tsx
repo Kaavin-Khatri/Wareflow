@@ -46,6 +46,10 @@ export interface SalesOrderItem {
   line_total: number;
   uom_id?: string | null;
   uom_code?: string | null;
+  is_unusual?: boolean;
+  anomaly_reason?: string | null;
+  historical_mean?: number | null;
+  historical_stddev?: number | null;
 }
 
 export interface SalesOrder {
@@ -62,6 +66,9 @@ export interface SalesOrder {
   total_amount: number;
   created_at: string;
   items: SalesOrderItem[];
+  has_unusual_items?: boolean;
+  unusual_items_count?: number;
+  anomaly_warnings?: string[];
 }
 
 interface RetailerOption {
@@ -371,9 +378,17 @@ export default function SalesOrdersAdminPage() {
       render: (order) => (
         <div className="flex items-center gap-2">
           <FileSpreadsheet className="w-4 h-4 text-purple-400" />
-          <span className="font-mono text-xs font-semibold text-[var(--text)]">
-            {order.so_number}
-          </span>
+          <div className="flex flex-col">
+            <span className="font-mono text-xs font-semibold text-[var(--text)]">
+              {order.so_number}
+            </span>
+            {order.has_unusual_items && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-amber-400 font-medium font-mono">
+                <AlertTriangle className="w-3 h-3 text-amber-400" />
+                Unusual Size ({order.unusual_items_count})
+              </span>
+            )}
+          </div>
         </div>
       ),
     },
@@ -948,6 +963,34 @@ export default function SalesOrdersAdminPage() {
                 </div>
               )}
 
+              {/* Statistical Anomaly Advisory Banner */}
+              {selectedOrder.has_unusual_items && (
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-1.5 text-amber-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>Statistical Anomaly Advisory (3σ Threshold)</span>
+                    </div>
+                    <GlassBadge variant="warning">
+                      {selectedOrder.unusual_items_count} UNUSUAL ITEM{selectedOrder.unusual_items_count === 1 ? "" : "S"}
+                    </GlassBadge>
+                  </div>
+                  <p className="text-[11px] text-amber-200/80 leading-relaxed">
+                    This order contains line items significantly exceeding historical buyer purchase volumes (&gt; 3σ standard deviation). This is an advisory alert for warehouse staff and does not block confirmation.
+                  </p>
+                  {selectedOrder.anomaly_warnings && selectedOrder.anomaly_warnings.length > 0 && (
+                    <div className="pt-1 space-y-1">
+                      {selectedOrder.anomaly_warnings.map((warn, i) => (
+                        <div key={i} className="text-[11px] font-mono text-amber-400 flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+                          <span>{warn}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Line Items Table */}
               <div className="space-y-2">
                 <span className="text-xs font-semibold text-[var(--text)] uppercase tracking-wider font-mono">
@@ -967,7 +1010,19 @@ export default function SalesOrdersAdminPage() {
                     <tbody className="divide-y divide-[var(--glass-border)] text-[var(--text)]">
                       {selectedOrder.items?.map((it) => (
                         <tr key={it.id} className="hover:bg-white/5">
-                          <td className="p-2.5 font-medium">{it.product_name || it.product_id}</td>
+                          <td className="p-2.5 font-medium">
+                            <div className="flex items-center gap-2">
+                              <span>{it.product_name || it.product_id}</span>
+                              {it.is_unusual && (
+                                <span
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                                  title={it.anomaly_reason || "Unusual order quantity"}
+                                >
+                                  <AlertTriangle className="w-2.5 h-2.5" /> 3σ Anomaly
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="p-2.5 text-center font-mono text-[var(--text-muted)]">
                             {it.product_sku || "—"}
                           </td>

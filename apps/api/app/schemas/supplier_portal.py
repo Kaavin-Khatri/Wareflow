@@ -1,6 +1,7 @@
 """Pydantic schemas for the Supplier Self-Service Portal (Magic Link)."""
 
 from datetime import date, datetime
+
 from pydantic import BaseModel, Field
 
 

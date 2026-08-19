@@ -4,8 +4,8 @@ Identifies dormant catalog items with zero outbound movements in the trailing wi
 and ranks them by capital-at-risk (tied-up capital).
 """
 
-from datetime import UTC, datetime
 import logging
+from datetime import UTC, datetime
 
 from app.repositories.interfaces.forecast_repository import ForecastRepositoryInterface
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface

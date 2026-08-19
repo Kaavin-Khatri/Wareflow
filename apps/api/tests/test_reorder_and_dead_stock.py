@@ -1,7 +1,7 @@
 """Unit and integration tests for Step 14.2 Reorder Suggestions & Dead-Stock Detection."""
 
-from datetime import UTC, datetime, timedelta
 import uuid
+from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
 
@@ -285,7 +285,7 @@ def test_create_po_from_suggestions_produces_prefilled_draft_po():
     # Verify persisted in PO repository
     persisted = po_repo.get_by_id(created_po.id)
     assert persisted is not None
-    assert getattr(persisted, "supplier_id") == "sup-agro-1"
+    assert persisted.supplier_id == "sup-agro-1"
 
 
 def test_dead_stock_detection_and_window_exclusion():

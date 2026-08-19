@@ -1,13 +1,12 @@
 """Tests for Delivery Assignment & Logistics Status Board (Step 12.1)."""
 
-import uuid
 from datetime import UTC, datetime
 
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
-from app.core.di import get_delivery_service, get_sales_order_service
+from app.core.di import get_delivery_service
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.main import app
 from app.models.delivery import DeliveryStatusEnum

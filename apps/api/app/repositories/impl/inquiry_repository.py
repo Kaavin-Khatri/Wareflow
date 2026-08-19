@@ -1,7 +1,7 @@
 """Product inquiry repository implementation."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -77,7 +77,7 @@ class InMemoryInquiryRepository(InquiryRepositoryInterface):
         if not inquiry.id:
             inquiry.id = str(uuid.uuid4())
         if not getattr(inquiry, "created_at", None):
-            inquiry.created_at = datetime.now(timezone.utc)
+            inquiry.created_at = datetime.now(UTC)
         self._inquiries[inquiry.id] = inquiry
         return inquiry
 

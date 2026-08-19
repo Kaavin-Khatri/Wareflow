@@ -1,7 +1,7 @@
 """Alert Log repository implementations (SQLAlchemy and InMemory)."""
 
-from datetime import UTC, datetime, timedelta
 import uuid
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session

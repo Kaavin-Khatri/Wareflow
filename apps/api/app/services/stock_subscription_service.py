@@ -1,9 +1,8 @@
 """Domain service managing Retailer Restock Subscriptions (Step 13.4)."""
 
-from datetime import UTC, datetime
 import logging
-from typing import Any
 import uuid
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 

@@ -1,7 +1,6 @@
 """WhatsApp notification channel implementation using Meta Cloud API."""
 
 import logging
-from typing import Any
 
 from app.services.notification_channels.base import BaseNotificationChannel, NotificationPayload
 from app.services.whatsapp_client import WhatsAppClient

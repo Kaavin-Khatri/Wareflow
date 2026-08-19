@@ -1,7 +1,7 @@
 """Notification repository implementation."""
 
-from datetime import UTC, datetime
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session

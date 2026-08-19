@@ -42,7 +42,7 @@ class DeliveryService:
         """Assign driver and vehicle to packed sales order, advancing status to shipped."""
         order = self._get_and_validate_order_for_dispatch(sales_order_id)
         delivery = self.delivery_repo.get_by_sales_order_id(sales_order_id)
-        
+
         if delivery:
             delivery.driver_name = payload.driver_name
             delivery.vehicle_no = payload.vehicle_no

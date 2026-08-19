@@ -62,6 +62,10 @@ class SalesOrderItemResponse(BaseModel):
     line_total: float = 0.0
     uom_id: str | None = None
     uom_code: str | None = None
+    is_unusual: bool = False
+    anomaly_reason: str | None = None
+    historical_mean: float | None = None
+    historical_stddev: float | None = None
 
 
 class SalesOrderResponse(BaseModel):
@@ -82,6 +86,9 @@ class SalesOrderResponse(BaseModel):
     total_amount: float
     created_at: datetime
     items: list[SalesOrderItemResponse] = []
+    has_unusual_items: bool = False
+    unusual_items_count: int = 0
+    anomaly_warnings: list[str] = []
 
 
 class SalesOrderListResponse(BaseModel):

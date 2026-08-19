@@ -12,6 +12,7 @@ from functools import lru_cache
 from fastapi import Depends
 from sqlalchemy.orm import Session
 
+from app.core.alert_scheduler import AlertScheduler
 from app.core.config import Settings, get_settings
 from app.db.session import get_db_session
 from app.repositories.impl.alert_log_repository import (
@@ -27,25 +28,38 @@ from app.repositories.impl.customer_repository import (
     InMemoryCustomerRepository,
     SqlAlchemyCustomerRepository,
 )
+from app.repositories.impl.delivery_repository import (
+    InMemoryDeliveryRepository,
+    SqlAlchemyDeliveryRepository,
+)
+from app.repositories.impl.forecast_repository import (
+    InMemoryForecastRepository,
+    SqlAlchemyForecastRepository,
+)
 from app.repositories.impl.inquiry_repository import (
     InMemoryInquiryRepository,
+)
+from app.repositories.impl.inquiry_repository import (
     InquiryRepository as SqlAlchemyInquiryRepository,
 )
 from app.repositories.impl.invoice_repository import (
     InMemoryInvoiceRepository,
     SqlAlchemyInvoiceRepository,
 )
+from app.repositories.impl.notification_preference_repository import (
+    InMemoryNotificationPreferenceRepository,
+    SqlAlchemyNotificationPreferenceRepository,
+)
 from app.repositories.impl.notification_repository import (
     InMemoryNotificationRepository,
+    NotificationRepository,
+)
+from app.repositories.impl.notification_repository import (
     NotificationRepository as SqlAlchemyNotificationRepository,
 )
 from app.repositories.impl.payment_repository import (
     InMemoryPaymentRepository,
     SqlAlchemyPaymentRepository,
-)
-from app.repositories.impl.notification_repository import (
-    InMemoryNotificationRepository,
-    NotificationRepository,
 )
 from app.repositories.impl.product_repository import (
     InMemoryProductRepository,
@@ -86,6 +100,13 @@ from app.repositories.impl.stock_analytics_repository import (
 from app.repositories.impl.stock_repository import (
     SqlAlchemyStockRepository,
 )
+from app.repositories.impl.stock_subscription_repository import (
+    SqlAlchemyStockSubscriptionRepository,
+)
+from app.repositories.impl.supplier_access_token_repository import (
+    InMemorySupplierAccessTokenRepository,
+    SqlAlchemySupplierAccessTokenRepository,
+)
 from app.repositories.impl.supplier_repository import (
     InMemorySupplierRepository,
     SqlAlchemySupplierRepository,
@@ -106,11 +127,20 @@ from app.repositories.interfaces.business_settings_repository import (
 from app.repositories.interfaces.customer_repository import (
     CustomerRepositoryInterface,
 )
+from app.repositories.interfaces.delivery_repository import (
+    DeliveryRepositoryInterface,
+)
+from app.repositories.interfaces.forecast_repository import (
+    ForecastRepositoryInterface,
+)
 from app.repositories.interfaces.inquiry_repository import (
     InquiryRepositoryInterface,
 )
 from app.repositories.interfaces.invoice_repository import (
     InvoiceRepositoryInterface,
+)
+from app.repositories.interfaces.notification_preference_repository import (
+    NotificationPreferenceRepositoryInterface,
 )
 from app.repositories.interfaces.notification_repository import (
     NotificationRepositoryInterface,
@@ -142,17 +172,26 @@ from app.repositories.interfaces.stock_repository import StockRepositoryInterfac
 from app.repositories.interfaces.stock_subscription_repository import (
     StockSubscriptionRepositoryInterface,
 )
+from app.repositories.interfaces.supplier_access_token_repository import (
+    SupplierAccessTokenRepositoryInterface,
+)
 from app.repositories.interfaces.supplier_repository import SupplierRepositoryInterface
 from app.repositories.interfaces.transfer_repository import TransferRepositoryInterface
 from app.repositories.interfaces.uom_repository import UomRepositoryInterface
-from app.core.alert_scheduler import AlertScheduler
 from app.services.alert_engine_service import AlertEngineService
+from app.services.anomaly_detection_service import AnomalyDetectionService
 from app.services.audit_service import AuditService
 from app.services.business_settings_service import BusinessSettingsService
 from app.services.customer_service import CustomerService
+from app.services.dead_stock_service import DeadStockService
+from app.services.delivery_service import DeliveryService
 from app.services.einvoice_service import EinvoiceService
 from app.services.export_service import ExportService
+from app.services.forecasting.exponential_smoothing import ExponentialSmoothingForecast
+from app.services.forecasting.moving_average import MovingAverageForecast
+from app.services.forecasting_service import ForecastingService
 from app.services.inquiry_service import InquiryService
+from app.services.insight_narrator import InsightNarratorService
 from app.services.invoice_service import InvoiceService
 from app.services.ledger_service import LedgerService
 from app.services.notification_channels.email_channel import EmailChannel
@@ -161,45 +200,15 @@ from app.services.notification_channels.sms_channel import SmsChannel
 from app.services.notification_channels.whatsapp_channel import WhatsAppChannel
 from app.services.notification_preference_service import NotificationPreferenceService
 from app.services.notification_service import NotificationService
-from app.repositories.impl.notification_preference_repository import (
-    InMemoryNotificationPreferenceRepository,
-    SqlAlchemyNotificationPreferenceRepository,
-)
-from app.repositories.interfaces.notification_preference_repository import (
-    NotificationPreferenceRepositoryInterface,
-)
-from app.repositories.impl.forecast_repository import (
-    InMemoryForecastRepository,
-    SqlAlchemyForecastRepository,
-)
-from app.repositories.interfaces.forecast_repository import (
-    ForecastRepositoryInterface,
-)
-from app.services.forecasting.exponential_smoothing import ExponentialSmoothingForecast
-from app.services.forecasting.moving_average import MovingAverageForecast
-from app.services.forecasting_service import ForecastingService
-from app.services.dead_stock_service import DeadStockService
-from app.services.reorder_suggestion_service import ReorderSuggestionService
 from app.services.payment_service import PaymentService
 from app.services.portal_auth_service import PortalAuthService
-from app.repositories.impl.delivery_repository import (
-    InMemoryDeliveryRepository,
-    SqlAlchemyDeliveryRepository,
-)
-from app.repositories.impl.stock_subscription_repository import (
-    InMemoryStockSubscriptionRepository,
-    SqlAlchemyStockSubscriptionRepository,
-)
-from app.repositories.interfaces.delivery_repository import (
-    DeliveryRepositoryInterface,
-)
-from app.services.delivery_service import DeliveryService
 from app.services.pricing_strategy import PricingEngineService
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
 from app.services.purchase_order_service import PurchaseOrderService
 from app.services.purchase_return_service import PurchaseReturnService
 from app.services.recall_service import RecallService
+from app.services.reorder_suggestion_service import ReorderSuggestionService
 from app.services.retailer_service import RetailerService
 from app.services.sales_order_service import SalesOrderService
 from app.services.sales_return_service import SalesReturnService
@@ -208,13 +217,6 @@ from app.services.stock_analytics_service import StockAnalyticsService
 from app.services.stock_service import StockService
 from app.services.stock_subscription_service import StockSubscriptionService
 from app.services.storage_service import StorageServiceInterface, SupabaseStorageService
-from app.repositories.impl.supplier_access_token_repository import (
-    InMemorySupplierAccessTokenRepository,
-    SqlAlchemySupplierAccessTokenRepository,
-)
-from app.repositories.interfaces.supplier_access_token_repository import (
-    SupplierAccessTokenRepositoryInterface,
-)
 from app.services.supplier_portal_service import SupplierPortalService
 from app.services.supplier_service import SupplierService
 from app.services.transfer_service import TransferService
@@ -498,24 +500,6 @@ def get_business_settings_service(
     )
 
 
-def get_alert_engine_service(
-    business_repo: BusinessSettingsRepositoryInterface = Depends(
-        get_db_business_settings_repository
-    ),
-    supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
-) -> AlertEngineService:
-    """Factory for AlertEngineService registering standard compliance and operational rules."""
-    license_rule = ExpiringLicenseRule(
-        business_repo=business_repo,
-        supplier_repo=supplier_repo,
-    )
-    engine = AlertEngineService(
-        rules=[license_rule],
-        business_repo=business_repo,
-        supplier_repo=supplier_repo,
-    )
-    return engine
-
 
 @lru_cache
 def get_sales_order_repository() -> SalesOrderRepositoryInterface:
@@ -556,6 +540,16 @@ def get_customer_service(
     )
 
 
+def get_anomaly_detection_service(
+    so_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
+) -> AnomalyDetectionService:
+    """Factory for AnomalyDetectionService computing 3-sigma thresholds on sales order line items."""
+    return AnomalyDetectionService(
+        so_repo=so_repo,
+        stddev_multiplier=3.0,
+    )
+
+
 def get_sales_order_service(
     so_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
     retailer_repo: RetailerRepository = Depends(get_retailer_repository),
@@ -565,6 +559,7 @@ def get_sales_order_service(
     customer_repo: CustomerRepositoryInterface = Depends(get_db_customer_repository),
     uom_service: UomService = Depends(get_uom_service),
     audit_service: AuditService = Depends(get_audit_service),
+    anomaly_detector: AnomalyDetectionService = Depends(get_anomaly_detection_service),
 ) -> SalesOrderService:
     """Factory for SalesOrderService with DIP dependencies."""
     return SalesOrderService(
@@ -576,6 +571,7 @@ def get_sales_order_service(
         customer_repo=customer_repo,
         uom_service=uom_service,
         audit_service=audit_service,
+        anomaly_detector=anomaly_detector,
     )
 
 
@@ -835,18 +831,6 @@ def get_export_service(
     )
 
 
-@lru_cache
-def get_in_memory_notification_repository() -> NotificationRepositoryInterface:
-    """Factory for in-memory NotificationRepository."""
-    return InMemoryNotificationRepository()
-
-
-def get_notification_repository(
-    db: Session = Depends(get_db_session),
-) -> NotificationRepositoryInterface:
-    """Factory for database-backed NotificationRepository."""
-    return NotificationRepository(session=db)
-
 
 def get_notification_service(
     notif_repo: NotificationRepositoryInterface = Depends(get_notification_repository),
@@ -909,37 +893,6 @@ def get_supplier_portal_service(
         notification_service=notif_service,
         audit_service=audit_service,
     )
-
-
-@lru_cache
-def get_in_memory_forecast_repository() -> ForecastRepositoryInterface:
-    """Factory for in-memory ForecastRepository."""
-    return InMemoryForecastRepository()
-
-
-def get_forecast_repository(db: Session = Depends(get_db_session)) -> ForecastRepositoryInterface:
-    """Factory for database-backed ForecastRepository."""
-    return SqlAlchemyForecastRepository(session=db)
-
-
-def get_forecasting_service(
-    forecast_repo: ForecastRepositoryInterface = Depends(get_forecast_repository),
-    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
-    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
-) -> ForecastingService:
-    """Factory for ForecastingService registering MovingAverage and ExponentialSmoothing strategies."""
-    settings = get_settings()
-    moving_avg = MovingAverageForecast()
-    exp_smooth = ExponentialSmoothingForecast()
-    return ForecastingService(
-        forecast_repo=forecast_repo,
-        stock_repo=stock_repo,
-        product_repo=product_repo,
-        strategies=[moving_avg, exp_smooth],
-        default_strategy=settings.forecast_strategy,
-        cache_ttl_hours=settings.forecast_cache_ttl_hours,
-    )
-
 
 def get_purchase_order_service(
     po_repo: PurchaseOrderRepositoryInterface = Depends(get_db_purchase_order_repository),
@@ -1048,12 +1001,14 @@ def get_alert_scheduler() -> AlertScheduler:
                         ),
                     ],
                 )
-                from app.repositories.impl.product_repository import SqlAlchemyProductRepository
-                from app.repositories.impl.stock_repository import SqlAlchemyStockRepository
                 from app.repositories.impl.invoice_repository import SqlAlchemyInvoiceRepository
+                from app.repositories.impl.product_repository import SqlAlchemyProductRepository
                 from app.repositories.impl.profile_repository import SqlAlchemyProfileRepository
                 from app.repositories.impl.retailer_repository import SqlAlchemyRetailerRepository
-                from app.repositories.impl.stock_subscription_repository import SqlAlchemyStockSubscriptionRepository
+                from app.repositories.impl.stock_repository import SqlAlchemyStockRepository
+                from app.repositories.impl.stock_subscription_repository import (
+                    SqlAlchemyStockSubscriptionRepository,
+                )
                 from app.repositories.impl.supplier_repository import SqlAlchemySupplierRepository
 
                 return AlertEngineService(
@@ -1144,4 +1099,18 @@ def get_dead_stock_service(
     )
 
 
-
+def get_insight_narrator_service(
+    so_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
+    reorder_service: ReorderSuggestionService = Depends(get_reorder_suggestion_service),
+    dead_stock_service: DeadStockService = Depends(get_dead_stock_service),
+) -> InsightNarratorService:
+    """Factory for InsightNarratorService synthesizing warehouse intelligence."""
+    settings = get_settings()
+    return InsightNarratorService(
+        so_repo=so_repo,
+        reorder_service=reorder_service,
+        dead_stock_service=dead_stock_service,
+        groq_api_key=settings.groq_api_key or "",
+        groq_model=settings.groq_model,
+        cache_ttl_days=settings.insight_cache_ttl_days,
+    )

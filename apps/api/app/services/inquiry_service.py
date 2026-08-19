@@ -5,8 +5,8 @@ Manages the lifecycle of customer and retailer product inquiries and quote reque
 including submission from the retailer portal, staff responses, and notification triggers.
 """
 
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
 
@@ -61,7 +61,7 @@ class InquiryService:
             retailer_id=current_user.retailer_id,
             message=payload.message,
             status=InquiryStatusEnum.OPEN,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         saved = self._inquiry_repo.create(inquiry)
         return self._to_response(saved, product=product)
@@ -108,7 +108,7 @@ class InquiryService:
 
         inquiry.response = payload.response
         inquiry.status = InquiryStatusEnum.RESPONDED
-        inquiry.responded_at = datetime.now(timezone.utc)
+        inquiry.responded_at = datetime.now(UTC)
         updated = self._inquiry_repo.update(inquiry)
 
         product_name = getattr(inquiry.product, "name", "Requested Item") if getattr(inquiry, "product", None) else "Requested Item"
@@ -155,6 +155,6 @@ class InquiryService:
             message=inquiry.message,
             status=inquiry.status.value if hasattr(inquiry.status, "value") else str(inquiry.status),
             response=inquiry.response,
-            created_at=inquiry.created_at or datetime.now(timezone.utc),
+            created_at=inquiry.created_at or datetime.now(UTC),
             responded_at=inquiry.responded_at,
         )

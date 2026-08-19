@@ -10,7 +10,6 @@ Validates:
 
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
-import pytest
 
 from app.api.routers import portal
 from app.core.di import get_portal_auth_service
@@ -25,8 +24,8 @@ from app.repositories.impl.profile_repository import InMemoryProfileRepository
 from app.repositories.impl.retailer_repository import InMemoryRetailerRepository
 from app.repositories.impl.retailer_user_repository import InMemoryRetailerUserRepository
 from app.repositories.impl.stock_repository import InMemoryStockRepository
-from app.services.pricing_strategy import PricingEngineService
 from app.services.portal_auth_service import PortalAuthService
+from app.services.pricing_strategy import PricingEngineService
 
 
 def _setup_portal_catalog_env():

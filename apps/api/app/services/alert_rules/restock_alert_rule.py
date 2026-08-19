@@ -1,10 +1,9 @@
 """Restock alert rule strategy notifying subscribed retailers when stock is replenished (Step 13.4)."""
 
-from datetime import UTC, datetime
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
-from app.models.portal import ChannelPreferenceEnum
 from app.services.alert_rules.base import AlertEvaluationContext, AlertResult, BaseAlertRule
 
 logger = logging.getLogger(__name__)

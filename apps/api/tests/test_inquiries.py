@@ -1,6 +1,6 @@
 """Tests for product inquiries, staff responses, and notification triggers."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
 
@@ -139,7 +139,7 @@ def test_retailer_sees_only_own_inquiries_strict_data_wall():
         retailer_id=env["ret_alice"].id,
         message="Alice question",
         status=InquiryStatusEnum.OPEN,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     inq_alice.product = env["product"]
     inq_alice.retailer = env["ret_alice"]
@@ -151,7 +151,7 @@ def test_retailer_sees_only_own_inquiries_strict_data_wall():
         retailer_id=env["ret_bob"].id,
         message="Bob question",
         status=InquiryStatusEnum.OPEN,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     inq_bob.product = env["product"]
     inq_bob.retailer = env["ret_bob"]
@@ -184,7 +184,7 @@ def test_staff_inbox_lists_and_filters_inquiries():
         retailer_id=env["ret_alice"].id,
         message="Open question",
         status=InquiryStatusEnum.OPEN,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     inq1.product = env["product"]
     inquiry_repo.create(inq1)
@@ -195,7 +195,7 @@ def test_staff_inbox_lists_and_filters_inquiries():
         message="Responded question",
         status=InquiryStatusEnum.RESPONDED,
         response="Already answered",
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     inq2.product = env["product"]
     inquiry_repo.create(inq2)
@@ -224,7 +224,7 @@ def test_staff_responds_to_inquiry_and_dispatches_notification():
         retailer_id=env["ret_alice"].id,
         message="Can you deliver 100 bags tomorrow?",
         status=InquiryStatusEnum.OPEN,
-        created_at=datetime.now(timezone.utc),
+        created_at=datetime.now(UTC),
     )
     inq.product = env["product"]
     inq.retailer = env["ret_alice"]

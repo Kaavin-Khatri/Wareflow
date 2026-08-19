@@ -8,6 +8,8 @@ Routers handle HTTP concerns only. Business logic lives in services.
 Repositories implement data-access contracts defined by interfaces.
 """
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -41,8 +43,6 @@ from app.api.routers import (
     two_factor,
     uom,
 )
-from contextlib import asynccontextmanager
-
 from app.core.config import get_settings
 from app.core.di import get_alert_scheduler
 

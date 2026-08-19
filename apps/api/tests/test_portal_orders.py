@@ -10,9 +10,9 @@ Validates:
 """
 
 from datetime import UTC, datetime
+
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
-import pytest
 
 from app.api.routers import portal
 from app.core.di import (
@@ -22,10 +22,8 @@ from app.core.di import (
 )
 from app.core.security import CurrentUser, get_current_user, require_portal_retailer
 from app.models.catalog import Product
-from app.models.notification import Notification
 from app.models.portal import RetailerUser
-from app.models.profile import Profile
-from app.models.retailer import BuyerTypeEnum, Retailer, SalesOrder, SalesOrderItem, SOStatusEnum
+from app.models.retailer import BuyerTypeEnum, Retailer, SalesOrder, SOStatusEnum
 from app.models.warehouse import StockBatch, Warehouse
 from app.repositories.impl.customer_repository import InMemoryCustomerRepository
 from app.repositories.impl.invoice_repository import InMemoryInvoiceRepository

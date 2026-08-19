@@ -1,7 +1,6 @@
 """SQLAlchemy and InMemory implementations for StockSubscriptionRepository (Step 13.4)."""
 
 import logging
-from typing import Any
 import uuid
 
 from sqlalchemy import func, select

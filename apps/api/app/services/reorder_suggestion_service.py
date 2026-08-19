@@ -4,10 +4,9 @@ Calculates actionable purchase replenishment recommendations based on on-hand in
 configured reorder points, supplier lead times, and AI demand forecasting.
 """
 
-from datetime import UTC, datetime
 import logging
 import math
-from typing import Any
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 
@@ -20,7 +19,7 @@ from app.schemas.analytics import (
     ReorderSuggestionItem,
     ReorderSuggestionsResponse,
 )
-from app.schemas.purchase_orders import POItemCreateRequest, POCreateRequest, PurchaseOrderResponse
+from app.schemas.purchase_orders import POCreateRequest, POItemCreateRequest, PurchaseOrderResponse
 from app.services.forecasting_service import ForecastingService
 from app.services.purchase_order_service import PurchaseOrderService
 

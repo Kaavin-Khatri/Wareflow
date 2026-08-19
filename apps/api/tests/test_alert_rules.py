@@ -1,12 +1,12 @@
 """Unit and integration tests for Step 13.2 Smart Alert Rules & Engine."""
 
-from datetime import UTC, date, datetime, timedelta
 import uuid
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
-from app.models.billing import Invoice, InvoiceItem, InvoiceStatusEnum
-from app.models.catalog import Product
+from app.core.security import CurrentUser
+from app.models.billing import Invoice, InvoiceStatusEnum
 from app.models.retailer import BuyerTypeEnum, Retailer, SalesOrder, SalesOrderItem, SOStatusEnum
 from app.models.warehouse import StockBatch, Warehouse
 from app.repositories.impl.alert_log_repository import InMemoryAlertLogRepository
@@ -25,7 +25,6 @@ from app.services.notification_channels.in_app_channel import InAppChannel
 from app.services.notification_service import NotificationService
 from app.services.pricing_strategy import PricingEngineService
 from app.services.sales_order_service import SalesOrderService
-from app.core.security import CurrentUser
 
 
 @pytest.fixture

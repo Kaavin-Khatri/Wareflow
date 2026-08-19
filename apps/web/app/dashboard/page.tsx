@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import AppLayout from "@/components/AppLayout";
@@ -13,6 +13,7 @@ import {
   GlassBadge,
 } from "@/components/glass";
 import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
+import { apiClient } from "@/lib/api-client";
 import {
   TrendingUp,
   Truck,
@@ -25,6 +26,9 @@ import {
   Users,
   CheckCircle2,
   Clock,
+  Sparkles,
+  RefreshCw,
+  Zap,
 } from "lucide-react";
 
 interface RecentOrder {
@@ -36,8 +40,32 @@ interface RecentOrder {
   status: "dispatched" | "processing" | "pending";
 }
 
+interface WeeklyInsightMetrics {
+  weekly_revenue: number;
+  weekly_orders_count: number;
+  confirmed_orders_count: number;
+  top_mover_product_name: string | null;
+  top_mover_units_sold: number;
+  reorder_needed_count: number;
+  dead_stock_count: number;
+  dead_stock_capital: number;
+}
+
+interface WeeklyInsight {
+  headline: string;
+  narrative: string;
+  metrics_summary: WeeklyInsightMetrics;
+  generated_at: string;
+  expires_at: string;
+  is_ai_generated: boolean;
+  is_cached: boolean;
+}
+
 export default function DashboardPage() {
   const [ordersListRef] = useAutoAnimate();
+  const [insight, setInsight] = useState<WeeklyInsight | null>(null);
+  const [loadingInsight, setLoadingInsight] = useState(false);
+
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([
     {
       id: "ord-1",
@@ -72,6 +100,34 @@ export default function DashboardPage() {
       status: "dispatched",
     },
   ]);
+
+  async function fetchWeeklyInsight(forceRefresh = false) {
+    setLoadingInsight(true);
+    try {
+      const url = forceRefresh
+        ? "/analytics/weekly-insight?force_refresh=true"
+        : "/analytics/weekly-insight";
+      const data = await apiClient.get<WeeklyInsight>(url);
+      setInsight(data);
+    } catch (err) {
+      console.warn("Weekly insight unavailable or API unconfigured:", err);
+    } finally {
+      setLoadingInsight(false);
+    }
+  }
+
+  useEffect(() => {
+    let ignore = false;
+    async function load() {
+      if (!ignore) {
+        await fetchWeeklyInsight(false);
+      }
+    }
+    load();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const addSimulatedOrder = () => {
     const randomId = Math.floor(Math.random() * 900 + 100);
@@ -152,6 +208,105 @@ export default function DashboardPage() {
         ]}
         mainContent={
           <div className="space-y-6">
+            {/* AI Owner Weekly Intelligence Narrative Briefing */}
+            {insight && (
+              <GlassCard className="p-6 relative overflow-hidden border border-purple-500/30 bg-gradient-to-br from-purple-950/20 via-background to-background shadow-2xl">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--glass-border)]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <GlassCardTitle className="text-sm font-semibold text-white">
+                          AI Executive Intelligence Briefing
+                        </GlassCardTitle>
+                        <GlassBadge
+                          variant={insight.is_ai_generated ? "accent" : "neutral"}
+                          className="text-[10px] uppercase font-mono"
+                        >
+                          {insight.is_ai_generated ? "Groq LLM Powered" : "Grounded Rule Engine"}
+                        </GlassBadge>
+                        {insight.is_cached && (
+                          <GlassBadge variant="neutral" className="text-[10px] font-mono">
+                            7d Cached
+                          </GlassBadge>
+                        )}
+                      </div>
+                      <GlassCardDescription className="text-xs text-purple-200/70">
+                        Synthesized 7-day executive pulse across dispatches, top velocity products, and inventory risks.
+                      </GlassCardDescription>
+                    </div>
+                  </div>
+
+                  <GlassButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => fetchWeeklyInsight(true)}
+                    disabled={loadingInsight}
+                    className="text-xs self-start sm:self-auto text-purple-300 hover:text-purple-100"
+                  >
+                    <RefreshCw
+                      className={`w-3.5 h-3.5 mr-1.5 ${loadingInsight ? "animate-spin" : ""}`}
+                    />
+                    {loadingInsight ? "Analyzing..." : "Refresh Pulse"}
+                  </GlassButton>
+                </div>
+
+                <div className="pt-4 space-y-4">
+                  {/* Headline & 2-3 sentence grounded narrative */}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>{insight.headline}</span>
+                    </h3>
+                    <p className="text-xs text-[var(--text)] leading-relaxed bg-black/20 p-3.5 rounded-xl border border-[var(--glass-border)] font-normal">
+                      {insight.narrative}
+                    </p>
+                  </div>
+
+                  {/* Grounded Underlying Metrics Strip */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 text-xs">
+                    <div className="p-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--glass-border)]">
+                      <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-mono">
+                        7D Sales Revenue
+                      </span>
+                      <span className="text-xs font-mono font-bold text-emerald-400">
+                        ₹{Number(insight.metrics_summary.weekly_revenue).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--glass-border)]">
+                      <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-mono">
+                        Orders / Confirmed
+                      </span>
+                      <span className="text-xs font-mono font-bold text-white">
+                        {insight.metrics_summary.weekly_orders_count} orders ({insight.metrics_summary.confirmed_orders_count} conf)
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--glass-border)]">
+                      <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-mono">
+                        Velocity Leader
+                      </span>
+                      <span className="text-xs font-semibold text-[var(--accent)] truncate block" title={insight.metrics_summary.top_mover_product_name || "None"}>
+                        {insight.metrics_summary.top_mover_product_name || "—"} ({insight.metrics_summary.top_mover_units_sold} units)
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--glass-border)]">
+                      <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-mono">
+                        Dead Capital Risk
+                      </span>
+                      <span className="text-xs font-mono font-bold text-amber-400">
+                        ₹{Number(insight.metrics_summary.dead_stock_capital).toLocaleString("en-IN", { minimumFractionDigits: 2 })} ({insight.metrics_summary.dead_stock_count} SKUs)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </GlassCard>
+            )}
+
             {/* Live Orders Table with AutoAnimate */}
             <GlassCard className="p-6 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">

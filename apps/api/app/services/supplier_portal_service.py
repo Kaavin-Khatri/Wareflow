@@ -1,10 +1,9 @@
 """Supplier Portal Service for magic link access and ready-for-dispatch signaling."""
 
-from datetime import UTC, datetime, timedelta
 import logging
 import secrets
-from typing import Any
 import uuid
+from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException, status
 

@@ -101,6 +101,33 @@ class SqlAlchemySalesOrderRepository(SalesOrderRepositoryInterface):
         count = (self.session.execute(stmt).scalar() or 0) + 1
         return f"{prefix}-{count:04d}"
 
+    def get_historical_order_quantities(
+        self,
+        product_id: str,
+        retailer_id: str | None = None,
+        customer_id: str | None = None,
+        exclude_order_id: str | None = None,
+    ) -> list[float]:
+        stmt = (
+            select(SalesOrderItem.qty)
+            .join(SalesOrder, SalesOrderItem.so_id == SalesOrder.id)
+            .where(
+                SalesOrderItem.product_id == product_id,
+                SalesOrder.status != SOStatusEnum.CANCELLED,
+            )
+        )
+        if retailer_id:
+            stmt = stmt.where(SalesOrder.retailer_id == retailer_id)
+        elif customer_id:
+            stmt = stmt.where(SalesOrder.customer_id == customer_id)
+
+        if exclude_order_id:
+            stmt = stmt.where(SalesOrder.id != exclude_order_id)
+
+        stmt = stmt.order_by(SalesOrder.order_date.asc())
+        results = self.session.execute(stmt).scalars().all()
+        return [float(q) for q in results]
+
 
 class InMemorySalesOrderRepository(SalesOrderRepositoryInterface):
     """In-Memory implementation of SalesOrderRepositoryInterface for fast isolated tests."""
@@ -183,10 +210,18 @@ class InMemorySalesOrderRepository(SalesOrderRepositoryInterface):
                 p_data = item_data["product"]
                 item.product = Product(
                     id=p_data["id"],
-                    sku=p_data["sku"],
+                    sku=p_data.get("sku", "SKU"),
                     name=p_data["name"],
                     cost_price=float(p_data.get("cost_price", 0.0)),
                     wholesale_price=float(p_data.get("wholesale_price", 0.0)),
+                )
+            elif item_data.get("product_name"):
+                item.product = Product(
+                    id=item_data["product_id"],
+                    sku=item_data.get("product_sku", "SKU"),
+                    name=item_data["product_name"],
+                    cost_price=0.0,
+                    wholesale_price=float(item_data.get("unit_price", 0.0)),
                 )
             items.append(item)
         so.items = items
@@ -290,3 +325,35 @@ class InMemorySalesOrderRepository(SalesOrderRepositoryInterface):
             sum(1 for o in self.orders.values() if o.get("so_number", "").startswith(prefix)) + 1
         )
         return f"{prefix}-{count:04d}"
+
+    def get_historical_order_quantities(
+        self,
+        product_id: str,
+        retailer_id: str | None = None,
+        customer_id: str | None = None,
+        exclude_order_id: str | None = None,
+    ) -> list[float]:
+        quantities: list[float] = []
+        for o in self.orders.values():
+            if exclude_order_id and o.get("id") == exclude_order_id:
+                continue
+            if o.get("status") == SOStatusEnum.CANCELLED or o.get("status") == "cancelled":
+                continue
+            if retailer_id and o.get("retailer_id") != retailer_id:
+                continue
+            if customer_id and o.get("customer_id") != customer_id:
+                continue
+            for item in o.get("items", []):
+                p_id = (
+                    item.get("product_id")
+                    if isinstance(item, dict)
+                    else getattr(item, "product_id", None)
+                )
+                if p_id == product_id:
+                    q = (
+                        item.get("qty", 0.0)
+                        if isinstance(item, dict)
+                        else getattr(item, "qty", 0.0)
+                    )
+                    quantities.append(float(q))
+        return quantities

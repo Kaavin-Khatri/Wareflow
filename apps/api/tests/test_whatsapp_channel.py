@@ -1,8 +1,7 @@
 """Unit and integration tests for Step 13.3 WhatsApp Notification Channel & Client."""
 
-from datetime import UTC, datetime
 from typing import Any
-import pytest
+
 import httpx
 
 from app.repositories.impl.notification_repository import InMemoryNotificationRepository

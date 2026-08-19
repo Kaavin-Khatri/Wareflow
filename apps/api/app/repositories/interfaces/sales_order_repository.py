@@ -39,3 +39,13 @@ class SalesOrderRepositoryInterface(Protocol):
     def generate_next_so_number(self) -> str:
         """Generate the next sequential human-readable sales order number (e.g. SO-YYYYMM-0001)."""
         ...
+
+    def get_historical_order_quantities(
+        self,
+        product_id: str,
+        retailer_id: str | None = None,
+        customer_id: str | None = None,
+        exclude_order_id: str | None = None,
+    ) -> list[float]:
+        """Fetch historical ordered quantities for a specific product and buyer (retailer/customer)."""
+        ...

@@ -1,13 +1,13 @@
 """Tests for Step 13.5 Supplier Ready-for-Dispatch Magic Link Signal & Owner Notification."""
 
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
-import uuid
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.di import get_purchase_order_service, get_supplier_portal_service
+from app.core.di import get_supplier_portal_service
 from app.main import app
 from app.models.auth_rbac import Role
 from app.models.catalog import Product

@@ -1,21 +1,17 @@
 """Tests for Step 13.4 Retailer Restock Subscriptions & Availability Alerts."""
 
-from datetime import UTC, date, datetime
 from typing import Any
-import pytest
+
 from fastapi.testclient import TestClient
 
 from app.core.security import CurrentUser, get_current_user
 from app.main import app
 from app.models.catalog import Product
-from app.models.portal import ChannelPreferenceEnum, StockSubscription
 from app.models.retailer import Retailer
-from app.models.supplier import POStatusEnum, PurchaseOrder, PurchaseOrderItem
 from app.repositories.impl.notification_repository import InMemoryNotificationRepository
 from app.repositories.impl.stock_subscription_repository import (
     InMemoryStockSubscriptionRepository,
 )
-from app.schemas.purchase_orders import POReceiveItemRequest, POReceiveRequest
 from app.services.alert_engine_service import AlertEngineService
 from app.services.alert_rules.base import AlertEvaluationContext
 from app.services.alert_rules.restock_alert_rule import RestockAlertRule

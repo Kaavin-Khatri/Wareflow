@@ -3,7 +3,7 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from app.api.routers import portal, retailers
