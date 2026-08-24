@@ -3517,6 +3517,55 @@
 - DI Factory: `get_owner_dashboard_service` in `apps/api/app/core/di.py`
 - Endpoint: `GET /analytics/dashboard` (Returns `OwnerDashboardResponse`)
 
+---
+
+## Step 15.2 — Accounts-Receivable Aging Report
+
+**Timestamp:** 2026-08-24T13:45:00Z
+**Status:** COMPLETE
+
+### What was done
+- **AR Aging Analytics Backend Service (`GET /analytics/ar-aging`)**:
+  - Implemented `ARAgingService` in `apps/api/app/services/ar_aging_service.py` to aggregate unpaid/partially-paid wholesale invoices against the live reference date (`as_of`).
+  - Divided receivables into standardized aging buckets:
+    - **Current (Within Terms)**: Due in future or today (`days_overdue <= 0`).
+    - **1–30 Days Overdue**: `1 <= days_overdue <= 30`.
+    - **31–60 Days Overdue**: `31 <= days_overdue <= 60`.
+    - **61–90 Days Overdue**: `61 <= days_overdue <= 90`.
+    - **90+ Days Overdue (Critical Risk)**: `days_overdue >= 91`.
+  - Computes per-retailer metrics: `current`, `bucket_1_30`, `bucket_31_60`, `bucket_61_90`, `bucket_90_plus`, `total_overdue`, `total_outstanding`, `oldest_invoice_date`, `invoice_count`, and authorized `credit_limit`.
+  - Calculates portfolio-wide summary totals: `total_current`, `total_bucket_1_30`, `total_bucket_31_60`, `total_bucket_61_90`, `total_bucket_90_plus`, `total_overdue`, `total_outstanding`, `total_retailers`, and `overdue_retailers_count`.
+  - Added query param `include_zero_balance: bool = True` allowing clear zeroed representation of accounts with zero debt or clean filtering.
+  - Registered `get_ar_aging_service` dependency injection factory in `apps/api/app/core/di.py` and exposed `GET /analytics/ar-aging` in `apps/api/app/api/routers/analytics.py`.
+- **AR Aging Report Web UI (`/admin/analytics/ar-aging`)**:
+  - Built comprehensive glassmorphic reporting interface in `apps/web/app/admin/analytics/ar-aging/page.tsx`:
+    - Top row of 6 KPI summary cards (`Total Outstanding`, `Current`, `1–30d`, `31–60d`, `61–90d`, `90+d Critical`).
+    - Proportional visual distribution bar with multi-colored bucket segments (Emerald, Amber, Orange, Rose, Crimson).
+    - Search toolbar with real-time text query, bucket quick filter pills, and "Hide Zero Balance" toggle.
+    - Full bucketed data table with column sortability, formatted currency values (₹), credit line indicators, critical alert badges for 90+ days delinquent accounts, and direct "Ledger" links into `/admin/retailers/[id]/ledger` (Step 9.2 / 10.2).
+    - CSV export feature (`Export CSV`) generating downloadable timestamped reports.
+  - Added "AR Aging Report" under Wholesale Operations / GST Invoices in `apps/web/lib/nav.ts`.
+- **Test Suites**:
+  - Backend: `apps/api/tests/test_ar_aging.py` (3 tests covering fresh deployment empty state, exact hand-calculated 2-retailer mixed-age invoice bucket checks, zero-balance toggle, and FastAPI TestClient integration). All 239 backend tests passing.
+  - Frontend: `apps/web/lib/__tests__/ar-aging-ui.test.tsx` (4 tests covering KPI cards, distribution bar, search, bucket filtering, zero-balance toggle, and clean empty state). All 163 frontend tests passing.
+
+### Decisions
+- **Aging Bucket Boundaries**: Fixed cutoff windows at 30/60/90-day increments:
+  - Current: $\text{due\_date} \ge \text{as\_of}$ ($\text{days\_overdue} \le 0$)
+  - 1–30 Days: $1 \le \text{days\_overdue} \le 30$
+  - 31–60 Days: $31 \le \text{days\_overdue} \le 60$
+  - 61–90 Days: $61 \le \text{days\_overdue} \le 90$
+  - 90+ Days: $\text{days\_overdue} \ge 91$
+- **Default Credit Terms Fallback**: Invoices without an explicit `due_date` default to `invoice_date + 30 days`.
+- **Direct Ledger Navigation**: Retailer names and table actions directly link to `/admin/retailers/${retailer_id}/ledger` for seamless collection workflows.
+
+### Key values for future steps
+- AR Aging Service: `ARAgingService` (`apps/api/app/services/ar_aging_service.py`)
+- DI Factory: `get_ar_aging_service` in `apps/api/app/core/di.py`
+- Endpoint: `GET /analytics/ar-aging` (Returns `ARAgingReportResponse`)
+- Web Route: `/admin/analytics/ar-aging`
+- Aging Cutoffs: 30 days (`1-30`), 60 days (`31-60`), 90 days (`61-90`), 91+ days (`90+`)
+
 
 
 

@@ -204,6 +204,7 @@ wareflow/
 │   │   │       ├── suppliers.test.tsx
 │   │   │       ├── purchase-orders.test.tsx
 │   │   │       ├── owner-dashboard-ui.test.tsx
+│   │   │       ├── ar-aging-ui.test.tsx
 │   │   │       └── dashboard-shell.test.tsx
 │   │   └── app/                    # App Router pages
 │   │       ├── layout.tsx          # Root layout with anti-flash script & ThemeProvider
@@ -222,7 +223,8 @@ wareflow/
 │   │       │   └── page.tsx
 │   │       ├── admin/
 │   │       │   ├── analytics/
-│   │       │   │   └── stock/page.tsx # Stock Valuation & Composition Analytics dashboard
+│   │       │   │   ├── stock/page.tsx # Stock Valuation & Composition Analytics dashboard
+│   │       │   │   └── ar-aging/page.tsx # Accounts-Receivable Aging Report in 30/60/90+ day buckets
 │   │       │   ├── inventory/page.tsx # Multi-warehouse inventory overview & batch inspector
 │   │       │   ├── products/page.tsx  # Product catalog management
 │   │       │   ├── categories/page.tsx# Category hierarchy editor
@@ -318,6 +320,7 @@ wareflow/
 │           │   └── audit_and_settings.py # AdminAuditLog, BusinessSettings
 │           ├── services/           # Business logic (depends on abstractions)
 │           │   ├── alert_engine_service.py
+│           │   ├── ar_aging_service.py
 │           │   ├── audit_service.py
 │           │   ├── business_settings_service.py
 │           │   ├── customer_service.py
@@ -545,6 +548,7 @@ wareflow/
 | GET    | `/analytics/anomalies/order/{order_id}`| Detect 3σ statistical anomalies for sales order lines | Yes (Authenticated User)        |
 | GET    | `/analytics/weekly-insight`            | 7-day executive AI intelligence narrative (7d cache)  | Yes (Authenticated User)        |
 | GET    | `/analytics/dashboard`                 | Single round-trip owner KPI metrics, movement & queues| Yes (Authenticated User)        |
+| GET    | `/analytics/ar-aging`                  | Bucketed accounts receivable aging (Current, 30/60/90+)| Yes (`invoices:view`)           |
 
 ## Architecture Layers
 

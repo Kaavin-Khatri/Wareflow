@@ -180,6 +180,7 @@ from app.repositories.interfaces.transfer_repository import TransferRepositoryIn
 from app.repositories.interfaces.uom_repository import UomRepositoryInterface
 from app.services.alert_engine_service import AlertEngineService
 from app.services.anomaly_detection_service import AnomalyDetectionService
+from app.services.ar_aging_service import ARAgingService
 from app.services.audit_service import AuditService
 from app.services.business_settings_service import BusinessSettingsService
 from app.services.customer_service import CustomerService
@@ -1137,4 +1138,15 @@ def get_owner_dashboard_service(
         dead_stock_service=dead_stock_service,
         insight_narrator=insight_narrator,
         supplier_repo=supplier_repo,
+    )
+
+
+def get_ar_aging_service(
+    invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
+    retailer_repo: RetailerRepository = Depends(get_retailer_repository),
+) -> ARAgingService:
+    """Factory for ARAgingService compiling accounts receivable aging reports."""
+    return ARAgingService(
+        invoice_repository=invoice_repo,
+        retailer_repository=retailer_repo,
     )

@@ -130,6 +130,12 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         icon: "ReceiptText",
         requiredPermission: "invoices:view",
       },
+      {
+        name: "AR Aging Report",
+        href: "/admin/analytics/ar-aging",
+        icon: "Clock",
+        requiredPermission: "invoices:view",
+      },
 
 
       {

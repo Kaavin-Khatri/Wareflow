@@ -297,3 +297,48 @@ class OwnerDashboardResponse(BaseModel):
         False, description="True if no products/orders exist in the deployment"
     )
     generated_at: datetime = Field(..., description="Timestamp of dashboard compilation")
+
+
+class ARAgingBucketItem(BaseModel):
+    """Accounts receivable aging breakdown for an individual wholesale retailer (Step 15.2)."""
+
+    retailer_id: str = Field(..., description="Unique retailer UUID")
+    retailer_name: str = Field(..., description="Registered wholesale business name")
+    contact_person: str | None = Field(None, description="Primary contact name")
+    phone: str | None = Field(None, description="Primary contact phone")
+    credit_limit: float = Field(0.0, description="Authorized credit limit in INR")
+    credit_balance: float = Field(0.0, description="Current credit balance utilized in INR")
+    current: float = Field(0.0, description="Amount not yet overdue (0 days / future due date)")
+    bucket_1_30: float = Field(0.0, description="Amount overdue 1 to 30 days")
+    bucket_31_60: float = Field(0.0, description="Amount overdue 31 to 60 days")
+    bucket_61_90: float = Field(0.0, description="Amount overdue 61 to 90 days")
+    bucket_90_plus: float = Field(0.0, description="Amount overdue 90+ days (critical collection risk)")
+    total_overdue: float = Field(0.0, description="Sum of 1-30, 31-60, 61-90, and 90+ overdue buckets")
+    total_outstanding: float = Field(0.0, description="Sum of current and total overdue receivables")
+    oldest_invoice_date: str | None = Field(None, description="ISO date of the oldest unpaid invoice")
+    invoice_count: int = Field(0, description="Total count of open/unpaid invoices for this retailer")
+
+
+class ARAgingSummary(BaseModel):
+    """Portfolio-wide summary totals across all aging buckets (Step 15.2)."""
+
+    total_current: float = Field(0.0, description="Total current receivables across all retailers")
+    total_bucket_1_30: float = Field(0.0, description="Total 1-30 days overdue receivables")
+    total_bucket_31_60: float = Field(0.0, description="Total 31-60 days overdue receivables")
+    total_bucket_61_90: float = Field(0.0, description="Total 61-90 days overdue receivables")
+    total_bucket_90_plus: float = Field(0.0, description="Total 90+ days overdue critical receivables")
+    total_overdue: float = Field(0.0, description="Total overdue receivables across all buckets")
+    total_outstanding: float = Field(0.0, description="Total outstanding receivables portfolio-wide")
+    total_retailers: int = Field(0, description="Total count of active/reported retailers")
+    overdue_retailers_count: int = Field(0, description="Count of retailers with total_overdue > 0")
+
+
+class ARAgingReportResponse(BaseModel):
+    """Full Accounts-Receivable Aging Report response (Step 15.2)."""
+
+    as_of_date: str = Field(..., description="As-of reference date for overdue calculation (YYYY-MM-DD)")
+    summary: ARAgingSummary = Field(..., description="Aggregated summary totals across all aging buckets")
+    retailers: list[ARAgingBucketItem] = Field(
+        default_factory=list, description="Per-retailer bucketed aging list sorted descending by overdue risk"
+    )
+    generated_at: datetime = Field(..., description="Timestamp of report compilation")

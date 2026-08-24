@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.di import (
     get_anomaly_detection_service,
+    get_ar_aging_service,
     get_dead_stock_service,
     get_forecasting_service,
     get_insight_narrator_service,
@@ -12,6 +13,7 @@ from app.core.di import (
 )
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.analytics import (
+    ARAgingReportResponse,
     CreatePOFromSuggestionsRequest,
     DeadStockResponse,
     OrderAnomalyReportResponse,
@@ -22,6 +24,7 @@ from app.schemas.analytics import (
 from app.schemas.forecast import ForecastSummaryResponse
 from app.schemas.purchase_orders import PurchaseOrderResponse
 from app.services.anomaly_detection_service import AnomalyDetectionService
+from app.services.ar_aging_service import ARAgingService
 from app.services.dead_stock_service import DeadStockService
 from app.services.forecasting_service import ForecastingService
 from app.services.insight_narrator import InsightNarratorService
@@ -153,3 +156,19 @@ def get_weekly_insight(
 ) -> WeeklyInsightResponse:
     """Synthesize demand forecasts, reorder alerts, dead stock, and sales into a grounded executive narrative."""
     return service.get_weekly_insight(force_refresh=force_refresh)
+
+
+@router.get(
+    "/ar-aging",
+    response_model=ARAgingReportResponse,
+    summary="Get accounts-receivable aging report across wholesale retailers in 30/60/90+ day buckets",
+)
+def get_ar_aging_report(
+    include_zero_balance: bool = Query(
+        True, description="Include active retailers with zero outstanding balance"
+    ),
+    service: ARAgingService = Depends(get_ar_aging_service),
+    _user: CurrentUser = Depends(require_permission("invoices:view")),
+) -> ARAgingReportResponse:
+    """Compute aged receivables breakdown (Current, 1-30, 31-60, 61-90, 90+ days) per retailer."""
+    return service.get_ar_aging_report(include_zero_balance=include_zero_balance)

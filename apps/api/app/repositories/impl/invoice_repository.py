@@ -311,7 +311,11 @@ class InMemoryInvoiceRepository(InvoiceRepositoryInterface):
         total = len(results)
         sorted_results = sorted(
             results,
-            key=lambda x: getattr(x, "created_at", datetime.now(UTC)),
+            key=lambda x: (
+                getattr(x, "created_at", None)
+                or getattr(x, "invoice_date", None)
+                or datetime.min.replace(tzinfo=UTC)
+            ),
             reverse=True,
         )
         start_idx = (page - 1) * page_size
@@ -319,9 +323,9 @@ class InMemoryInvoiceRepository(InvoiceRepositoryInterface):
         paginated = sorted_results[start_idx:end_idx]
 
         for inv in paginated:
-            if not hasattr(inv, "items"):
+            if not hasattr(inv, "items") or getattr(inv, "items", None) is None:
                 inv.items = self._items.get(inv.id, [])
-            if inv.sales_order_id and not hasattr(inv, "sales_order"):
+            if inv.sales_order_id and getattr(inv, "sales_order", None) is None:
                 inv.sales_order = self._sales_orders.get(inv.sales_order_id)
 
         return paginated, total
