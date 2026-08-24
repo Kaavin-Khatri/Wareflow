@@ -3770,6 +3770,63 @@
   - `GET /analytics/shrinkage?group_by=product|category&period=30d`
 - Pages: `/admin/analytics/suppliers`, `/admin/analytics/retailers`, `/admin/analytics/warehouses`, `/admin/analytics/shrinkage`
 
+---
+
+## Step 16.3 — Period Comparisons & Scheduled Owner Reports
+
+**Timestamp:** 2026-08-24T23:00:00Z
+**Status:** COMPLETE
+
+### What was done
+- **Core Period Comparison Engine (`ComparisonService`)**:
+  - Implemented pure delta math (`compute_metric_delta`) supporting exact percentage deltas (`((current - prior) / prior) * 100`), absolute value deltas, polarity inversion for inverted metrics (e.g. shrinkage loss where drop = favorable), and robust handling of zero-prior / zero-current edge cases.
+  - Implemented multi-window scorecard generation for 6 key wholesale metrics (`revenue`, `gross_margin`, `stock_valuation`, `turnover_rate`, `units_sold`, `shrinkage_value`) across 4 standard periods (`7d`, `30d`, `90d`, `12m`).
+- **Automated Scheduled Weekly Owner Report Engine (`ScheduledReportService`)**:
+  - Aggregates rolling weekly wholesale performance: total revenue & growth vs prior week, blended gross profit margin %, real-time stock holding valuation, 30-day inventory turnover velocity, safety-stock breach count, and overdue accounts receivable balance.
+  - Compiles top 5 fast-moving revenue drivers, top slow-moving stagnant capital products, actionable operational highlights, and an executive narrative summary paragraph.
+  - Implemented 1-page ReportLab PDF generator (`build_pdf`) with modern navy/slate styling, enterprise typography, structured metric tables, operational advisory callouts, and page budget discipline.
+  - Implemented multi-channel dispatch (`dispatch_weekly_report` & `send_weekly_report_now`) delivering the report to all Owner/Manager profiles via Email (HTML body + PDF attachment), WhatsApp template message with key metric bullet points, and persistent In-App notifications.
+- **Async Alert Scheduler Integration**:
+  - Configured `AlertScheduler` with APScheduler Monday morning cron trigger (`CronTrigger(day_of_week="mon", hour=2, minute=30, timezone="UTC")`) invoking `weekly_report_factory` to automatically generate and dispatch executive reports at the start of each business week.
+- **FastAPI Endpoints**:
+  - `GET /analytics/period-comparisons?period=30d`: Scorecard of 6 key enterprise metrics with prior-period deltas.
+  - `GET /analytics/weekly-report/latest`: Current compiled weekly executive summary and actionable highlights.
+  - `GET /analytics/weekly-report/pdf`: Direct PDF binary stream download for owner executive reporting.
+  - `POST /analytics/weekly-report/send-now`: Manual on-demand report generation and multi-channel dispatch.
+- **Frontend UI & Components**:
+  - `apps/web/components/analytics/ComparisonBadge.tsx`: Reusable micro-component rendering trend indicators (▲, ▼, —), emerald/rose/zinc coloring with polarity inversion (`higherIsBetter`), prior value tooltips, and custom size/formatting props.
+  - `apps/web/app/admin/analytics/page.tsx`: Central Analytics & BI Landing Hub featuring:
+    - Real-time period comparison selector (`7D`, `30D`, `90D`, `12M`).
+    - 6 Live enterprise KPI cards with `ComparisonBadge`.
+    - Weekly Executive Briefing card with executive narrative, actionable alerts feed, fast movers, and slow movers.
+    - PDF download and "Send Report Now" dispatch actions with toast notifications.
+    - Specialized navigation directory with direct links to all 8 BI modules.
+  - Attached `ComparisonBadge` to KPI metric cards in `/admin/analytics/profitability`.
+- **Quality Assurance & Verification**:
+  - Backend pytest suite: `apps/api/tests/test_period_comparisons_and_scheduled_reports.py` (5/5 tests passing). Full backend suite: 269/269 tests passing.
+  - Frontend Vitest suite: `apps/web/lib/__tests__/step-16-3-comparison-and-reports-ui.test.tsx` (11/11 tests passing). Full frontend suite: 44 test suites (191 tests) passing.
+  - Next.js production build: Succeeded across all 50 routes with 0 errors.
+
+### Decisions
+- **Zero-Prior Delta Math**: When prior value is 0 and current > 0, delta percentage is set to `+100.0%` with clear string formatting, avoiding `DivisionByZero` runtime errors.
+- **ReportLab Flowable 1-Page Layout**: Enforced strict vertical spacing (`Spacer(1, 4)` to `Spacer(1, 8)`) and table paddings to guarantee the weekly executive report fits cleanly on a single high-impact page without page overflow.
+- **Idempotent Multi-Channel Dispatch**: `send-now` generates identical data and narrative payload to the scheduled cron job, ensuring deterministic owner reporting across scheduled and manual triggers.
+
+### Key values for future steps
+- Services:
+  - `ComparisonService` (`apps/api/app/services/comparison_service.py`)
+  - `ScheduledReportService` (`apps/api/app/services/scheduled_report_service.py`)
+- DI Factories: `get_comparison_service`, `get_scheduled_report_service`, `weekly_report_factory` in `apps/api/app/core/di.py`
+- Endpoints:
+  - `GET /analytics/period-comparisons`
+  - `GET /analytics/weekly-report/latest`
+  - `GET /analytics/weekly-report/pdf`
+  - `POST /analytics/weekly-report/send-now`
+- UI Component: `ComparisonBadge` (`apps/web/components/analytics/ComparisonBadge.tsx`)
+- Central Hub Page: `/admin/analytics` (`apps/web/app/admin/analytics/page.tsx`)
+- Cron Schedule: Every Monday at 02:30 UTC via `AlertScheduler`
+
+
 
 
 

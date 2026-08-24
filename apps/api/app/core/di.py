@@ -183,6 +183,7 @@ from app.services.anomaly_detection_service import AnomalyDetectionService
 from app.services.ar_aging_service import ARAgingService
 from app.services.audit_service import AuditService
 from app.services.business_settings_service import BusinessSettingsService
+from app.services.comparison_service import ComparisonService
 from app.services.customer_service import CustomerService
 from app.services.dead_stock_service import DeadStockService
 from app.services.delivery_service import DeliveryService
@@ -216,6 +217,7 @@ from app.services.retailer_performance_service import RetailerPerformanceService
 from app.services.retailer_service import RetailerService
 from app.services.sales_order_service import SalesOrderService
 from app.services.sales_return_service import SalesReturnService
+from app.services.scheduled_report_service import ScheduledReportService
 from app.services.search_service import SearchService
 from app.services.shrinkage_service import ShrinkageService
 from app.services.staff_service import StaffService
@@ -1057,8 +1059,73 @@ def get_alert_scheduler() -> AlertScheduler:
             finally:
                 db.close()
 
+        def weekly_report_factory() -> ScheduledReportService:
+            session_factory = get_session_factory()
+            db = session_factory()
+            try:
+                notif_repo = NotificationRepository(session=db)
+                settings = get_settings()
+                notif_service = NotificationService(
+                    notification_repo=notif_repo,
+                    channels=[
+                        InAppChannel(notification_repo=notif_repo),
+                        EmailChannel(api_key=settings.resend_api_key),
+                        WhatsAppChannel(
+                            access_token=settings.whatsapp_access_token,
+                            phone_number_id=settings.whatsapp_phone_number_id,
+                            api_version=settings.whatsapp_api_version,
+                        ),
+                    ],
+                )
+                from app.repositories.impl.business_settings_repository import (
+                    SqlAlchemyBusinessSettingsRepository,
+                )
+                from app.repositories.impl.invoice_repository import (
+                    SqlAlchemyInvoiceRepository,
+                )
+                from app.repositories.impl.product_repository import (
+                    SqlAlchemyProductRepository,
+                )
+                from app.repositories.impl.profile_repository import (
+                    SqlAlchemyProfileRepository,
+                )
+                from app.repositories.impl.sales_order_repository import (
+                    SqlAlchemySalesOrderRepository,
+                )
+                from app.repositories.impl.stock_repository import (
+                    SqlAlchemyStockRepository,
+                )
+                from app.services.comparison_service import ComparisonService
+
+                so_repo = SqlAlchemySalesOrderRepository(session=db)
+                stk_repo = SqlAlchemyStockRepository(session=db)
+                prod_repo = SqlAlchemyProductRepository(session=db)
+                inv_repo = SqlAlchemyInvoiceRepository(session=db)
+                prof_repo = SqlAlchemyProfileRepository(session=db)
+                biz_repo = SqlAlchemyBusinessSettingsRepository(session=db)
+
+                comp_service = ComparisonService(
+                    sales_order_repo=so_repo,
+                    stock_repo=stk_repo,
+                    product_repo=prod_repo,
+                )
+
+                return ScheduledReportService(
+                    sales_order_repo=so_repo,
+                    stock_repo=stk_repo,
+                    product_repo=prod_repo,
+                    invoice_repo=inv_repo,
+                    profile_repo=prof_repo,
+                    comparison_service=comp_service,
+                    notification_service=notif_service,
+                    business_settings_repo=biz_repo,
+                )
+            finally:
+                db.close()
+
         _global_alert_scheduler = AlertScheduler(
             alert_engine_factory=alert_engine_factory,
+            weekly_report_factory=weekly_report_factory,
             interval_minutes=30,
         )
     return _global_alert_scheduler
@@ -1260,6 +1327,43 @@ def get_shrinkage_service(
         stock_repo=stock_repo,
         product_repo=product_repo,
     )
+
+
+def get_comparison_service(
+    sales_order_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+) -> ComparisonService:
+    """Factory for ComparisonService (Step 16.3)."""
+    return ComparisonService(
+        sales_order_repo=sales_order_repo,
+        stock_repo=stock_repo,
+        product_repo=product_repo,
+    )
+
+
+def get_scheduled_report_service(
+    sales_order_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    invoice_repo: InvoiceRepositoryInterface = Depends(get_invoice_repository),
+    profile_repo: ProfileRepository = Depends(get_profile_repository),
+    comparison_service: ComparisonService = Depends(get_comparison_service),
+    notification_service: NotificationService = Depends(get_notification_service),
+    business_settings_repo: BusinessSettingsRepositoryInterface = Depends(get_business_settings_repository),
+) -> ScheduledReportService:
+    """Factory for ScheduledReportService (Step 16.3)."""
+    return ScheduledReportService(
+        sales_order_repo=sales_order_repo,
+        stock_repo=stock_repo,
+        product_repo=product_repo,
+        invoice_repo=invoice_repo,
+        profile_repo=profile_repo,
+        comparison_service=comparison_service,
+        notification_service=notification_service,
+        business_settings_repo=business_settings_repo,
+    )
+
 
 
 

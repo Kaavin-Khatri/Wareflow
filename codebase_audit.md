@@ -228,10 +228,15 @@ wareflow/
 │   │       │   └── page.tsx
 │   │       ├── admin/
 │   │       │   ├── analytics/
-│   │       │   │   ├── stock/page.tsx # Stock Valuation & Composition Analytics dashboard
+│   │       │   │   ├── page.tsx          # Central Analytics Landing Hub with period comparison selector & executive weekly summary
+│   │       │   │   ├── stock/page.tsx    # Stock Valuation & Composition Analytics dashboard
 │   │       │   │   ├── ar-aging/page.tsx # Accounts-Receivable Aging Report in 30/60/90+ day buckets
 │   │       │   │   ├── profitability/page.tsx # Profitability & gross margin analytics by product/category/retailer
-│   │       │   │   └── turnover/page.tsx # Inventory turnover velocity & early-warning health banding
+│   │       │   │   ├── turnover/page.tsx # Inventory turnover velocity & early-warning health banding
+│   │       │   │   ├── suppliers/page.tsx# Supplier performance scorecards (on-time, accuracy, returns)
+│   │       │   │   ├── retailers/page.tsx# Retailer ranking & churn risk indicators
+│   │       │   │   ├── warehouses/page.tsx# Multi-warehouse comparative holding valuation & inventory movement
+│   │       │   │   └── shrinkage/page.tsx# Shrinkage, damage & write-off valuation by product & category
 │   │       │   ├── inventory/page.tsx # Multi-warehouse inventory overview & batch inspector
 │   │       │   ├── products/page.tsx  # Product catalog management
 │   │       │   ├── categories/page.tsx# Category hierarchy editor
@@ -264,7 +269,7 @@ wareflow/
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
 │       ├── .env.example
-│       ├── tests/                  # Pytest test suite (264 tests, 100% green)
+│       ├── tests/                  # Pytest test suite (269 tests, 100% green)
 │       │   ├── test_appearance_preferences.py
 │       │   ├── test_di_and_health.py
 │       │   ├── test_models.py
@@ -286,7 +291,8 @@ wareflow/
 │       │   ├── test_export_service.py
 │       │   ├── test_search.py
 │       │   ├── test_profitability_and_turnover.py
-│       │   └── test_performance_and_warehouse_analytics.py
+│       │   ├── test_performance_and_warehouse_analytics.py
+│       │   └── test_period_comparisons_and_scheduled_reports.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
@@ -303,7 +309,7 @@ wareflow/
 │           │       ├── uom.py      # Unit of Measure & Conversions (/uom, /products/{id}/conversions)
 │           │       ├── stock.py    # Multi-Warehouse Stock Overview, Adjustments, Ledger, Transfers, Recalls & Excel Exports (/stock/*, /stock/overview.xlsx, /stock/movements.xlsx)
 │           │       ├── stock_analytics.py # Stock Valuation & Composition Analytics (/analytics/stock/*)
-│           │       ├── analytics.py# Owner Dashboard, AR Aging, Profitability, Turnover, Weekly Insight & Excel Export (/analytics/owner-dashboard, /analytics/ar-aging, /analytics/profitability, /analytics/turnover)
+│           │       ├── analytics.py# Owner Dashboard, AR Aging, Profitability, Turnover, Suppliers, Retailers, Warehouse Breakdown, Shrinkage, Period Comparisons & Weekly Scheduled Reports (/analytics/*)
 │           │       ├── search.py   # Global Unified ERP Search across domains (/search)
 │           │       ├── suppliers.py# Vendor / Supplier profiles (/suppliers)
 │           │       ├── purchase_orders.py # Purchase Orders, Receiving & PDF Export (/purchase-orders, /purchase-orders/{id}/pdf)
@@ -318,15 +324,11 @@ wareflow/
 │           ├── models/             # Domain ORM models
 │           │   ├── __init__.py
 │           │   ├── profile.py      # Staff & Admin user profiles with 2FA & theme prefs
-│           │   ├── uom.py          # Units of Measure & Conversions
-│           │   ├── catalog.py      # Categories & Products
-│           │   ├── warehouse.py    # Warehouses & StockBatches
-│           │   ├── supplier.py     # Suppliers & PurchaseOrders
-│           │   ├── retailer.py     # Retailers, SalesOrders (with buyer_type)
-│           │   ├── billing.py      # Invoices, InvoiceItems, Payments
-│           │   ├── returns.py      # SalesReturns, PurchaseReturns
-│           │   ├── delivery.py     # Deliveries
-│           │   ├── auth_rbac.py    # Roles, Permissions, RolePermissions
+│           │   ├── catalog.py      # Category & Product models
+│           │   ├── warehouse.py    # Warehouse & StockBatch models
+│           │   ├── supplier.py     # Supplier & PurchaseOrder models
+│           │   ├── retailer.py     # Retailer & SalesOrder models
+│           │   ├── billing.py      # Invoice & Payment models
 │           │   ├── portal.py       # Customers, Subscriptions, Magic Tokens, Inquiries
 │           │   ├── recalls.py      # BatchRecalls, RecallAffectedOrders (in active use)
 │           │   ├── inventory.py    # StockMovements (Append-only Ledger)

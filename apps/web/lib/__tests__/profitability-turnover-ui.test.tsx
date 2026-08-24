@@ -174,6 +174,9 @@ vi.mock("@/lib/api-client", () => ({
       if (url.startsWith("/analytics/turnover")) {
         return Promise.resolve(mockTurnoverData);
       }
+      if (url.startsWith("/analytics/period-comparisons")) {
+        return Promise.resolve({ metrics: {} });
+      }
       return Promise.resolve({});
     }),
   },

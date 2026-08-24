@@ -7,6 +7,7 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassBadge } from "@/components/glass/GlassBadge";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
+import { ComparisonBadge } from "@/components/analytics/ComparisonBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { apiClient } from "@/lib/api-client";
 import {
@@ -68,15 +69,22 @@ export default function ProfitabilityAnalyticsPage() {
   const [sortField, setSortField] = useState<keyof ProfitabilityItem>("gross_margin_inr");
   const [sortAsc, setSortAsc] = useState(false);
 
+  const [comparisons, setComparisons] = useState<any>(null);
+
   // Fetch profitability data
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiClient.get<ProfitabilityResponse>(
-        `/analytics/profitability?group_by=${groupBy}&period=${period}`
-      );
-      setData(res);
+      const p = period === "all" ? "30d" : period;
+      const [res, compRes] = await Promise.allSettled([
+        apiClient.get<ProfitabilityResponse>(
+          `/analytics/profitability?group_by=${groupBy}&period=${period}`
+        ),
+        apiClient.get<any>(`/analytics/period-comparisons?period=${p}`),
+      ]);
+      if (res.status === "fulfilled") setData(res.value);
+      if (compRes.status === "fulfilled") setComparisons(compRes.value);
     } catch (err: any) {
       setError(err?.message || "Failed to load profitability metrics");
     } finally {
@@ -179,34 +187,43 @@ export default function ProfitabilityAnalyticsPage() {
             <span className="text-[11px] font-semibold text-[var(--text-subtle)] px-2 uppercase font-mono">
               Group By:
             </span>
-            {(["product", "category", "retailer"] as GroupByOption[]).map((opt) => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => setGroupBy(opt)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all flex items-center gap-1.5 ${
-                  groupBy === opt
-                    ? "bg-[var(--accent)] text-white shadow-[0_0_12px_var(--accent-glow)]"
-                    : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
-                }`}
-              >
-                {opt === "product" && <Package className="w-3.5 h-3.5" />}
-                {opt === "category" && <Tags className="w-3.5 h-3.5" />}
-                {opt === "retailer" && <Store className="w-3.5 h-3.5" />}
-                <span>{opt}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Period Selector Tabs */}
-          <div className="flex items-center gap-1 bg-[var(--surface-overlay)] p-1 rounded-xl border border-[var(--glass-border)]">
-            <Calendar className="w-3.5 h-3.5 text-[var(--text-muted)] ml-2 mr-1" />
             {(
               [
-                { id: "7d", label: "7 Days" },
-                { id: "30d", label: "30 Days" },
-                { id: "90d", label: "90 Days" },
-                { id: "12m", label: "1 Year" },
+                { id: "product", label: "Product SKU", icon: Package },
+                { id: "category", label: "Category", icon: Tags },
+                { id: "retailer", label: "Retailer / Buyer", icon: Store },
+              ] as { id: GroupByOption; label: string; icon: any }[]
+            ).map((opt) => {
+              const Icon = opt.icon;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setGroupBy(opt.id)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                    groupBy === opt.id
+                      ? "bg-[var(--accent)] text-white font-bold shadow-sm"
+                      : "text-[var(--text-muted)] hover:text-[var(--text)]"
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Period Filter Pills */}
+          <div className="flex items-center gap-1 bg-[var(--surface-overlay)] p-1 rounded-xl border border-[var(--glass-border)]">
+            <span className="text-[11px] font-semibold text-[var(--text-subtle)] px-2 uppercase font-mono flex items-center gap-1">
+              <Calendar className="w-3 h-3" /> Period:
+            </span>
+            {(
+              [
+                { id: "7d", label: "7D" },
+                { id: "30d", label: "30D" },
+                { id: "90d", label: "90D" },
+                { id: "12m", label: "12M" },
                 { id: "all", label: "All Time" },
               ] as { id: PeriodOption; label: string }[]
             ).map((p) => (
@@ -229,77 +246,109 @@ export default function ProfitabilityAnalyticsPage() {
         {/* Top KPI Metrics Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
           {/* Total Revenue */}
-          <GlassCard className="p-4 relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider font-mono">
-                Total Revenue
-              </span>
-              <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                <IndianRupee className="w-4 h-4" />
+          <GlassCard className="p-4 relative overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider font-mono">
+                  Total Revenue
+                </span>
+                <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                  <IndianRupee className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl md:text-2xl font-black text-[var(--text)] mt-2 font-mono">
+                ₹
+                <AnimatedNumber value={data?.summary?.total_revenue || 0} />
               </div>
             </div>
-            <div className="text-xl md:text-2xl font-black text-[var(--text)] mt-2 font-mono">
-              ₹
-              <AnimatedNumber value={data?.summary?.total_revenue || 0} />
-            </div>
-            <div className="text-[11px] text-[var(--text-subtle)] mt-1 flex items-center gap-1">
-              <span>{data?.summary?.total_units_sold || 0} total units sold</span>
+            <div className="text-[11px] text-[var(--text-subtle)] mt-2 flex items-center justify-between">
+              <span>{data?.summary?.total_units_sold || 0} units</span>
+              {comparisons?.metrics?.revenue && (
+                <ComparisonBadge
+                  deltaPct={comparisons.metrics.revenue.delta_pct}
+                  higherIsBetter={true}
+                  periodLabel={`vs prior ${period}`}
+                  size="xs"
+                />
+              )}
             </div>
           </GlassCard>
 
           {/* Total Procurement Cost */}
-          <GlassCard className="p-4 relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider font-mono">
-                Total Cost (COGS)
-              </span>
-              <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                <Package className="w-4 h-4" />
+          <GlassCard className="p-4 relative overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider font-mono">
+                  Total Cost (COGS)
+                </span>
+                <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <Package className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl md:text-2xl font-black text-[var(--text)] mt-2 font-mono">
+                ₹
+                <AnimatedNumber value={data?.summary?.total_cost || 0} />
               </div>
             </div>
-            <div className="text-xl md:text-2xl font-black text-[var(--text)] mt-2 font-mono">
-              ₹
-              <AnimatedNumber value={data?.summary?.total_cost || 0} />
-            </div>
-            <div className="text-[11px] text-[var(--text-subtle)] mt-1">
+            <div className="text-[11px] text-[var(--text-subtle)] mt-2">
               <span>Weighted supplier acquisition cost</span>
             </div>
           </GlassCard>
 
           {/* Total Gross Profit INR */}
-          <GlassCard className="p-4 relative overflow-hidden border-emerald-500/30 bg-emerald-950/10">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider font-mono">
-                Gross Profit (₹)
-              </span>
-              <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                <TrendingUp className="w-4 h-4" />
+          <GlassCard className="p-4 relative overflow-hidden border-emerald-500/30 bg-emerald-950/10 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider font-mono">
+                  Gross Profit (₹)
+                </span>
+                <div className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl md:text-2xl font-black text-emerald-400 mt-2 font-mono">
+                ₹
+                <AnimatedNumber value={data?.summary?.total_gross_margin_inr || 0} />
               </div>
             </div>
-            <div className="text-xl md:text-2xl font-black text-emerald-400 mt-2 font-mono">
-              ₹
-              <AnimatedNumber value={data?.summary?.total_gross_margin_inr || 0} />
-            </div>
-            <div className="text-[11px] text-emerald-500/80 mt-1">
-              <span>Revenue minus Cost of Goods</span>
+            <div className="text-[11px] text-emerald-500/80 mt-2 flex items-center justify-between">
+              <span>Revenue minus Cost</span>
+              {comparisons?.metrics?.gross_margin && (
+                <ComparisonBadge
+                  deltaPct={comparisons.metrics.gross_margin.delta_pct}
+                  higherIsBetter={true}
+                  periodLabel={`vs prior ${period}`}
+                  size="xs"
+                />
+              )}
             </div>
           </GlassCard>
 
           {/* Overall Margin % */}
-          <GlassCard className="p-4 relative overflow-hidden">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider font-mono">
-                Blended Margin %
-              </span>
-              <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                <Percent className="w-4 h-4" />
+          <GlassCard className="p-4 relative overflow-hidden flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-[var(--text-muted)] uppercase tracking-wider font-mono">
+                  Blended Margin %
+                </span>
+                <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                  <Percent className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="text-xl md:text-2xl font-black text-[var(--text)] mt-2 font-mono">
+                <AnimatedNumber value={data?.summary?.overall_margin_pct || 0} />%
               </div>
             </div>
-            <div className="text-xl md:text-2xl font-black text-[var(--text)] mt-2 font-mono">
-              <AnimatedNumber value={data?.summary?.overall_margin_pct || 0} />%
-            </div>
-            <div className="text-[11px] text-[var(--text-subtle)] mt-1">
-              <span>Gross profit / total revenue</span>
+            <div className="text-[11px] text-[var(--text-subtle)] mt-2 flex items-center justify-between">
+              <span>Gross profit / revenue</span>
+              {comparisons?.metrics?.gross_margin && (
+                <ComparisonBadge
+                  deltaPct={comparisons.metrics.gross_margin.delta_pct}
+                  higherIsBetter={true}
+                  periodLabel={`vs prior ${period}`}
+                  size="xs"
+                />
+              )}
             </div>
           </GlassCard>
         </div>

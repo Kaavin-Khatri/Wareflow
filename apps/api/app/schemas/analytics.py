@@ -563,3 +563,97 @@ class ShrinkageResponse(BaseModel):
     generated_at: datetime = Field(..., description="Timestamp of calculation")
 
 
+# --- Step 16.3: Period Comparisons & Scheduled Weekly Reports ---
+
+
+class ComparisonMetricResult(BaseModel):
+    """Generic period-over-period and year-over-year comparative metric result (Step 16.3)."""
+
+    metric_key: str = Field(..., description="Programmatic metric key (e.g. revenue, margin, turnover)")
+    metric_label: str = Field(..., description="Human readable label")
+    current_value: float = Field(..., description="Value in current period")
+    prior_value: float = Field(..., description="Value in immediately preceding period")
+    prior_year_value: float | None = Field(None, description="Value in same period last year")
+    delta_value: float = Field(..., description="Absolute change (current - prior)")
+    delta_pct: float = Field(..., description="Percentage change ((current - prior) / prior) * 100")
+    delta_year_pct: float | None = Field(None, description="Percentage change vs same period last year")
+    trend: str = Field("flat", description="Trend direction: 'up', 'down', 'flat'")
+    is_positive: bool = Field(True, description="True if trend movement is favorable based on polarity")
+    higher_is_better: bool = Field(True, description="Whether higher values are beneficial")
+    period_label: str = Field("vs prior period", description="Baseline comparison label")
+    formatted_current: str | None = Field(None, description="Formatted string e.g. ₹1,20,000")
+    formatted_prior: str | None = Field(None, description="Formatted string for prior value")
+
+
+class PeriodComparisonsResponse(BaseModel):
+    """Comprehensive comparative scorecard across all major ERP KPIs (Step 16.3)."""
+
+    period: str = Field(..., description="Selected time horizon (7d, 30d, 90d, 12m)")
+    current_range: str = Field(..., description="Human readable current date range")
+    prior_range: str = Field(..., description="Human readable comparison date range")
+    metrics: dict[str, ComparisonMetricResult] = Field(..., description="Map of metric_key -> comparison result")
+    generated_at: datetime = Field(..., description="Timestamp of calculation")
+
+
+class WeeklyReportHighlightItem(BaseModel):
+    """Structured highlight item for the weekly owner summary."""
+
+    title: str = Field(..., description="Highlight title")
+    description: str = Field(..., description="Contextual note / explanation")
+    category: str = Field(..., description="Category: movers, slow_movers, low_stock, overdue_ar, turnover, shrinkage")
+    metric_value: str | None = Field(None, description="Optional metric display text")
+    badge_variant: str | None = Field("neutral", description="Visual badge style")
+
+
+class WeeklyReportData(BaseModel):
+    """Complete data structure for the 1-page Weekly Business Summary (Step 16.3)."""
+
+    report_id: str = Field(..., description="Unique generated report ID")
+    start_date: str = Field(..., description="Start date of the 7-day period (YYYY-MM-DD)")
+    end_date: str = Field(..., description="End date of the 7-day period (YYYY-MM-DD)")
+    period_label: str = Field(..., description="Human friendly date range label")
+    generated_at: datetime = Field(..., description="Timestamp of report generation")
+    
+    # Executive Scorecard
+    revenue_inr: float = Field(0.0, description="Gross sales revenue in the week")
+    revenue_delta_pct: float = Field(0.0, description="Revenue % change vs prior week")
+    gross_margin_pct: float = Field(0.0, description="Gross profit margin % in the week")
+    gross_margin_delta_pct: float = Field(0.0, description="Margin % change vs prior week")
+    total_stock_valuation_inr: float = Field(0.0, description="Current total inventory valuation")
+    turnover_ratio_30d: float = Field(0.0, description="Trailing 30-day inventory turnover ratio")
+    
+    # Operational Alerts
+    low_stock_count: int = Field(0, description="Count of products below reorder point")
+    overdue_invoices_count: int = Field(0, description="Count of unpaid invoices past due")
+    overdue_amount_inr: float = Field(0.0, description="Total outstanding overdue AR in INR")
+    shrinkage_inr: float = Field(0.0, description="Weekly damage & loss write-off value")
+    
+    # Fast & Slow Movers
+    top_fast_movers: list[dict] = Field(default_factory=list, description="Top 3 revenue generating products")
+    top_slow_movers: list[dict] = Field(default_factory=list, description="Top 3 stagnant SKUs by tied-up capital")
+    
+    # Key Highlights
+    highlights: list[WeeklyReportHighlightItem] = Field(default_factory=list, description="AI & business insights")
+    narrative_summary: str = Field("", description="Concise executive paragraph summarizing the week")
+
+
+class SendWeeklyReportRequest(BaseModel):
+    """Payload to trigger manual or automated dispatch of the weekly report."""
+
+    channels: list[str] = Field(default_factory=lambda: ["email", "whatsapp"], description="Target channels")
+    recipients: list[str] | None = Field(None, description="Optional custom recipient email/phone override")
+    force_fresh: bool = Field(False, description="Recompute fresh metrics instead of cached")
+
+
+class SendWeeklyReportResponse(BaseModel):
+    """Response returned when weekly report is dispatched."""
+
+    success: bool = Field(True, description="Whether dispatch was initiated successfully")
+    report_id: str = Field(..., description="ID of the sent report")
+    dispatched_at: datetime = Field(..., description="Timestamp of dispatch")
+    channels_sent: list[str] = Field(default_factory=list, description="Channels successfully dispatched to")
+    recipients_count: int = Field(0, description="Total recipients reached")
+    summary_text: str = Field("", description="Executive summary text dispatched in message")
+
+
+

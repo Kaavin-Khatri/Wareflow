@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from app.core.di import (
     get_anomaly_detection_service,
     get_ar_aging_service,
+    get_comparison_service,
     get_dead_stock_service,
     get_export_service,
     get_forecasting_service,
@@ -13,6 +14,7 @@ from app.core.di import (
     get_profitability_service,
     get_reorder_suggestion_service,
     get_retailer_performance_service,
+    get_scheduled_report_service,
     get_shrinkage_service,
     get_supplier_performance_service,
     get_turnover_service,
@@ -21,23 +23,29 @@ from app.core.di import (
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.analytics import (
     ARAgingReportResponse,
+    ComparisonMetricResult,
     CreatePOFromSuggestionsRequest,
     DeadStockResponse,
     OrderAnomalyReportResponse,
     OwnerDashboardResponse,
+    PeriodComparisonsResponse,
     ProfitabilityResponse,
     ReorderSuggestionsResponse,
     RetailerPerformanceResponse,
+    SendWeeklyReportRequest,
+    SendWeeklyReportResponse,
     ShrinkageResponse,
     SupplierPerformanceResponse,
     TurnoverResponse,
     WarehouseBreakdownResponse,
     WeeklyInsightResponse,
+    WeeklyReportData,
 )
 from app.schemas.forecast import ForecastSummaryResponse
 from app.schemas.purchase_orders import PurchaseOrderResponse
 from app.services.anomaly_detection_service import AnomalyDetectionService
 from app.services.ar_aging_service import ARAgingService
+from app.services.comparison_service import ComparisonService
 from app.services.dead_stock_service import DeadStockService
 from app.services.export_service import ExportService
 from app.services.forecasting_service import ForecastingService
@@ -46,6 +54,7 @@ from app.services.owner_dashboard_service import OwnerDashboardService
 from app.services.profitability_service import ProfitabilityService
 from app.services.reorder_suggestion_service import ReorderSuggestionService
 from app.services.retailer_performance_service import RetailerPerformanceService
+from app.services.scheduled_report_service import ScheduledReportService
 from app.services.shrinkage_service import ShrinkageService
 from app.services.supplier_performance_service import SupplierPerformanceService
 from app.services.turnover_service import TurnoverService
@@ -315,5 +324,74 @@ def get_shrinkage_analytics(
 ) -> ShrinkageResponse:
     """Analyze inventory shrinkage, loss totals, and damage rates from negative stock adjustments."""
     return service.get_shrinkage(group_by=group_by, period=period)
+
+
+# --- Step 16.3: Period Comparisons & Scheduled Weekly Reports ---
+
+
+@router.get(
+    "/period-comparisons",
+    response_model=PeriodComparisonsResponse,
+    summary="Get period-over-period and YoY comparative deltas across core business KPIs",
+)
+def get_period_comparisons(
+    period: str = Query(
+        "30d",
+        pattern="^(7d|30d|90d|12m|365d)$",
+        description="Time window for period comparison: 7d, 30d, 90d, 12m",
+    ),
+    service: ComparisonService = Depends(get_comparison_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> PeriodComparisonsResponse:
+    """Calculate period-over-period and year-over-year percentage and absolute deltas for all ERP KPIs."""
+    return service.get_period_comparisons(period=period)
+
+
+@router.get(
+    "/weekly-report/latest",
+    response_model=WeeklyReportData,
+    summary="Get latest 7-day executive weekly business summary data",
+)
+def get_latest_weekly_report(
+    service: ScheduledReportService = Depends(get_scheduled_report_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> WeeklyReportData:
+    """Compile and retrieve the latest 7-day executive business summary dataset."""
+    return service.compile_weekly_report_data()
+
+
+@router.get(
+    "/weekly-report/pdf",
+    summary="Download formatted 1-page Weekly Business Summary PDF report",
+)
+def download_weekly_report_pdf(
+    service: ScheduledReportService = Depends(get_scheduled_report_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> Response:
+    """Generate and download a high-density 1-page A4 ReportLab PDF weekly summary."""
+    pdf_bytes = service.generate_weekly_report_pdf()
+    filename = f"wareflow_weekly_summary_{datetime.now().strftime('%Y%m%d')}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@router.post(
+    "/weekly-report/send-now",
+    response_model=SendWeeklyReportResponse,
+    summary="Manually trigger immediate dispatch of the weekly report via email and WhatsApp",
+)
+def send_weekly_report_now(
+    payload: SendWeeklyReportRequest | None = None,
+    service: ScheduledReportService = Depends(get_scheduled_report_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> SendWeeklyReportResponse:
+    """Trigger manual dispatch of the 1-page executive weekly summary to Owners and Managers."""
+    channels = payload.channels if payload and payload.channels else ["email", "whatsapp", "in_app"]
+    recipients = payload.recipients if payload else None
+    return service.send_weekly_report(channels=channels, recipients=recipients)
+
 
 
