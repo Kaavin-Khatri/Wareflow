@@ -12,7 +12,11 @@ from app.core.di import (
     get_owner_dashboard_service,
     get_profitability_service,
     get_reorder_suggestion_service,
+    get_retailer_performance_service,
+    get_shrinkage_service,
+    get_supplier_performance_service,
     get_turnover_service,
+    get_warehouse_analytics_service,
 )
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.analytics import (
@@ -23,7 +27,11 @@ from app.schemas.analytics import (
     OwnerDashboardResponse,
     ProfitabilityResponse,
     ReorderSuggestionsResponse,
+    RetailerPerformanceResponse,
+    ShrinkageResponse,
+    SupplierPerformanceResponse,
     TurnoverResponse,
+    WarehouseBreakdownResponse,
     WeeklyInsightResponse,
 )
 from app.schemas.forecast import ForecastSummaryResponse
@@ -37,7 +45,11 @@ from app.services.insight_narrator import InsightNarratorService
 from app.services.owner_dashboard_service import OwnerDashboardService
 from app.services.profitability_service import ProfitabilityService
 from app.services.reorder_suggestion_service import ReorderSuggestionService
+from app.services.retailer_performance_service import RetailerPerformanceService
+from app.services.shrinkage_service import ShrinkageService
+from app.services.supplier_performance_service import SupplierPerformanceService
 from app.services.turnover_service import TurnoverService
+from app.services.warehouse_analytics_service import WarehouseAnalyticsService
 
 router = APIRouter(prefix="/analytics", tags=["Analytics & AI"])
 
@@ -241,4 +253,67 @@ def get_turnover_analytics(
 ) -> TurnoverResponse:
     """Compute inventory turnover ratio and days of stock on hand ranked slowest-to-fastest with visual velocity health banding."""
     return service.get_turnover(period=period)
+
+
+@router.get(
+    "/supplier-performance",
+    response_model=SupplierPerformanceResponse,
+    summary="Get supplier on-time delivery rates, fulfillment accuracy, and return metrics",
+)
+def get_supplier_performance_analytics(
+    service: SupplierPerformanceService = Depends(get_supplier_performance_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> SupplierPerformanceResponse:
+    """Calculate vendor reliability scorecards, on-time delivery rates, fulfillment accuracy, and return rates."""
+    return service.get_supplier_performance()
+
+
+@router.get(
+    "/retailer-performance",
+    response_model=RetailerPerformanceResponse,
+    summary="Get retailer purchasing volume, ordering trend, and churn risk flags",
+)
+def get_retailer_performance_analytics(
+    service: RetailerPerformanceService = Depends(get_retailer_performance_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> RetailerPerformanceResponse:
+    """Rank wholesale retailers by revenue and order volume, tracking ordering frequency and flagging churn risks."""
+    return service.get_retailer_performance()
+
+
+@router.get(
+    "/warehouse-breakdown",
+    response_model=WarehouseBreakdownResponse,
+    summary="Get per-warehouse stock valuation and 30-day movement throughput",
+)
+def get_warehouse_breakdown_analytics(
+    service: WarehouseAnalyticsService = Depends(get_warehouse_analytics_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> WarehouseBreakdownResponse:
+    """Calculate inventory holding valuations, batch counts, and 30-day inbound/outbound volume per warehouse."""
+    return service.get_warehouse_breakdown()
+
+
+@router.get(
+    "/shrinkage",
+    response_model=ShrinkageResponse,
+    summary="Get damage, loss, and discrepancy write-off analytics per product or category",
+)
+def get_shrinkage_analytics(
+    group_by: str = Query(
+        "product",
+        pattern="^(product|category)$",
+        description="Grouping dimension: product or category",
+    ),
+    period: str = Query(
+        "30d",
+        pattern="^(7d|30d|90d|12m|365d|all)$",
+        description="Reporting time window: 7d, 30d, 90d, 12m, all",
+    ),
+    service: ShrinkageService = Depends(get_shrinkage_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> ShrinkageResponse:
+    """Analyze inventory shrinkage, loss totals, and damage rates from negative stock adjustments."""
+    return service.get_shrinkage(group_by=group_by, period=period)
+
 

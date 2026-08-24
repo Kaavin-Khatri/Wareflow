@@ -4,7 +4,7 @@ import { filterNavSections, NAVIGATION_SECTIONS } from "../nav";
 describe("Dynamic Navigation & RBAC Filtering", () => {
   it("Owner role can see all navigation sections and items", () => {
     const visible = filterNavSections(NAVIGATION_SECTIONS, [], "Owner");
-    expect(visible.length).toBe(3);
+    expect(visible.length).toBe(NAVIGATION_SECTIONS.length);
     const allItemsCount = visible.reduce((sum, s) => sum + s.items.length, 0);
     const originalCount = NAVIGATION_SECTIONS.reduce((sum, s) => sum + s.items.length, 0);
     expect(allItemsCount).toBe(originalCount);

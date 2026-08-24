@@ -3712,6 +3712,64 @@
   - `GET /analytics/turnover?period=30d`
 - Pages: `/admin/analytics/profitability`, `/admin/analytics/turnover`
 
+---
+
+### Step 16.2 — Supplier & Retailer Performance + Warehouse Breakdown + Shrinkage Tracking
+
+**Timestamp:** 2026-08-24T20:53:00Z
+**Status:** COMPLETE
+
+### What was done
+- **Supplier Performance Analytics (`SupplierPerformanceService` + `GET /analytics/supplier-performance`)**:
+  - Implemented supplier vendor scoring across on-time delivery rate, fulfillment accuracy, return rate, and total procurement spend.
+  - Metrics:
+    - `On-Time Delivery Rate = (On-time completed POs / Total completed POs) * 100%` (where `receipt_date <= po.expected_date`)
+    - `Fulfillment Accuracy = (Total units received / Total units ordered) * 100%`
+    - `Return Rate = (Total returned units from purchase returns / Total units received) * 100%`
+    - `Quality Banding`: `excellent` (On-time ≥90%, Accuracy ≥95%, Return ≤2%), `good` (On-time ≥75%, Accuracy ≥85%, Return ≤5%), `needs_improvement` (otherwise).
+- **Retailer Performance & Churn Risk (`RetailerPerformanceService` + `GET /analytics/retailer-performance`)**:
+  - Implemented B2B retail buyer rankings by revenue, average order value (AOV), and ordering frequency trends.
+  - Calculated ordering interval: `span_days / (order_count - 1)` (or fallback 30.0d).
+  - **Churn-Risk Heuristic**: Flags `is_churn_risk = True` when `days_since_last_order > 2 * avg_order_gap_days` and `order_count >= 2`.
+  - Trend Detection: `increasing` (recent order gap significantly shorter than historical average), `decreasing` (recent order gap longer than average), `steady` (consistent pace).
+- **Warehouse Holdings & Throughput Breakdown (`WarehouseAnalyticsService` + `GET /analytics/warehouse-breakdown`)**:
+  - Aggregated multi-facility stock valuation, total units stored, and 30-day inbound/outbound physical flow from stock movements ledger.
+  - Calculated per-warehouse `valuation_share_pct = (warehouse_val / company_total_val) * 100%`.
+- **Shrinkage & Damage Write-Off Tracking (`ShrinkageService` + `GET /analytics/shrinkage`)**:
+  - Aggregated negative inventory adjustment movements (`type="adjustment"`, `quantity < 0`, reasons: damage, loss, theft, spoilage, discrepancy).
+  - Calculated monetary write-off value: `abs(quantity) * product.cost_price`.
+  - Calculated shrinkage rate: `(total_shrinkage_value / (total_stock_value + total_shrinkage_value)) * 100%`.
+  - Supported grouping by `"product"` SKU and `"category"`, across time windows (7d, 30d, 90d, 12m, all).
+- **Frontend Analytics Dashboards**:
+  - `/admin/analytics/suppliers`: Vendor performance leaderboard, KPI cards, rating badges, search and sortable table.
+  - `/admin/analytics/retailers`: Retailer revenue ranking, KPI cards, churn-risk warning chips, velocity trend indicators, and ledger navigation.
+  - `/admin/analytics/warehouses`: Facility inventory holding cards, valuation share progress bars, and 30d flow metrics.
+  - `/admin/analytics/shrinkage`: Damage write-off dashboard, product/category toggle, period filters, and loss share bars.
+  - Updated navigation in `apps/web/lib/nav.ts` with dedicated "Analytics & Intelligence" section.
+- **Verification & QA**:
+  - Backend pytest suite: `apps/api/tests/test_performance_and_warehouse_analytics.py` (5/5 tests passing). Full backend suite: 264/264 tests passing.
+  - Frontend Vitest suite: `apps/web/lib/__tests__/step-16-2-analytics-ui.test.tsx` (4/4 tests passing). Full frontend suite: 43 test suites (180 tests) passing.
+  - Next.js production build: Succeeded across all 49 routes with 0 errors.
+
+### Decisions
+- **Churn-Risk Heuristic Protocol**: Recorded as a *tunable, explicitly-approximate signal — not a prediction, a flag worth a human look*. When a retailer's dormancy interval exceeds 2x their established cadence, a human sales rep should proactively reach out before the customer is lost.
+- **Quality Banding for Suppliers**: Multi-variable grading prevents vendors with high fulfillment accuracy but chronic delivery delays from receiving top tier ratings.
+- **Shrinkage Valuation at Cost Price**: Shrinkage reflects direct capital loss of procurement cost rather than unrealized potential retail margin.
+
+### Key values for future steps
+- Services:
+  - `SupplierPerformanceService` (`apps/api/app/services/supplier_performance_service.py`)
+  - `RetailerPerformanceService` (`apps/api/app/services/retailer_performance_service.py`)
+  - `WarehouseAnalyticsService` (`apps/api/app/services/warehouse_analytics_service.py`)
+  - `ShrinkageService` (`apps/api/app/services/shrinkage_service.py`)
+- DI Factories: `get_supplier_performance_service`, `get_retailer_performance_service`, `get_warehouse_analytics_service`, `get_shrinkage_service` in `apps/api/app/core/di.py`
+- Endpoints:
+  - `GET /analytics/supplier-performance`
+  - `GET /analytics/retailer-performance`
+  - `GET /analytics/warehouse-breakdown`
+  - `GET /analytics/shrinkage?group_by=product|category&period=30d`
+- Pages: `/admin/analytics/suppliers`, `/admin/analytics/retailers`, `/admin/analytics/warehouses`, `/admin/analytics/shrinkage`
+
 
 
 

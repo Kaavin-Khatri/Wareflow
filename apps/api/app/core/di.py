@@ -212,21 +212,25 @@ from app.services.purchase_order_service import PurchaseOrderService
 from app.services.purchase_return_service import PurchaseReturnService
 from app.services.recall_service import RecallService
 from app.services.reorder_suggestion_service import ReorderSuggestionService
+from app.services.retailer_performance_service import RetailerPerformanceService
 from app.services.retailer_service import RetailerService
 from app.services.sales_order_service import SalesOrderService
 from app.services.sales_return_service import SalesReturnService
 from app.services.search_service import SearchService
+from app.services.shrinkage_service import ShrinkageService
 from app.services.staff_service import StaffService
 from app.services.stock_analytics_service import StockAnalyticsService
 from app.services.stock_service import StockService
 from app.services.stock_subscription_service import StockSubscriptionService
 from app.services.storage_service import StorageServiceInterface, SupabaseStorageService
+from app.services.supplier_performance_service import SupplierPerformanceService
 from app.services.supplier_portal_service import SupplierPortalService
 from app.services.supplier_service import SupplierService
 from app.services.transfer_service import TransferService
 from app.services.turnover_service import TurnoverService
 from app.services.two_factor_service import TwoFactorService
 from app.services.uom_service import UomService
+from app.services.warehouse_analytics_service import WarehouseAnalyticsService
 
 
 @lru_cache
@@ -1210,5 +1214,52 @@ def get_turnover_service(
         product_repo=product_repo,
         stock_repo=stock_repo,
     )
+
+
+def get_supplier_performance_service(
+    supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
+    purchase_order_repo: PurchaseOrderRepositoryInterface = Depends(get_db_purchase_order_repository),
+    purchase_return_repo: PurchaseReturnRepositoryInterface = Depends(get_db_purchase_return_repository),
+) -> SupplierPerformanceService:
+    """Factory for SupplierPerformanceService (Step 16.2)."""
+    return SupplierPerformanceService(
+        supplier_repo=supplier_repo,
+        purchase_order_repo=purchase_order_repo,
+        purchase_return_repo=purchase_return_repo,
+    )
+
+
+def get_retailer_performance_service(
+    retailer_repo: RetailerRepository = Depends(get_retailer_repository),
+    sales_order_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
+) -> RetailerPerformanceService:
+    """Factory for RetailerPerformanceService (Step 16.2)."""
+    return RetailerPerformanceService(
+        retailer_repo=retailer_repo,
+        sales_order_repo=sales_order_repo,
+    )
+
+
+def get_warehouse_analytics_service(
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+) -> WarehouseAnalyticsService:
+    """Factory for WarehouseAnalyticsService (Step 16.2)."""
+    return WarehouseAnalyticsService(
+        stock_repo=stock_repo,
+        product_repo=product_repo,
+    )
+
+
+def get_shrinkage_service(
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+) -> ShrinkageService:
+    """Factory for ShrinkageService (Step 16.2)."""
+    return ShrinkageService(
+        stock_repo=stock_repo,
+        product_repo=product_repo,
+    )
+
 
 

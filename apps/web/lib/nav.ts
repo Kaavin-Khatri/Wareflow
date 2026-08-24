@@ -171,6 +171,59 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: "Analytics & Intelligence",
+    items: [
+      {
+        name: "Stock Valuation",
+        href: "/admin/analytics/stock",
+        icon: "BarChart3",
+        requiredPermission: "inventory:view",
+      },
+      {
+        name: "Profitability & Margins",
+        href: "/admin/analytics/profitability",
+        icon: "TrendingUp",
+        requiredPermission: "invoices:view",
+      },
+      {
+        name: "Inventory Turnover",
+        href: "/admin/analytics/turnover",
+        icon: "Activity",
+        requiredPermission: "inventory:view",
+      },
+      {
+        name: "AR Aging Report",
+        href: "/admin/analytics/ar-aging",
+        icon: "Clock",
+        requiredPermission: "invoices:view",
+      },
+      {
+        name: "Supplier Reliability",
+        href: "/admin/analytics/suppliers",
+        icon: "Truck",
+        requiredPermission: "inventory:view",
+      },
+      {
+        name: "Retailer Performance",
+        href: "/admin/analytics/retailers",
+        icon: "Store",
+        requiredPermission: "orders:view",
+      },
+      {
+        name: "Warehouse Holdings",
+        href: "/admin/analytics/warehouses",
+        icon: "Building2",
+        requiredPermission: "inventory:view",
+      },
+      {
+        name: "Shrinkage & Loss",
+        href: "/admin/analytics/shrinkage",
+        icon: "AlertOctagon",
+        requiredPermission: "inventory:view",
+      },
+    ],
+  },
+  {
     title: "Organization & Admin",
     items: [
       {

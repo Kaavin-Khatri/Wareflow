@@ -264,7 +264,7 @@ wareflow/
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
 │       ├── .env.example
-│       ├── tests/                  # Pytest test suite (259 tests, 100% green)
+│       ├── tests/                  # Pytest test suite (264 tests, 100% green)
 │       │   ├── test_appearance_preferences.py
 │       │   ├── test_di_and_health.py
 │       │   ├── test_models.py
@@ -285,7 +285,8 @@ wareflow/
 │       │   ├── test_stock_subscriptions_and_restock.py
 │       │   ├── test_export_service.py
 │       │   ├── test_search.py
-│       │   └── test_profitability_and_turnover.py
+│       │   ├── test_profitability_and_turnover.py
+│       │   └── test_performance_and_warehouse_analytics.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
@@ -568,6 +569,10 @@ wareflow/
 | GET    | `/analytics/ar-aging`                  | Bucketed accounts receivable aging (Current, 30/60/90+)| Yes (`invoices:view`)           |
 | GET    | `/analytics/profitability`             | Gross margin analytics rolled up by product/category/retailer | Yes (Authenticated User)        |
 | GET    | `/analytics/turnover`                  | Inventory turnover ratio & days of stock with health banding  | Yes (Authenticated User)        |
+| GET    | `/analytics/supplier-performance`      | Vendor scoring (on-time rate, accuracy, return rate, spend & bands) | Yes (Authenticated User)        |
+| GET    | `/analytics/retailer-performance`      | Retailer revenue rank, velocity trend & 2x gap churn risk alerts | Yes (Authenticated User)        |
+| GET    | `/analytics/warehouse-breakdown`       | Per-facility inventory valuation, units stored, and 30d flow   | Yes (Authenticated User)        |
+| GET    | `/analytics/shrinkage`                 | Damage write-offs, discrepancies & shrinkage rate by product/cat| Yes (Authenticated User)        |
 
 ## Architecture Layers
 

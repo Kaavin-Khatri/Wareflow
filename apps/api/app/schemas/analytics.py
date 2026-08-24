@@ -420,3 +420,146 @@ class TurnoverResponse(BaseModel):
     items: list[TurnoverItem] = Field(default_factory=list, description="Ranked product turnover velocity records")
     generated_at: datetime = Field(..., description="Timestamp of calculation")
 
+
+# --- Step 16.2: Supplier & Retailer Performance, Warehouse Breakdown & Shrinkage ---
+
+
+class SupplierPerformanceItem(BaseModel):
+    """Supplier fulfillment and on-time reliability score."""
+
+    supplier_id: str = Field(..., description="Unique supplier ID")
+    supplier_name: str = Field(..., description="Registered vendor company name")
+    contact_person: str | None = Field(None, description="Primary contact name")
+    phone: str | None = Field(None, description="Contact phone")
+    total_pos: int = Field(0, description="Total purchase orders placed with supplier")
+    completed_pos: int = Field(0, description="Received or completed purchase orders")
+    on_time_delivery_pct: float = Field(0.0, description="Percentage of orders delivered on or before expected date")
+    fulfillment_accuracy_pct: float = Field(0.0, description="Percentage of ordered items received without discrepancy")
+    return_rate_pct: float = Field(0.0, description="Percentage of received inventory returned to supplier")
+    total_spend_inr: float = Field(0.0, description="Cumulative procurement spend in INR")
+    rating_band: str = Field("good", description="Supplier quality band: excellent, good, needs_improvement")
+
+
+class SupplierPerformanceSummary(BaseModel):
+    """Portfolio-wide supplier performance summary."""
+
+    average_on_time_pct: float = Field(0.0, description="Mean on-time delivery rate")
+    average_accuracy_pct: float = Field(0.0, description="Mean fulfillment accuracy rate")
+    average_return_rate_pct: float = Field(0.0, description="Mean return rate")
+    total_spend_inr: float = Field(0.0, description="Total procurement capital spent")
+    total_suppliers_analyzed: int = Field(0, description="Count of evaluated suppliers")
+    excellent_count: int = Field(0, description="Count of excellent rated suppliers")
+    needs_improvement_count: int = Field(0, description="Count of suppliers needing performance improvement")
+
+
+class SupplierPerformanceResponse(BaseModel):
+    """Complete response for GET /analytics/supplier-performance (Step 16.2)."""
+
+    summary: SupplierPerformanceSummary = Field(..., description="High-level supplier portfolio KPIs")
+    items: list[SupplierPerformanceItem] = Field(default_factory=list, description="Ranked supplier reliability records")
+    generated_at: datetime = Field(..., description="Timestamp of calculation")
+
+
+class RetailerPerformanceItem(BaseModel):
+    """Retailer purchasing volume, order trend, and churn risk scoring."""
+
+    retailer_id: str = Field(..., description="Unique retailer ID")
+    retailer_name: str = Field(..., description="Store or business name")
+    contact_person: str | None = Field(None, description="Primary contact name")
+    phone: str | None = Field(None, description="Contact phone")
+    pricing_tier: str = Field("standard", description="Assigned wholesale pricing tier")
+    total_orders: int = Field(0, description="Total sales orders placed")
+    total_revenue: float = Field(0.0, description="Cumulative revenue generated in INR")
+    avg_order_value: float = Field(0.0, description="Average order value (AOV) in INR")
+    last_order_date: str | None = Field(None, description="Date of most recent order in YYYY-MM-DD")
+    days_since_last_order: int = Field(0, description="Days elapsed since most recent order")
+    avg_order_gap_days: float = Field(0.0, description="Historical average days between consecutive orders")
+    frequency_trend: str = Field("steady", description="Order velocity trend: increasing, steady, decreasing")
+    is_churn_risk: bool = Field(False, description="True if days since last order exceeds 2x historical average gap")
+    churn_risk_reason: str | None = Field(None, description="Explanation for churn risk flag")
+
+
+class RetailerPerformanceSummary(BaseModel):
+    """Portfolio-wide retailer performance summary."""
+
+    total_retailers: int = Field(0, description="Total registered wholesale retailers")
+    active_retailers_count: int = Field(0, description="Count of retailers with orders in past 90 days")
+    churn_risk_count: int = Field(0, description="Count of retailers flagged with churn risk")
+    total_portfolio_revenue_inr: float = Field(0.0, description="Total cumulative sales revenue")
+    average_order_value_inr: float = Field(0.0, description="Overall blended average order value")
+
+
+class RetailerPerformanceResponse(BaseModel):
+    """Complete response for GET /analytics/retailer-performance (Step 16.2)."""
+
+    summary: RetailerPerformanceSummary = Field(..., description="Summary retailer metrics")
+    items: list[RetailerPerformanceItem] = Field(default_factory=list, description="Ranked retailer performance records")
+    generated_at: datetime = Field(..., description="Timestamp of calculation")
+
+
+class WarehouseMetricsItem(BaseModel):
+    """Per-warehouse storage valuation and 30-day movement throughput."""
+
+    warehouse_id: str = Field(..., description="Unique warehouse ID")
+    warehouse_name: str = Field(..., description="Facility name")
+    location: str | None = Field(None, description="Warehouse address / city")
+    is_active: bool = Field(True, description="Warehouse active status")
+    total_products_stored: int = Field(0, description="Count of distinct product SKUs stored")
+    total_stock_units: float = Field(0.0, description="Total physical units on hand")
+    total_stock_value_inr: float = Field(0.0, description="Total inventory valuation in INR")
+    inbound_30d_units: float = Field(0.0, description="Units received into warehouse in trailing 30 days")
+    outbound_30d_units: float = Field(0.0, description="Units shipped out of warehouse in trailing 30 days")
+    movement_count_30d: int = Field(0, description="Total movement transactions in trailing 30 days")
+    valuation_share_pct: float = Field(0.0, description="Percentage of total company inventory value in this facility")
+
+
+class WarehouseBreakdownSummary(BaseModel):
+    """Company-wide storage summary across all facilities."""
+
+    total_warehouses: int = Field(0, description="Total operating warehouses")
+    company_total_stock_units: float = Field(0.0, description="Total physical inventory across all facilities")
+    company_total_valuation_inr: float = Field(0.0, description="Total inventory asset value in INR")
+    total_30d_inbound_units: float = Field(0.0, description="Total inbound throughput across all facilities")
+    total_30d_outbound_units: float = Field(0.0, description="Total outbound fulfillment across all facilities")
+
+
+class WarehouseBreakdownResponse(BaseModel):
+    """Complete response for GET /analytics/warehouse-breakdown (Step 16.2)."""
+
+    summary: WarehouseBreakdownSummary = Field(..., description="Summary company warehouse metrics")
+    warehouses: list[WarehouseMetricsItem] = Field(default_factory=list, description="Individual facility breakdowns")
+    generated_at: datetime = Field(..., description="Timestamp of calculation")
+
+
+class ShrinkageItem(BaseModel):
+    """Inventory shrinkage/loss metric for a single product or category."""
+
+    id: str = Field(..., description="Entity ID (product_id or category_id)")
+    name: str = Field(..., description="Entity name")
+    secondary_info: str | None = Field(None, description="SKU or category name")
+    badge: str | None = Field(None, description="Category or status badge")
+    units_lost: float = Field(0.0, description="Total physical units lost/damaged")
+    incidents_count: int = Field(0, description="Count of damage/adjustment incidents")
+    shrinkage_value_inr: float = Field(0.0, description="Total monetary loss in INR (units * cost_price)")
+    pct_of_total_shrinkage: float = Field(0.0, description="Percentage share of total shrinkage value")
+
+
+class ShrinkageSummary(BaseModel):
+    """Aggregate shrinkage loss KPIs."""
+
+    total_shrinkage_value_inr: float = Field(0.0, description="Total monetary shrinkage in INR")
+    total_units_lost: float = Field(0.0, description="Total physical units written off")
+    shrinkage_rate_pct: float = Field(0.0, description="Shrinkage as percentage of total inventory value")
+    damage_incidents_count: int = Field(0, description="Total distinct damage/adjustment entries")
+
+
+class ShrinkageResponse(BaseModel):
+    """Complete response for GET /analytics/shrinkage (Step 16.2)."""
+
+    period: str = Field(..., description="Reporting time window: 7d, 30d, 90d, 12m, all")
+    group_by: str = Field(..., description="Grouping dimension: product or category")
+    summary: ShrinkageSummary = Field(..., description="Top summary loss KPIs")
+    items: list[ShrinkageItem] = Field(default_factory=list, description="Grouped shrinkage records")
+    generated_at: datetime = Field(..., description="Timestamp of calculation")
+
+

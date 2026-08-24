@@ -244,7 +244,7 @@ class InMemoryPurchaseOrderRepository(PurchaseOrderRepositoryInterface):
             ]
 
         results.sort(
-            key=lambda p: p.created_at if hasattr(p, "created_at") else datetime.now(), reverse=True
+            key=lambda p: (getattr(p, "created_at", None) or datetime.min), reverse=True
         )
         return results
 
