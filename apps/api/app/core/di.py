@@ -818,11 +818,28 @@ def get_delivery_service(
     )
 
 
+def get_ar_aging_service(
+    invoice_repo: InvoiceRepositoryInterface = Depends(get_invoice_repository),
+    retailer_repo: RetailerRepository = Depends(get_retailer_repository),
+) -> ARAgingService:
+    """Factory for ARAgingService compiling accounts receivable aging reports."""
+    return ARAgingService(
+        invoice_repository=invoice_repo,
+        retailer_repository=retailer_repo,
+    )
+
+
 def get_export_service(
     so_repo: SalesOrderRepositoryInterface = Depends(get_sales_order_repository),
     business_settings_repo: BusinessSettingsRepositoryInterface = Depends(get_business_settings_repository),
     delivery_repo: DeliveryRepositoryInterface = Depends(get_delivery_repository),
     stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    po_repo: PurchaseOrderRepositoryInterface = Depends(get_purchase_order_repository),
+    invoice_repo: InvoiceRepositoryInterface = Depends(get_invoice_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_product_repository),
+    retailer_repo: RetailerRepository = Depends(get_retailer_repository),
+    supplier_repo: SupplierRepositoryInterface = Depends(get_supplier_repository),
+    ar_aging_service: ARAgingService = Depends(get_ar_aging_service),
 ) -> ExportService:
     """Factory for ExportService with DIP dependencies."""
     return ExportService(
@@ -830,6 +847,12 @@ def get_export_service(
         business_settings_repo=business_settings_repo,
         delivery_repo=delivery_repo,
         stock_repo=stock_repo,
+        purchase_order_repo=po_repo,
+        invoice_repo=invoice_repo,
+        product_repo=product_repo,
+        retailer_repo=retailer_repo,
+        supplier_repo=supplier_repo,
+        ar_aging_service=ar_aging_service,
     )
 
 
@@ -1138,15 +1161,4 @@ def get_owner_dashboard_service(
         dead_stock_service=dead_stock_service,
         insight_narrator=insight_narrator,
         supplier_repo=supplier_repo,
-    )
-
-
-def get_ar_aging_service(
-    invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
-    retailer_repo: RetailerRepository = Depends(get_retailer_repository),
-) -> ARAgingService:
-    """Factory for ARAgingService compiling accounts receivable aging reports."""
-    return ARAgingService(
-        invoice_repository=invoice_repo,
-        retailer_repository=retailer_repo,
     )

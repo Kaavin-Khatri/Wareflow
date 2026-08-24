@@ -156,6 +156,7 @@ vi.mock("@/lib/api-client", () => ({
       }
       return Promise.resolve({});
     }),
+    downloadBlob: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -211,7 +212,8 @@ describe("GST Invoices & Billing UI", () => {
       expect(screen.getByText("Salted Butter 500g")).toBeDefined();
       expect(screen.getByText("CGST (9%):")).toBeDefined();
       expect(screen.getByText("SGST (9%):")).toBeDefined();
-      expect(screen.getByText(/Print \/ Export PDF/i)).toBeDefined();
+      expect(screen.getByText(/Download Official GST PDF/i)).toBeDefined();
+      expect(screen.getByText(/Print Invoice/i)).toBeDefined();
       expect(screen.getByText(/Generate E-Invoice \(IRN\)/i)).toBeDefined();
     });
   });

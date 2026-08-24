@@ -1,8 +1,9 @@
 from datetime import datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
+from app.core.di import get_export_service
 from app.core.security import CurrentUser, get_current_user
 from app.schemas.recalls import (
     BatchRecallCreateRequest,
@@ -26,6 +27,7 @@ from app.schemas.stock_transfers import (
     StockTransferListResponse,
     StockTransferResponse,
 )
+from app.services.export_service import ExportService
 from app.services.stock_service import StockService
 
 router = APIRouter(tags=["Stock & Inventory"])
@@ -59,6 +61,25 @@ def get_stock_overview(
         category_id=category_id,
         status_filter=status,
         search=search,
+    )
+
+
+@router.get(
+    "/stock/overview.xlsx",
+    status_code=status.HTTP_200_OK,
+    summary="Download stock overview Excel workbook",
+)
+def download_stock_overview_excel(
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    export_service: Annotated[ExportService, Depends(get_export_service)],
+) -> Response:
+    """Generate and download structured Stock Valuation & Inventory Overview Excel spreadsheet."""
+    xlsx_bytes = export_service.generate_stock_overview_excel()
+    dt_str = datetime.now().strftime("%Y%m%d")
+    return Response(
+        content=xlsx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="stock_overview_{dt_str}.xlsx"'},
     )
 
 
@@ -145,6 +166,25 @@ def list_stock_movements(
         start_date=start_date,
         end_date=end_date,
         search=search,
+    )
+
+
+@router.get(
+    "/stock/movements.xlsx",
+    status_code=status.HTTP_200_OK,
+    summary="Download stock movements ledger Excel workbook",
+)
+def download_stock_movements_excel(
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    export_service: Annotated[ExportService, Depends(get_export_service)],
+) -> Response:
+    """Generate and download structured Stock Movement Ledger Excel spreadsheet."""
+    xlsx_bytes = export_service.generate_stock_movements_excel()
+    dt_str = datetime.now().strftime("%Y%m%d")
+    return Response(
+        content=xlsx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="stock_movements_{dt_str}.xlsx"'},
     )
 
 

@@ -43,6 +43,7 @@
 | 2FA (TOTP & QR)    | pyotp + qrcode            | >=2.9.0   |
 | Encryption         | cryptography              | >=42.0.0  |
 | PDF Engine (api)   | ReportLab (platypus)      | >=4.0.0   |
+| Excel Engine (api) | openpyxl                  | >=3.1.0,<4.0.0 |
 | Background Worker  | APScheduler               | >=3.10.0,<4.0.0 |
 | Test Runner (api)  | Pytest + pytest-cov       | >=8.0.0   |
 
@@ -290,14 +291,16 @@ wareflow/
 │           │       ├── categories.py# Product Category taxonomy (/categories)
 │           │       ├── products.py # Wholesale Products & Pricing (/products)
 │           │       ├── uom.py      # Unit of Measure & Conversions (/uom, /products/{id}/conversions)
-│           │       ├── stock.py    # Multi-Warehouse Stock Overview, Adjustments, Ledger, Transfers & Recalls (/stock/*, /stock/adjustments, /stock/movements, /stock/transfers, /stock/recalls, /products/{id}/stock)
+│           │       ├── stock.py    # Multi-Warehouse Stock Overview, Adjustments, Ledger, Transfers, Recalls & Excel Exports (/stock/*, /stock/overview.xlsx, /stock/movements.xlsx)
 │           │       ├── stock_analytics.py # Stock Valuation & Composition Analytics (/analytics/stock/*)
+│           │       ├── analytics.py# Owner Dashboard, AR Aging, Weekly Insight & Excel Export (/analytics/owner-dashboard, /analytics/ar-aging, /analytics/ar-aging.xlsx, /analytics/weekly-insight)
 │           │       ├── suppliers.py# Vendor / Supplier profiles (/suppliers)
-│           │       ├── purchase_orders.py # Purchase Orders & Receiving (/purchase-orders)
+│           │       ├── purchase_orders.py # Purchase Orders, Receiving & PDF Export (/purchase-orders, /purchase-orders/{id}/pdf)
 │           │       ├── purchase_returns.py# Supplier Returns (/purchase-returns)
 │           │       ├── retailers.py# Retailer accounts & credit limits (/retailers)
 │           │       ├── customers.py# Direct end-customers & walk-in buyers (/customers)
-│           │       └── sales_orders.py# Sales Orders & FIFO Fulfillment (/sales-orders)
+│           │       ├── sales_orders.py# Sales Orders, Fulfillment & PDF Export (/sales-orders, /sales-orders/{id}/pdf, /sales-orders/{id}/pick-list.pdf, /sales-orders/{id}/packing-slip.pdf)
+│           │       └── invoices.py # Tax Invoices, E-Invoicing & PDF Export (/invoices, /invoices/{id}/pdf)
 │           ├── db/
 │           │   ├── base.py         # SQLAlchemy DeclarativeBase
 │           │   └── session.py      # Engine (NullPool) + get_db_session dependency
@@ -324,6 +327,7 @@ wareflow/
 │           │   ├── audit_service.py
 │           │   ├── business_settings_service.py
 │           │   ├── customer_service.py
+│           │   ├── export_service.py   # PDF & Excel generator (Pick Lists, Packing Slips, PO/SO/Invoice PDFs, Stock/Ledger/AR-Aging Excel workbooks)
 │           │   ├── owner_dashboard_service.py
 │           │   ├── pricing_strategy.py
 │           │   ├── product_service.py

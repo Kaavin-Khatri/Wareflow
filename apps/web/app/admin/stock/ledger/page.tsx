@@ -18,6 +18,7 @@ import {
   PlusCircle,
   Warehouse as WarehouseIcon,
   Layers,
+  FileSpreadsheet,
 } from "lucide-react";
 
 
@@ -414,11 +415,28 @@ export default function StockMovementLedgerPage() {
           onSearchChange={setSearchQuery}
           searchPlaceholder="Search ledger by product, SKU, warehouse, batch, or human activity note..."
           primaryAction={
-            <Link href="/admin/stock/adjust">
-              <GlassButton variant="primary" size="md">
-                <PlusCircle className="w-4 h-4 mr-1.5" /> Record Stock Adjustment
+            <div className="flex items-center gap-2">
+              <GlassButton
+                variant="outline"
+                size="md"
+                onClick={async () => {
+                  try {
+                    await apiClient.downloadBlob("/stock/movements.xlsx", "Stock_Movements_Ledger.xlsx");
+                  } catch (err) {
+                    console.error("Stock movements export failed:", err);
+                  }
+                }}
+                className="text-xs h-10 gap-1.5 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
+                title="Export Stock Movements as Excel (.xlsx)"
+              >
+                <FileSpreadsheet className="w-4 h-4" /> Export Excel
               </GlassButton>
-            </Link>
+              <Link href="/admin/stock/adjust">
+                <GlassButton variant="primary" size="md">
+                  <PlusCircle className="w-4 h-4 mr-1.5" /> Record Stock Adjustment
+                </GlassButton>
+              </Link>
+            </div>
           }
         >
           <DataTable

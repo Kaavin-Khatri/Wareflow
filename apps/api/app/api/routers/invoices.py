@@ -1,8 +1,13 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.core.di import get_einvoice_service, get_invoice_service, get_payment_service
+from app.core.di import (
+    get_einvoice_service,
+    get_export_service,
+    get_invoice_service,
+    get_payment_service,
+)
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.billing import (
     EInvoiceConfigResponse,
@@ -15,6 +20,7 @@ from app.schemas.billing import (
 )
 from app.schemas.invoices import InvoiceListResponse, InvoiceResponse
 from app.services.einvoice_service import EinvoiceService
+from app.services.export_service import ExportService
 from app.services.invoice_service import InvoiceService
 from app.services.payment_service import PaymentService
 
@@ -194,4 +200,23 @@ def generate_eway_bill(
         invoice_id=invoice_id,
         payload=payload,
         current_user=current_user,
+    )
+
+
+@router.get(
+    "/invoices/{invoice_id}/pdf",
+    status_code=status.HTTP_200_OK,
+    summary="Download print-ready GST Tax Invoice PDF",
+)
+def download_invoice_pdf(
+    invoice_id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    export_service: ExportService = Depends(get_export_service),
+) -> Response:
+    """Generate and download print-ready statutory GST Tax Invoice PDF document."""
+    pdf_bytes = export_service.generate_invoice_pdf(invoice_id=invoice_id)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="Invoice_{invoice_id}.pdf"'},
     )

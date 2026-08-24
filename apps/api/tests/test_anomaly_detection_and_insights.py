@@ -385,7 +385,51 @@ def test_weekly_insight_7_day_caching_and_force_refresh():
 
 def test_api_endpoints_anomalies_and_weekly_insight(mock_owner_user: CurrentUser):
     """Test REST API routes for GET /analytics/weekly-insight and GET /analytics/anomalies/order/{id}."""
+    from app.core.di import get_anomaly_detection_service, get_insight_narrator_service
+
+    so_repo = InMemorySalesOrderRepository(initial_data=[])
+    product_repo = InMemoryProductRepository()
+    stock_repo = InMemoryStockRepository()
+    supplier_repo = InMemorySupplierRepository()
+    po_repo = InMemoryPurchaseOrderRepository()
+    stock_service = StockService(stock_repo=stock_repo, uom_service=UomService(uom_repo=None))
+    po_service = PurchaseOrderService(
+        po_repo=po_repo,
+        supplier_repo=supplier_repo,
+        product_repo=product_repo,
+        stock_service=stock_service,
+    )
+    forecasting_service = ForecastingService(
+        forecast_repo=None,
+        stock_repo=stock_repo,
+        product_repo=product_repo,
+        strategies=[MovingAverageForecast()],
+    )
+    reorder_service = ReorderSuggestionService(
+        product_repo=product_repo,
+        stock_repo=stock_repo,
+        forecasting_service=forecasting_service,
+        supplier_repo=supplier_repo,
+        po_repo=po_repo,
+        po_service=po_service,
+    )
+    dead_stock_service = DeadStockService(
+        product_repo=product_repo,
+        stock_repo=stock_repo,
+        forecast_repo=None,
+    )
+    narrator = InsightNarratorService(
+        so_repo=so_repo,
+        reorder_service=reorder_service,
+        dead_stock_service=dead_stock_service,
+        groq_api_key="",
+        cache_ttl_days=7,
+    )
+    anomaly_detector = AnomalyDetectionService(so_repo=so_repo)
+
     app.dependency_overrides[get_current_user] = lambda: mock_owner_user
+    app.dependency_overrides[get_insight_narrator_service] = lambda: narrator
+    app.dependency_overrides[get_anomaly_detection_service] = lambda: anomaly_detector
 
     with TestClient(app) as client:
         # Test weekly-insight endpoint
@@ -400,3 +444,5 @@ def test_api_endpoints_anomalies_and_weekly_insight(mock_owner_user: CurrentUser
         # Test non-existent order anomalies endpoint returns 404
         resp_missing = client.get("/analytics/anomalies/order/non-existent-order-id")
         assert resp_missing.status_code == 404
+
+    app.dependency_overrides.clear()

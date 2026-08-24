@@ -223,6 +223,17 @@ export default function ARAgingReportPage() {
     document.body.removeChild(link);
   };
 
+  const exportExcel = async () => {
+    try {
+      await apiClient.downloadBlob(
+        "/analytics/ar-aging.xlsx",
+        `Wareflow_AR_Aging_Report_${report?.as_of_date || "today"}.xlsx`
+      );
+    } catch (err) {
+      console.error("Excel export failed:", err);
+    }
+  };
+
   return (
     <AppLayout>
       <div className="w-full space-y-6 pb-16">
@@ -244,6 +255,16 @@ export default function ARAgingReportPage() {
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
+            <GlassButton
+              variant="outline"
+              size="sm"
+              onClick={exportExcel}
+              disabled={loading || !filteredRetailers.length}
+              className="border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" />
+              <span>Export Excel (.xlsx)</span>
+            </GlassButton>
             <GlassButton
               variant="outline"
               size="sm"

@@ -3566,6 +3566,58 @@
 - Web Route: `/admin/analytics/ar-aging`
 - Aging Cutoffs: 30 days (`1-30`), 60 days (`31-60`), 90 days (`61-90`), 91+ days (`90+`)
 
+---
+
+## Step 15.3 — Excel / PDF Export
+
+**Timestamp:** 2026-08-24T14:20:00Z
+**Status:** COMPLETE
+
+### What was done
+- **Excel & PDF Export Backend Service (`ExportService`)**:
+  - Implemented complete `ExportService` in `apps/api/app/services/export_service.py` supporting both ReportLab PDF generation and openpyxl Excel spreadsheet generation:
+    - **Pick List PDF (`GET /sales-orders/{id}/pick-list.pdf`)**: Internal warehouse document with batch checkboxes, storage zone grouping, and strict zero-pricing guardrails.
+    - **Packing Slip PDF (`GET /sales-orders/{id}/packing-slip.pdf`)**: Customer-facing shipment delivery manifest with consignee address, dispatch logistics info, line items, and receiver signature block.
+    - **Purchase Order PDF (`GET /purchase-orders/{id}/pdf`)**: Vendor-facing procurement order with company header from `BusinessSettings`, vendor contact block, item table, and procurement signatory.
+    - **Sales Order PDF (`GET /sales-orders/{id}/pdf`)**: Wholesale sales order confirmation with customer pricing tier, line item amounts, and tax breakdown.
+    - **GST Tax Invoice PDF (`GET /invoices/{id}/pdf`)**: Official statutory tax invoice document with HSN codes, CGST/SGST/IGST breakdown, E-Invoice IRN & QR code details, E-Way Bill references, bank remittance details, and authorized signatory.
+    - **Stock Overview Excel (`GET /stock/overview.xlsx`)**: Formatted multi-column workbook containing SKU, product name, category, UoM, on-hand units, cost/wholesale price, valuation, reorder thresholds, health status, and automated Excel `SUM()` formula totals.
+    - **Stock Movement Ledger Excel (`GET /stock/movements.xlsx`)**: Formatted ledger sheet with movement IDs, UTC timestamps, transaction types (`IN`, `OUT`, `ADJUSTMENT`), product SKUs, quantities, and reference links.
+    - **AR Aging Report Excel (`GET /analytics/ar-aging.xlsx`)**: Structured aged receivables matrix with retailer IDs, credit limits, 30/60/90+ day bucket columns, total overdue, outstanding amounts, and summary formulas.
+  - Added dependency `openpyxl>=3.1.0,<4.0.0` to `apps/api/requirements.txt`.
+  - Wired `get_export_service` dependency injection factory in `apps/api/app/core/di.py`.
+  - Exposed all 6 endpoints across the router layer (`purchase_orders.py`, `sales_orders.py`, `invoices.py`, `stock.py`, `analytics.py`).
+- **Frontend Export Integration**:
+  - Enhanced `apiClient.downloadBlob(endpoint, filename)` helper in `apps/web/lib/api-client.ts` with automatic object URL creation, DOM download triggering, and clean URL revocation.
+  - Added export buttons across administrative interfaces:
+    - `apps/web/app/admin/purchase-orders/page.tsx`: Added "PDF" export button in table actions column.
+    - `apps/web/app/admin/sales-orders/page.tsx`: Added "PDF" export button in table actions column and modal footer.
+    - `apps/web/app/admin/invoices/page.tsx`: Added "PDF" export button in table actions and "Download Official GST PDF" in invoice preview modal.
+    - `apps/web/app/admin/inventory/page.tsx`: Added "Export Excel (.xlsx)" toolbar action in `ListViewTemplate`.
+    - `apps/web/app/admin/stock/ledger/page.tsx`: Added "Export Excel (.xlsx)" action in `ListViewTemplate`.
+    - `apps/web/app/admin/analytics/ar-aging/page.tsx`: Added "Export Excel (.xlsx)" action next to CSV export.
+- **Verification & QA**:
+  - Backend pytest suite: `apps/api/tests/test_export_service.py` (7 tests verifying PDF generation, byte stream sizes, Excel headers, sheet names, and Excel formula generation). Full backend suite passing: 246/246 tests passing.
+  - Frontend Vitest suite: `apps/web/lib/__tests__/export-service.test.ts` (4 tests verifying blob downloads and error handling). Full frontend suite passing: 40/40 test files (167 tests) passing.
+  - Next.js production build: Succeeded with 0 errors across all 43 static/dynamic routes.
+
+### SOLID Principles Applied
+- **Single Responsibility Principle (SRP)**: `ExportService` solely manages file format formatting and binary byte stream rendering, leaving database queries and business calculations to repositories and domain services.
+- **Open/Closed Principle (OCP)**: Document builders can be extended with new file formats (e.g. CSV, XML) without modifying existing PDF/Excel logic.
+- **Dependency Inversion Principle (DIP)**: `ExportService` depends exclusively on repository interfaces (`SalesOrderRepositoryInterface`, `PurchaseOrderRepositoryInterface`, `InvoiceRepositoryInterface`, etc.) injected via `apps/api/app/core/di.py`.
+
+### Key values for future steps
+- Document Service: `ExportService` (`apps/api/app/services/export_service.py`)
+- DI Factory: `get_export_service` in `apps/api/app/core/di.py`
+- Endpoints:
+  - `GET /purchase-orders/{id}/pdf` (`application/pdf`)
+  - `GET /sales-orders/{id}/pdf` (`application/pdf`)
+  - `GET /invoices/{id}/pdf` (`application/pdf`)
+  - `GET /stock/overview.xlsx` (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`)
+  - `GET /stock/movements.xlsx` (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`)
+  - `GET /analytics/ar-aging.xlsx` (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`)
+
+
 
 
 

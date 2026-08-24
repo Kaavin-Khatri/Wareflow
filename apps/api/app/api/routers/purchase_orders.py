@@ -1,8 +1,8 @@
 """Purchase Orders and Goods Receiving router."""
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.core.di import get_purchase_order_service
+from app.core.di import get_export_service, get_purchase_order_service
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.purchase_orders import (
     POCreateRequest,
@@ -10,6 +10,7 @@ from app.schemas.purchase_orders import (
     POUpdateRequest,
     PurchaseOrderResponse,
 )
+from app.services.export_service import ExportService
 from app.services.purchase_order_service import PurchaseOrderService
 
 router = APIRouter(prefix="/purchase-orders", tags=["Purchase Orders"])
@@ -119,3 +120,22 @@ def receive_goods(
     - Auto-derives partially_received or received status
     """
     return service.receive_goods(po_id=id, payload=payload, actor_id=current_user.id)
+
+
+@router.get(
+    "/{id}/pdf",
+    status_code=status.HTTP_200_OK,
+    summary="Download purchase order PDF",
+)
+def download_purchase_order_pdf(
+    id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    export_service: ExportService = Depends(get_export_service),
+) -> Response:
+    """Generate and download print-ready Purchase Order PDF document."""
+    pdf_bytes = export_service.generate_purchase_order_pdf(purchase_order_id=id)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename=PO_{id}.pdf"},
+    )

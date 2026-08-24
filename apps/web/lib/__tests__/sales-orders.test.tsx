@@ -145,6 +145,10 @@ vi.mock("@/lib/api-client", () => ({
       }
       return Promise.resolve({});
     }),
+    downloadBlob: vi.fn().mockImplementation((url: string) => {
+      window.open(url, "_blank");
+      return Promise.resolve();
+    }),
     patch: vi.fn().mockImplementation(
       (
         url: string,

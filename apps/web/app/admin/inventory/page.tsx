@@ -19,6 +19,7 @@ import {
   Clock,
   Calendar,
   Layers,
+  FileSpreadsheet,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -348,6 +349,23 @@ export default function InventoryAdminPage() {
         searchPlaceholder="Search product by name, SKU, or barcode..."
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        primaryAction={
+          <GlassButton
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              try {
+                await apiClient.downloadBlob("/stock/overview.xlsx", "Stock_Overview.xlsx");
+              } catch (err) {
+                console.error("Stock overview export failed:", err);
+              }
+            }}
+            className="text-xs h-9 gap-1.5 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
+            title="Export Stock Overview as Excel (.xlsx)"
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Export Excel
+          </GlassButton>
+        }
         filters={
           <div className="flex items-center gap-2 flex-wrap">
             {/* Warehouse Filter */}

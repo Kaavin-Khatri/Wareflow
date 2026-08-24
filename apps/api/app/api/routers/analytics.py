@@ -1,11 +1,12 @@
-"""General analytics, demand forecasting, reorder suggestions, dead-stock, anomalies, and AI executive briefing router."""
+from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.core.di import (
     get_anomaly_detection_service,
     get_ar_aging_service,
     get_dead_stock_service,
+    get_export_service,
     get_forecasting_service,
     get_insight_narrator_service,
     get_owner_dashboard_service,
@@ -26,6 +27,7 @@ from app.schemas.purchase_orders import PurchaseOrderResponse
 from app.services.anomaly_detection_service import AnomalyDetectionService
 from app.services.ar_aging_service import ARAgingService
 from app.services.dead_stock_service import DeadStockService
+from app.services.export_service import ExportService
 from app.services.forecasting_service import ForecastingService
 from app.services.insight_narrator import InsightNarratorService
 from app.services.owner_dashboard_service import OwnerDashboardService
@@ -172,3 +174,23 @@ def get_ar_aging_report(
 ) -> ARAgingReportResponse:
     """Compute aged receivables breakdown (Current, 1-30, 31-60, 61-90, 90+ days) per retailer."""
     return service.get_ar_aging_report(include_zero_balance=include_zero_balance)
+
+
+@router.get(
+    "/ar-aging.xlsx",
+    status_code=status.HTTP_200_OK,
+    summary="Download Accounts-Receivable aging report Excel workbook",
+)
+def download_ar_aging_excel(
+    include_zero_balance: bool = Query(True, description="Include accounts with zero outstanding balance"),
+    export_service: ExportService = Depends(get_export_service),
+    _user: CurrentUser = Depends(require_permission("invoices:view")),
+) -> Response:
+    """Generate and download structured Accounts-Receivable Aging Excel spreadsheet."""
+    xlsx_bytes = export_service.generate_ar_aging_excel(include_zero_balance=include_zero_balance)
+    dt_str = datetime.now().strftime("%Y%m%d")
+    return Response(
+        content=xlsx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="ar_aging_{dt_str}.xlsx"'},
+    )

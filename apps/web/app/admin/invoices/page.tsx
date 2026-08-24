@@ -30,6 +30,7 @@ import {
   Check,
   ShieldCheck,
   Info,
+  FileDown,
 } from "lucide-react";
 
 interface InvoiceItem {
@@ -629,6 +630,22 @@ export default function InvoicesPage() {
       align: "right",
       render: (inv) => (
         <div className="flex items-center justify-end gap-1.5">
+          <GlassButton
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              try {
+                await apiClient.downloadBlob(`/invoices/${inv.id}/pdf`, `${inv.invoice_no}.pdf`);
+              } catch (err) {
+                console.error("Invoice PDF download failed:", err);
+              }
+            }}
+            className="text-xs h-7 px-2 border-sky-500/30 text-sky-300 hover:bg-sky-500/20"
+            title="Download Tax Invoice PDF"
+          >
+            <FileDown className="w-3 h-3 mr-1" />
+            PDF
+          </GlassButton>
           {inv.status !== "paid" && (
             <GlassButton
               variant="primary"
@@ -1089,11 +1106,25 @@ export default function InvoicesPage() {
                     </GlassButton>
                   )}
                   <GlassButton
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await apiClient.downloadBlob(`/invoices/${selectedInvoice.id}/pdf`, `${selectedInvoice.invoice_no}.pdf`);
+                      } catch (err) {
+                        console.error("Invoice PDF download failed:", err);
+                      }
+                    }}
+                    className="border-sky-500/30 text-sky-300 hover:bg-sky-500/20"
+                  >
+                    <FileDown className="w-4 h-4 mr-1.5" /> Download Official GST PDF
+                  </GlassButton>
+                  <GlassButton
                     variant="primary"
                     size="sm"
                     onClick={handlePrint}
                   >
-                    <Printer className="w-4 h-4 mr-1.5" /> Print / Export PDF
+                    <Printer className="w-4 h-4 mr-1.5" /> Print Invoice
                   </GlassButton>
                 </div>
               </div>

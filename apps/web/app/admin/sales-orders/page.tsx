@@ -30,6 +30,7 @@ import {
   Eye,
   Trash2,
   RotateCcw,
+  FileDown,
 } from "lucide-react";
 
 
@@ -337,13 +338,24 @@ export default function SalesOrdersAdminPage() {
   }
 
   function handlePrintPickList(orderId: string) {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    window.open(`${apiUrl}/sales-orders/${orderId}/pick-list.pdf`, "_blank");
+    apiClient.downloadBlob(`/sales-orders/${orderId}/pick-list.pdf`, `pick-list-${orderId}.pdf`).catch(() => {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      window.open(`${apiUrl}/sales-orders/${orderId}/pick-list.pdf`, "_blank");
+    });
   }
 
   function handlePrintPackingSlip(orderId: string) {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    window.open(`${apiUrl}/sales-orders/${orderId}/packing-slip.pdf`, "_blank");
+    apiClient.downloadBlob(`/sales-orders/${orderId}/packing-slip.pdf`, `packing-slip-${orderId}.pdf`).catch(() => {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      window.open(`${apiUrl}/sales-orders/${orderId}/packing-slip.pdf`, "_blank");
+    });
+  }
+
+  function handlePrintSalesOrderPdf(orderId: string, soNumber: string) {
+    apiClient.downloadBlob(`/sales-orders/${orderId}/pdf`, `${soNumber}.pdf`).catch(() => {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      window.open(`${apiUrl}/sales-orders/${orderId}/pdf`, "_blank");
+    });
   }
 
   async function handleOpenDetail(order: SalesOrder) {
@@ -503,14 +515,25 @@ export default function SalesOrdersAdminPage() {
       header: "Actions",
       align: "right",
       render: (order) => (
-        <GlassButton
-          variant="ghost"
-          size="sm"
-          onClick={() => handleOpenDetail(order)}
-          className="text-xs"
-        >
-          <Eye className="w-3.5 h-3.5 mr-1" /> Details
-        </GlassButton>
+        <div className="flex items-center justify-end gap-1.5">
+          <GlassButton
+            variant="outline"
+            size="sm"
+            onClick={() => handlePrintSalesOrderPdf(order.id, order.so_number)}
+            className="text-xs py-1 px-2.5 h-8 gap-1 border-sky-500/30 text-sky-300 hover:bg-sky-500/20"
+            title="Export Sales Order Confirmation PDF"
+          >
+            <FileDown className="w-3.5 h-3.5" /> PDF
+          </GlassButton>
+          <GlassButton
+            variant="ghost"
+            size="sm"
+            onClick={() => handleOpenDetail(order)}
+            className="text-xs"
+          >
+            <Eye className="w-3.5 h-3.5 mr-1" /> Details
+          </GlassButton>
+        </div>
       ),
     },
   ];
@@ -1126,6 +1149,15 @@ export default function SalesOrdersAdminPage() {
 
                   {selectedOrder.status !== "cancelled" && (
                     <>
+                      <GlassButton
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handlePrintSalesOrderPdf(selectedOrder.id, selectedOrder.so_number)}
+                      >
+                        <FileDown className="w-3.5 h-3.5 mr-1 text-sky-400" /> Export PDF
+                      </GlassButton>
+
                       <GlassButton
                         type="button"
                         variant="secondary"

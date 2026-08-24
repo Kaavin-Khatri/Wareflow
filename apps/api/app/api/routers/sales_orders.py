@@ -191,3 +191,22 @@ def get_pick_list_pdf(
     )
 
 
+@router.get(
+    "/{id}/pdf",
+    status_code=status.HTTP_200_OK,
+    summary="Download sales order confirmation PDF",
+)
+def download_sales_order_pdf(
+    id: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    export_service: ExportService = Depends(get_export_service),
+) -> Response:
+    """Generate and download print-ready Sales Order Confirmation PDF document."""
+    pdf_bytes = export_service.generate_sales_order_pdf(sales_order_id=id)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="SO_{id}.pdf"'},
+    )
+
+

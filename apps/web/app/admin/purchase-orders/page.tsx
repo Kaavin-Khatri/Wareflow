@@ -27,6 +27,7 @@ import {
   Trash2,
   Undo2,
   ShieldAlert,
+  FileDown,
 } from "lucide-react";
 
 export type POStatus =
@@ -624,6 +625,23 @@ export default function PurchaseOrdersPage() {
               Return
             </GlassButton>
           )}
+
+          <GlassButton
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              try {
+                await apiClient.downloadBlob(`/purchase-orders/${po.id}/pdf`, `${po.po_number}.pdf`);
+              } catch (err) {
+                console.error("PDF download failed:", err);
+              }
+            }}
+            className="text-xs py-1 px-2.5 h-8 gap-1 border-sky-500/30 text-sky-300 hover:bg-sky-500/20"
+            title="Export Purchase Order PDF"
+          >
+            <FileDown className="w-3.5 h-3.5" />
+            PDF
+          </GlassButton>
 
           <GlassButton
             variant="ghost"
