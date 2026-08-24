@@ -3665,6 +3665,54 @@
 - Endpoint: `GET /search?q={query}&limit={limit}` (Returns `SearchResponse`)
 - Frontend Component: `SearchCommandPalette` (`apps/web/components/SearchCommandPalette.tsx`)
 
+---
+
+## Step 16.1 — Profitability & Inventory Turnover Analytics
+
+**Timestamp:** 2026-08-24T14:56:00Z
+**Status:** COMPLETE
+
+### What was done
+- **Profitability Analytics (`ProfitabilityService` + `GET /analytics/profitability`)**:
+  - Implemented tier-adjusted gross margin calculations weighted by actual line item sales and quantities across customizable periods (`7d`, `30d`, `90d`, `12m`, `all`).
+  - Supported multi-dimensional rollups by `product`, `category`, and `retailer`.
+  - Margin formulas:
+    - `Revenue = units_sold * actual_selling_price` (actual selling price from sales order line items incorporates retailer tier discounts: Gold, Silver, Bronze, Standard, Walk-in)
+    - `Cost = units_sold * product.cost_price`
+    - `Gross Margin (INR) = Revenue - Cost`
+    - `Gross Margin (%) = (Gross Margin INR / Revenue) * 100` (if Revenue > 0 else 0.0%)
+- **Inventory Turnover Analytics (`TurnoverService` + `GET /analytics/turnover`)**:
+  - Implemented continuous velocity tracking sitting between normal sales movement and dead stock detection.
+  - Turnover formulas:
+    - `Average On-Hand = current_on_hand + (units_sold_in_period / 2.0)`
+    - `Turnover Ratio = units_sold_in_period / Average On-Hand`
+    - `Days of Stock on Hand = (Average On-Hand / units_sold_in_period) * days_in_period`
+  - Turnover Banding Thresholds:
+    - **Healthy**: `turnover_ratio >= 1.0` or (`days_of_stock <= 30.0` and `units_sold > 0`) -> Active inventory velocity.
+    - **Slowing**: `0.3 <= turnover_ratio < 1.0` or (`30.0 < days_of_stock <= 90.0` and `units_sold > 0`) -> Early warning before dead stock.
+    - **At-Risk**: `turnover_ratio < 0.3` or `days_of_stock > 90.0` or (`units_sold == 0` and `current_on_hand > 0`) -> Stagnant sitting capital.
+- **Frontend Analytics Interfaces**:
+  - `/admin/analytics/profitability`: Grouped view with Product/Category/Retailer dimension pills, time window tabs (7D/30D/90D/1Y/All), summary KPI cards, and sortable margin table with color-coded progress bars.
+  - `/admin/analytics/turnover`: Ranked inventory turnover table (slowest first), velocity health status filter pills (Healthy, Slowing, At-Risk), KPI cards, and direct management links to `/admin/products`.
+  - Added Profitability and Turnover links to `apps/web/lib/nav.ts`.
+- **Verification & QA**:
+  - Backend pytest suite: `apps/api/tests/test_profitability_and_turnover.py` (6/6 tests passing for hand-computed margin checks across tiers, category rollups, retailer rollups, and turnover velocity ranking). Full backend suite: 259/259 tests passing.
+  - Frontend Vitest suite: `apps/web/lib/__tests__/profitability-turnover-ui.test.tsx` (4/4 tests passing). Full frontend suite: 42 test suites (176 tests) passing.
+  - Next.js production build: Succeeded in 1.8s across all 45 routes with 0 errors.
+
+### Decisions
+- **Turnover as Continuous Early Warning**: While dead stock detection (Step 12.2) provides a binary flag (0 movement for 90+ days), inventory turnover ratio provides a continuous velocity signal (0.3 - 1.0x slowing, <0.3x at-risk) allowing proactive price adjustments or promotions weeks before dead stock lock-up occurs.
+- **Tier-Adjusted Frozen Order Pricing**: Uses frozen sales order line item unit prices to compute actual gross profit captured across different buyer tiers.
+
+### Key values for future steps
+- Services: `ProfitabilityService` (`apps/api/app/services/profitability_service.py`), `TurnoverService` (`apps/api/app/services/turnover_service.py`)
+- DI Factories: `get_profitability_service`, `get_turnover_service` in `apps/api/app/core/di.py`
+- Endpoints:
+  - `GET /analytics/profitability?group_by=product|category|retailer&period=30d`
+  - `GET /analytics/turnover?period=30d`
+- Pages: `/admin/analytics/profitability`, `/admin/analytics/turnover`
+
+
 
 
 

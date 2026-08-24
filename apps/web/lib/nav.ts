@@ -118,6 +118,18 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         requiredPermission: "inventory:view",
       },
       {
+        name: "Profitability",
+        href: "/admin/analytics/profitability",
+        icon: "TrendingUp",
+        requiredPermission: "inventory:view",
+      },
+      {
+        name: "Inventory Turnover",
+        href: "/admin/analytics/turnover",
+        icon: "Activity",
+        requiredPermission: "inventory:view",
+      },
+      {
         name: "Orders & Dispatch",
         href: "/admin/sales-orders",
         icon: "ShoppingBag",

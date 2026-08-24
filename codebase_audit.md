@@ -209,6 +209,7 @@ wareflow/
 │   │   │       ├── ar-aging-ui.test.tsx
 │   │   │       ├── search-ui.test.tsx
 │   │   │       ├── export-service.test.ts
+│   │   │       ├── profitability-turnover-ui.test.tsx
 │   │   │       └── dashboard-shell.test.tsx
 │   │   └── app/                    # App Router pages
 │   │       ├── layout.tsx          # Root layout with anti-flash script & ThemeProvider
@@ -228,7 +229,9 @@ wareflow/
 │   │       ├── admin/
 │   │       │   ├── analytics/
 │   │       │   │   ├── stock/page.tsx # Stock Valuation & Composition Analytics dashboard
-│   │       │   │   └── ar-aging/page.tsx # Accounts-Receivable Aging Report in 30/60/90+ day buckets
+│   │       │   │   ├── ar-aging/page.tsx # Accounts-Receivable Aging Report in 30/60/90+ day buckets
+│   │       │   │   ├── profitability/page.tsx # Profitability & gross margin analytics by product/category/retailer
+│   │       │   │   └── turnover/page.tsx # Inventory turnover velocity & early-warning health banding
 │   │       │   ├── inventory/page.tsx # Multi-warehouse inventory overview & batch inspector
 │   │       │   ├── products/page.tsx  # Product catalog management
 │   │       │   ├── categories/page.tsx# Category hierarchy editor
@@ -261,7 +264,7 @@ wareflow/
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
 │       ├── .env.example
-│       ├── tests/                  # Pytest test suite (253 tests, 100% green)
+│       ├── tests/                  # Pytest test suite (259 tests, 100% green)
 │       │   ├── test_appearance_preferences.py
 │       │   ├── test_di_and_health.py
 │       │   ├── test_models.py
@@ -281,7 +284,8 @@ wareflow/
 │       │   ├── test_whatsapp_channel.py
 │       │   ├── test_stock_subscriptions_and_restock.py
 │       │   ├── test_export_service.py
-│       │   └── test_search.py
+│       │   ├── test_search.py
+│       │   └── test_profitability_and_turnover.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
@@ -298,7 +302,7 @@ wareflow/
 │           │       ├── uom.py      # Unit of Measure & Conversions (/uom, /products/{id}/conversions)
 │           │       ├── stock.py    # Multi-Warehouse Stock Overview, Adjustments, Ledger, Transfers, Recalls & Excel Exports (/stock/*, /stock/overview.xlsx, /stock/movements.xlsx)
 │           │       ├── stock_analytics.py # Stock Valuation & Composition Analytics (/analytics/stock/*)
-│           │       ├── analytics.py# Owner Dashboard, AR Aging, Weekly Insight & Excel Export (/analytics/owner-dashboard, /analytics/ar-aging, /analytics/ar-aging.xlsx, /analytics/weekly-insight)
+│           │       ├── analytics.py# Owner Dashboard, AR Aging, Profitability, Turnover, Weekly Insight & Excel Export (/analytics/owner-dashboard, /analytics/ar-aging, /analytics/profitability, /analytics/turnover)
 │           │       ├── search.py   # Global Unified ERP Search across domains (/search)
 │           │       ├── suppliers.py# Vendor / Supplier profiles (/suppliers)
 │           │       ├── purchase_orders.py # Purchase Orders, Receiving & PDF Export (/purchase-orders, /purchase-orders/{id}/pdf)
@@ -338,6 +342,7 @@ wareflow/
 │           │   ├── pricing_strategy.py
 │           │   ├── product_service.py
 │           │   ├── profile_service.py
+│           │   ├── profitability_service.py # Gross margin & profitability calculations by product/category/retailer
 │           │   ├── purchase_order_service.py
 │           │   ├── purchase_return_service.py
 │           │   ├── retailer_service.py
@@ -350,6 +355,7 @@ wareflow/
 │           │   ├── storage_service.py
 │           │   ├── supplier_service.py
 │           │   ├── transfer_service.py
+│           │   ├── turnover_service.py # Inventory turnover ratio & velocity health banding
 │           │   ├── two_factor_service.py
 │           │   └── uom_service.py
 │           ├── repositories/
@@ -560,6 +566,8 @@ wareflow/
 | GET    | `/analytics/weekly-insight`            | 7-day executive AI intelligence narrative (7d cache)  | Yes (Authenticated User)        |
 | GET    | `/analytics/dashboard`                 | Single round-trip owner KPI metrics, movement & queues| Yes (Authenticated User)        |
 | GET    | `/analytics/ar-aging`                  | Bucketed accounts receivable aging (Current, 30/60/90+)| Yes (`invoices:view`)           |
+| GET    | `/analytics/profitability`             | Gross margin analytics rolled up by product/category/retailer | Yes (Authenticated User)        |
+| GET    | `/analytics/turnover`                  | Inventory turnover ratio & days of stock with health banding  | Yes (Authenticated User)        |
 
 ## Architecture Layers
 
@@ -595,6 +603,7 @@ wareflow/
 
 | Decision                                | Rationale                                                                                                                                                                                         |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Continuous Inventory Turnover Companion | `TurnoverService` provides continuous velocity ratios (Healthy ≥1.0x, Slowing 0.3-1.0x, At-Risk <0.3x) and days of stock as an early-warning signal before Step 12.2's 90-day binary dead-stock threshold |
 | Graph BFS Packaging Traversal           | `UomService` resolves multi-level packaging hierarchies (Pallet->Case->Pack->Piece) & inverses using graph traversal                                                                              |
 | Strict Base UoM Stock Ledger            | `stock_movements` and `stock_batches` strictly store quantities in product's `base_uom_id` via `convert_to_base_uom`                                                                              |
 | Graceful 1:1 Base Fallback              | Products with no custom packaging conversion defined trade 1:1 in base unit gracefully without runtime error                                                                                      |

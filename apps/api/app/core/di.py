@@ -207,6 +207,7 @@ from app.services.portal_auth_service import PortalAuthService
 from app.services.pricing_strategy import PricingEngineService
 from app.services.product_service import ProductService
 from app.services.profile_service import ProfileService
+from app.services.profitability_service import ProfitabilityService
 from app.services.purchase_order_service import PurchaseOrderService
 from app.services.purchase_return_service import PurchaseReturnService
 from app.services.recall_service import RecallService
@@ -223,6 +224,7 @@ from app.services.storage_service import StorageServiceInterface, SupabaseStorag
 from app.services.supplier_portal_service import SupplierPortalService
 from app.services.supplier_service import SupplierService
 from app.services.transfer_service import TransferService
+from app.services.turnover_service import TurnoverService
 from app.services.two_factor_service import TwoFactorService
 from app.services.uom_service import UomService
 
@@ -1182,4 +1184,31 @@ def get_search_service(
         supplier_repo=supplier_repo,
         invoice_repo=invoice_repo,
     )
+
+
+def get_profitability_service(
+    sales_order_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    retailer_repo: RetailerRepository = Depends(get_retailer_repository),
+) -> ProfitabilityService:
+    """Factory for ProfitabilityService (Step 16.1)."""
+    return ProfitabilityService(
+        sales_order_repo=sales_order_repo,
+        product_repo=product_repo,
+        retailer_repo=retailer_repo,
+    )
+
+
+def get_turnover_service(
+    sales_order_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+) -> TurnoverService:
+    """Factory for TurnoverService (Step 16.1)."""
+    return TurnoverService(
+        sales_order_repo=sales_order_repo,
+        product_repo=product_repo,
+        stock_repo=stock_repo,
+    )
+
 

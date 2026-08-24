@@ -10,7 +10,9 @@ from app.core.di import (
     get_forecasting_service,
     get_insight_narrator_service,
     get_owner_dashboard_service,
+    get_profitability_service,
     get_reorder_suggestion_service,
+    get_turnover_service,
 )
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.analytics import (
@@ -19,7 +21,9 @@ from app.schemas.analytics import (
     DeadStockResponse,
     OrderAnomalyReportResponse,
     OwnerDashboardResponse,
+    ProfitabilityResponse,
     ReorderSuggestionsResponse,
+    TurnoverResponse,
     WeeklyInsightResponse,
 )
 from app.schemas.forecast import ForecastSummaryResponse
@@ -31,7 +35,9 @@ from app.services.export_service import ExportService
 from app.services.forecasting_service import ForecastingService
 from app.services.insight_narrator import InsightNarratorService
 from app.services.owner_dashboard_service import OwnerDashboardService
+from app.services.profitability_service import ProfitabilityService
 from app.services.reorder_suggestion_service import ReorderSuggestionService
+from app.services.turnover_service import TurnoverService
 
 router = APIRouter(prefix="/analytics", tags=["Analytics & AI"])
 
@@ -194,3 +200,45 @@ def download_ar_aging_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="ar_aging_{dt_str}.xlsx"'},
     )
+
+
+@router.get(
+    "/profitability",
+    response_model=ProfitabilityResponse,
+    summary="Get gross margin and profitability analytics rolled up per product, category, or retailer",
+)
+def get_profitability_analytics(
+    group_by: str = Query(
+        "product",
+        pattern="^(product|category|retailer)$",
+        description="Grouping dimension: product, category, or retailer",
+    ),
+    period: str = Query(
+        "30d",
+        pattern="^(7d|30d|90d|12m|365d|all)$",
+        description="Reporting time window: 7d, 30d, 90d, 12m, all",
+    ),
+    service: ProfitabilityService = Depends(get_profitability_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> ProfitabilityResponse:
+    """Compute gross margins (selling price - cost price) and sales rollups for wholesale products, categories, or retailers."""
+    return service.get_profitability(group_by=group_by, period=period)
+
+
+@router.get(
+    "/turnover",
+    response_model=TurnoverResponse,
+    summary="Get inventory turnover velocity, days of stock on hand, and health banding",
+)
+def get_turnover_analytics(
+    period: str = Query(
+        "30d",
+        pattern="^(7d|30d|90d|12m|365d|all)$",
+        description="Reporting time window: 7d, 30d, 90d, 12m, all",
+    ),
+    service: TurnoverService = Depends(get_turnover_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> TurnoverResponse:
+    """Compute inventory turnover ratio and days of stock on hand ranked slowest-to-fastest with visual velocity health banding."""
+    return service.get_turnover(period=period)
+

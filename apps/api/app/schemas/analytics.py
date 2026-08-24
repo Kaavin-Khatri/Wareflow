@@ -342,3 +342,81 @@ class ARAgingReportResponse(BaseModel):
         default_factory=list, description="Per-retailer bucketed aging list sorted descending by overdue risk"
     )
     generated_at: datetime = Field(..., description="Timestamp of report compilation")
+
+
+# --- Step 16.1: Profitability & Inventory Turnover Analytics ---
+
+
+class ProfitabilityItem(BaseModel):
+    """Profitability metric for a single group (Product, Category, or Retailer)."""
+
+    id: str = Field(..., description="Entity ID (product_id, category_id, or retailer_id)")
+    name: str = Field(..., description="Entity primary name")
+    secondary_info: str | None = Field(None, description="SKU, pricing tier, or category name")
+    badge: str | None = Field(None, description="Category, tier, or status badge")
+    units_sold: float = Field(0.0, description="Total units sold in period")
+    orders_count: int = Field(0, description="Total distinct orders in period")
+    total_revenue: float = Field(0.0, description="Gross sales revenue in INR")
+    total_cost: float = Field(0.0, description="Total procurement cost in INR")
+    gross_margin_inr: float = Field(0.0, description="Gross profit in INR (Revenue - Cost)")
+    gross_margin_pct: float = Field(0.0, description="Gross margin percentage (Margin / Revenue * 100)")
+
+
+class ProfitabilitySummary(BaseModel):
+    """Summary totals across all grouped profitability rows."""
+
+    total_revenue: float = Field(0.0, description="Total revenue across all groups in INR")
+    total_cost: float = Field(0.0, description="Total cost across all groups in INR")
+    total_gross_margin_inr: float = Field(0.0, description="Total gross profit across all groups in INR")
+    overall_margin_pct: float = Field(0.0, description="Overall blended margin percentage")
+    total_units_sold: float = Field(0.0, description="Total units sold across all groups")
+    total_orders: int = Field(0, description="Total order volume in period")
+
+
+class ProfitabilityResponse(BaseModel):
+    """Complete response for GET /analytics/profitability (Step 16.1)."""
+
+    group_by: str = Field(..., description="Grouping dimension: product, category, or retailer")
+    period: str = Field(..., description="Reporting time window: 7d, 30d, 90d, 12m, all")
+    summary: ProfitabilitySummary = Field(..., description="Top summary aggregate metrics")
+    items: list[ProfitabilityItem] = Field(default_factory=list, description="Grouped profitability records")
+    generated_at: datetime = Field(..., description="Timestamp of calculation")
+
+
+class TurnoverItem(BaseModel):
+    """Inventory turnover velocity metric for a single product."""
+
+    product_id: str = Field(..., description="Unique product ID")
+    product_name: str = Field(..., description="Product catalog name")
+    sku: str = Field(..., description="Stock keeping unit")
+    category_name: str | None = Field(None, description="Category name")
+    unit: str = Field("Piece", description="Measurement unit")
+    current_on_hand: float = Field(..., description="Current physical stock on hand")
+    units_sold: float = Field(..., description="Total units sold during selected period")
+    average_on_hand: float = Field(..., description="Average inventory level over period")
+    turnover_ratio: float = Field(..., description="Inventory turnover ratio (Units Sold / Avg Stock)")
+    days_of_stock: float = Field(..., description="Days of stock on hand (Avg Stock / Units Sold * Days)")
+    turnover_band: str = Field(..., description="Velocity health band: healthy, slowing, at_risk")
+    cost_price: float = Field(0.0, description="Unit cost price in INR")
+    tied_up_capital: float = Field(0.0, description="Capital tied up in current on-hand stock")
+
+
+class TurnoverSummary(BaseModel):
+    """Aggregate catalog-wide turnover velocity metrics."""
+
+    average_turnover_ratio: float = Field(0.0, description="Catalog mean turnover ratio")
+    average_days_of_stock: float = Field(0.0, description="Catalog mean days of stock on hand")
+    healthy_count: int = Field(0, description="Number of products in healthy velocity band")
+    slowing_count: int = Field(0, description="Number of products in slowing velocity band")
+    at_risk_count: int = Field(0, description="Number of products in at-risk velocity band")
+    total_products: int = Field(0, description="Total active products analyzed")
+
+
+class TurnoverResponse(BaseModel):
+    """Complete response for GET /analytics/turnover (Step 16.1)."""
+
+    period: str = Field(..., description="Reporting time window: 7d, 30d, 90d, 12m, all")
+    summary: TurnoverSummary = Field(..., description="Summary KPI velocity metrics")
+    items: list[TurnoverItem] = Field(default_factory=list, description="Ranked product turnover velocity records")
+    generated_at: datetime = Field(..., description="Timestamp of calculation")
+
