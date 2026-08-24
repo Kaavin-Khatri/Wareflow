@@ -184,3 +184,116 @@ class OrderAnomalyReportResponse(BaseModel):
     unusual_items_count: int
     items: list[ItemAnomalyReport]
     evaluated_at: datetime
+
+
+# ============================================================================
+# Step 15.1: Owner Analytics Dashboard Schemas
+# ============================================================================
+
+
+class DashboardKPIMetrics(BaseModel):
+    """Executive KPI card metrics for warehouse owner."""
+
+    monthly_sales_revenue: float = Field(
+        0.0, description="Gross sales revenue for current calendar month in INR"
+    )
+    monthly_inventory_value: float = Field(
+        0.0, description="Total valuation of on-hand inventory at month-end in INR"
+    )
+    monthly_inventory_units: float = Field(
+        0.0, description="Total physical units on-hand in warehouse at month-end"
+    )
+    total_stock_value: float = Field(
+        0.0, description="Current total stock valuation across all active catalog products"
+    )
+    open_pos_count: int = Field(
+        0, description="Count of open purchase orders in draft, approved, or ordered status"
+    )
+    open_sos_count: int = Field(
+        0, description="Count of active sales orders in draft, confirmed, packed, or shipped status"
+    )
+    low_stock_count: int = Field(
+        0, description="Count of active products where 0 < on_hand <= reorder_point"
+    )
+    critical_stock_count: int = Field(
+        0, description="Count of active products where on_hand == 0 (stockout)"
+    )
+    total_outstanding_receivables: float = Field(
+        0.0, description="Total unpaid balance across non-cancelled invoices in INR"
+    )
+    overdue_invoices_count: int = Field(
+        0, description="Count of invoices past due date with remaining positive balance"
+    )
+
+
+class TopProductMovement(BaseModel):
+    """Fastest-moving product over trailing 30 days."""
+
+    product_id: str = Field(..., description="Unique product ID")
+    product_name: str = Field(..., description="Product catalog name")
+    sku: str = Field(..., description="Stock keeping unit identifier")
+    category_name: str | None = Field(None, description="Category name")
+    units_moved: float = Field(..., description="Total units sold or dispatched in trailing 30d")
+    revenue: float = Field(0.0, description="Total revenue generated from this product in INR")
+
+
+class InboundOutboundDataPoint(BaseModel):
+    """Daily inbound vs outbound movement aggregation point for timeseries charts."""
+
+    date: str = Field(..., description="Calendar date in YYYY-MM-DD format")
+    inbound_qty: float = Field(0.0, description="Total units received (PO + returns in)")
+    outbound_qty: float = Field(0.0, description="Total units dispatched (SO + returns out)")
+
+
+class LowStockQuickItem(BaseModel):
+    """Quick-action low stock item preview on dashboard."""
+
+    product_id: str = Field(..., description="Unique product ID")
+    product_name: str = Field(..., description="Product catalog name")
+    sku: str = Field(..., description="Stock keeping unit identifier")
+    current_stock: float = Field(..., description="Current on-hand stock quantity")
+    reorder_point: float = Field(..., description="Configured reorder trigger threshold")
+    urgency: str = Field(..., description="Urgency classification: critical, high, medium")
+    primary_supplier_name: str | None = Field(None, description="Primary supplier name if linked")
+
+
+class OverdueInvoiceQuickItem(BaseModel):
+    """Quick-action overdue invoice preview on dashboard."""
+
+    invoice_id: str = Field(..., description="Unique invoice ID")
+    invoice_number: str = Field(..., description="Sequential invoice number e.g. INV/2026-27/0001")
+    retailer_name: str = Field(..., description="Retailer or buyer company name")
+    due_date: str = Field(..., description="Invoice due date in YYYY-MM-DD format")
+    overdue_days: int = Field(..., description="Days past due date")
+    balance_due: float = Field(..., description="Remaining unpaid balance in INR")
+    status: str = Field(..., description="Current invoice status")
+
+
+class OwnerDashboardResponse(BaseModel):
+    """Unified single round-trip response for Owner Analytics Dashboard (Step 15.1)."""
+
+    kpi_metrics: DashboardKPIMetrics = Field(
+        ..., description="Top summary KPI cards for owner dashboard"
+    )
+    top_fastest_moving: list[TopProductMovement] = Field(
+        default_factory=list, description="Top 5 fastest moving products in trailing 30 days"
+    )
+    top_dead_stock: list[DeadStockItem] = Field(
+        default_factory=list, description="Top 5 stagnant products ranked by tied-up capital"
+    )
+    movement_trend_30d: list[InboundOutboundDataPoint] = Field(
+        default_factory=list, description="30-day daily inbound vs outbound movement series"
+    )
+    low_stock_quick_list: list[LowStockQuickItem] = Field(
+        default_factory=list, description="Top urgent low-stock items needing replenishment"
+    )
+    overdue_invoices_quick_list: list[OverdueInvoiceQuickItem] = Field(
+        default_factory=list, description="Top overdue invoices for accounts receivable aging"
+    )
+    weekly_insight: WeeklyInsightResponse | None = Field(
+        None, description="AI weekly executive briefing narrative (Groq or deterministic rule)"
+    )
+    is_empty_state: bool = Field(
+        False, description="True if no products/orders exist in the deployment"
+    )
+    generated_at: datetime = Field(..., description="Timestamp of dashboard compilation")

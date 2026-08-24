@@ -3463,6 +3463,60 @@
   - `GET /analytics/weekly-insight`
   - `GET /analytics/anomalies/order/{order_id}`
 
+---
+
+## Step 15.1 — Owner Analytics Dashboard (KPIs + Charts)
+
+**Timestamp:** 2026-08-21T02:10:00Z
+**Status:** COMPLETE
+
+### What was done
+- **Single Round-Trip Owner Analytics API (`GET /analytics/dashboard`)**:
+  - Implemented `OwnerDashboardService` synthesizing enterprise wholesale telemetry:
+    - **Monthly Wholesale Revenue**: Current calendar month sales from active/delivered orders (`confirmed`, `packed`, `shipped`, `delivered`).
+    - **Month-End Inventory Valuation**: Total on-hand physical units and cost-valuation (`on_hand * cost_price`).
+    - **Active Order Pipelines**: Open POs count (`draft`, `ordered`, `ready_for_dispatch`, `partially_received`) and Open SOs count (`draft`, `confirmed`, `packed`, `shipped`).
+    - **Stock Health SKUs**: Low stock ($0 < \text{on\_hand} \le \text{reorder\_point}$) and Critical stock ($\text{on\_hand} \le 0$) counts.
+    - **Outstanding Receivables & Aging**: Unpaid balance totals on non-cancelled invoices and overdue count ($due\_date < today$).
+    - **Top 5 Fastest-Moving Products**: Trailing 30-day velocity leaders ranked by units and revenue.
+    - **Top 5 Dead Stock Risks**: Capital tied up in inactive inventory (60+ days without outbound movement).
+    - **30-Day Movement Timeseries**: Inbound receipts vs outbound dispatches daily buckets.
+    - **Low-Stock Quick-List Action Queue**: Deficits, supplier names, urgency badges (`critical`, `high`, `medium`), and restock CTAs.
+    - **Overdue Invoices Action Queue**: Invoice numbers, retailer names, overdue days, balance due, and collection links.
+    - **Empty State Detection**: Zero crash on clean deployments, returning zeroed defaults and guided onboarding flag.
+- **Frontend Dashboard UI (`apps/web/app/dashboard/page.tsx`)**:
+  - Wired live `OwnerDashboardResponse` into `DashboardTemplate`:
+    - Top KPI summary cards for Monthly Sales Revenue, Month-End Inventory Valuation & Units, Stock Health alerts, and Outstanding Receivables.
+    - Recharts interactive 30-day AreaChart with smooth linear gradients, dual-line legend, tooltips, and responsive layout.
+    - Top 5 Fastest-Moving velocity list and Dead Stock capital risk cards.
+    - Low-Stock Quick-List widget with supplier names and "+ Restock PO" actions.
+    - Overdue Receivables Queue widget with overdue days and "Collect Payment" links.
+    - AI Executive Intelligence Briefing card with on-demand refresh.
+    - Guided `EmptyState` component for brand-new deployments.
+- **Test Suites**:
+  - Backend: `apps/api/tests/test_owner_dashboard.py` (4 tests verifying fresh deployment empty state, exact hand-calculated KPI metrics, 30-day movement bucket aggregation, and FastAPI TestClient integration).
+  - Frontend: `apps/web/lib/__tests__/owner-dashboard-ui.test.tsx` (2 tests verifying KPI numbers, Recharts chart container, quick lists, top movers, and guided empty state).
+
+### SOLID Principles Applied
+- **SRP (Single Responsibility Principle)**: `OwnerDashboardService` focuses solely on aggregating and computing wholesale telemetry metrics from existing domain repositories.
+- **DIP (Dependency Inversion Principle)**: `OwnerDashboardService` depends on repository abstractions (`StockRepositoryInterface`, `ProductRepositoryInterface`, `SalesOrderRepositoryInterface`, `PurchaseOrderRepositoryInterface`, `InvoiceRepositoryInterface`, `SupplierRepositoryInterface`).
+- **Zero Database Schema Bloat**: Derives all analytics dynamically from existing tables without unnecessary cache tables or redundant schema mutations.
+
+### Files Created/Modified
+- Created: `apps/api/app/services/owner_dashboard_service.py`
+- Created: `apps/api/tests/test_owner_dashboard.py`
+- Created: `apps/web/lib/__tests__/owner-dashboard-ui.test.tsx`
+- Modified: `apps/api/app/schemas/analytics.py`
+- Modified: `apps/api/app/core/di.py`
+- Modified: `apps/api/app/api/routers/analytics.py`
+- Modified: `apps/api/app/repositories/impl/stock_repository.py`
+- Modified: `apps/web/app/dashboard/page.tsx`
+
+### Key values for future steps
+- Owner Dashboard Service: `OwnerDashboardService` (`apps/api/app/services/owner_dashboard_service.py`)
+- DI Factory: `get_owner_dashboard_service` in `apps/api/app/core/di.py`
+- Endpoint: `GET /analytics/dashboard` (Returns `OwnerDashboardResponse`)
+
 
 
 

@@ -200,6 +200,7 @@ from app.services.notification_channels.sms_channel import SmsChannel
 from app.services.notification_channels.whatsapp_channel import WhatsAppChannel
 from app.services.notification_preference_service import NotificationPreferenceService
 from app.services.notification_service import NotificationService
+from app.services.owner_dashboard_service import OwnerDashboardService
 from app.services.payment_service import PaymentService
 from app.services.portal_auth_service import PortalAuthService
 from app.services.pricing_strategy import PricingEngineService
@@ -1113,4 +1114,27 @@ def get_insight_narrator_service(
         groq_api_key=settings.groq_api_key or "",
         groq_model=settings.groq_model,
         cache_ttl_days=settings.insight_cache_ttl_days,
+    )
+
+
+def get_owner_dashboard_service(
+    so_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
+    stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    po_repo: PurchaseOrderRepositoryInterface = Depends(get_db_purchase_order_repository),
+    invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
+    dead_stock_service: DeadStockService = Depends(get_dead_stock_service),
+    insight_narrator: InsightNarratorService = Depends(get_insight_narrator_service),
+    supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
+) -> OwnerDashboardService:
+    """Factory for OwnerDashboardService aggregating executive KPIs in one round trip."""
+    return OwnerDashboardService(
+        sales_order_repo=so_repo,
+        stock_repo=stock_repo,
+        product_repo=product_repo,
+        purchase_order_repo=po_repo,
+        invoice_repo=invoice_repo,
+        dead_stock_service=dead_stock_service,
+        insight_narrator=insight_narrator,
+        supplier_repo=supplier_repo,
     )

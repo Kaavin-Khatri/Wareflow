@@ -811,6 +811,20 @@ class InMemoryStockRepository(StockRepositoryInterface):
             reference_id=reference_id,
             created_by=created_by,
         )
+        self.movements.append(
+            {
+                "id": movement.id,
+                "product_id": movement.product_id,
+                "warehouse_id": movement.warehouse_id,
+                "batch_id": movement.batch_id,
+                "type": movement.type,
+                "quantity": movement.quantity,
+                "reference_type": movement.reference_type,
+                "reference_id": movement.reference_id,
+                "created_by": movement.created_by,
+                "created_at": datetime.now(UTC),
+            }
+        )
         return batch_model, movement
 
     def get_batch_by_id(self, batch_id: str) -> StockBatch | None:
@@ -1133,7 +1147,11 @@ class InMemoryStockRepository(StockRepositoryInterface):
             filtered = [
                 m
                 for m in filtered
-                if (m["type"].value if hasattr(m["type"], "value") else str(m["type"]))
+                if (
+                    (m.get("type") or m.get("movement_type")).value
+                    if hasattr(m.get("type") or m.get("movement_type"), "value")
+                    else str(m.get("type") or m.get("movement_type", ""))
+                )
                 == movement_type
             ]
         if start_date:
@@ -1164,7 +1182,8 @@ class InMemoryStockRepository(StockRepositoryInterface):
             p_data = self.products.get(m["product_id"], {})
             w_data = self.warehouses.get(m["warehouse_id"], {})
             b_data = self.batches.get(m["batch_id"], {}) if m.get("batch_id") else {}
-            m_type = m["type"].value if hasattr(m["type"], "value") else str(m["type"])
+            raw_t = m.get("type") if m.get("type") is not None else m.get("movement_type", "")
+            m_type = raw_t.value if hasattr(raw_t, "value") else str(raw_t)
             results.append(
                 {
                     "id": m["id"],

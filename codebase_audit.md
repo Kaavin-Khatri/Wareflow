@@ -203,6 +203,7 @@ wareflow/
 │   │   │       ├── stock-analytics.test.tsx
 │   │   │       ├── suppliers.test.tsx
 │   │   │       ├── purchase-orders.test.tsx
+│   │   │       ├── owner-dashboard-ui.test.tsx
 │   │   │       └── dashboard-shell.test.tsx
 │   │   └── app/                    # App Router pages
 │   │       ├── layout.tsx          # Root layout with anti-flash script & ThemeProvider
@@ -320,6 +321,7 @@ wareflow/
 │           │   ├── audit_service.py
 │           │   ├── business_settings_service.py
 │           │   ├── customer_service.py
+│           │   ├── owner_dashboard_service.py
 │           │   ├── pricing_strategy.py
 │           │   ├── product_service.py
 │           │   ├── profile_service.py
@@ -542,6 +544,7 @@ wareflow/
 | GET    | `/analytics/dead-stock`                | Stagnant/dead stock detection ranked by tied-up capital| Yes (Authenticated User)       |
 | GET    | `/analytics/anomalies/order/{order_id}`| Detect 3σ statistical anomalies for sales order lines | Yes (Authenticated User)        |
 | GET    | `/analytics/weekly-insight`            | 7-day executive AI intelligence narrative (7d cache)  | Yes (Authenticated User)        |
+| GET    | `/analytics/dashboard`                 | Single round-trip owner KPI metrics, movement & queues| Yes (Authenticated User)        |
 
 ## Architecture Layers
 

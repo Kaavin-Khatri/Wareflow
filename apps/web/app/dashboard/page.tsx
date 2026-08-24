@@ -1,8 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import AppLayout from "@/components/AppLayout";
 import { DashboardTemplate } from "@/components/templates/DashboardTemplate";
 import {
@@ -13,6 +23,7 @@ import {
   GlassBadge,
 } from "@/components/glass";
 import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
+import { EmptyState } from "@/components/EmptyState";
 import { apiClient } from "@/lib/api-client";
 import {
   TrendingUp,
@@ -25,19 +36,83 @@ import {
   FileSpreadsheet,
   Users,
   CheckCircle2,
-  Clock,
   Sparkles,
   RefreshCw,
   Zap,
+  IndianRupee,
+  Building2,
+  Flame,
+  AlertOctagon,
+  Boxes,
 } from "lucide-react";
 
-interface RecentOrder {
-  id: string;
-  orderNumber: string;
-  retailer: string;
-  itemsCount: number;
-  total: number;
-  status: "dispatched" | "processing" | "pending";
+export interface DashboardKPIMetrics {
+  monthly_sales_revenue: number;
+  monthly_inventory_value: number;
+  monthly_inventory_units: number;
+  total_stock_value: number;
+  open_pos_count: number;
+  open_sos_count: number;
+  low_stock_count: number;
+  critical_stock_count: number;
+  total_outstanding_receivables: number;
+  overdue_invoices_count: number;
+}
+
+export interface TopProductMovement {
+  product_id: string;
+  product_name: string;
+  sku: string;
+  units_moved: number;
+  revenue: number;
+  category_name?: string | null;
+}
+
+export interface DeadStockRiskItem {
+  product_id: string;
+  product_name: string;
+  sku: string;
+  units_on_hand: number;
+  tied_up_capital: number;
+  days_inactive: number;
+}
+
+export interface InboundOutboundDataPoint {
+  date: string;
+  inbound_qty: number;
+  outbound_qty: number;
+}
+
+export interface LowStockQuickItem {
+  product_id: string;
+  product_name: string;
+  sku: string;
+  current_stock: number;
+  reorder_point: number;
+  urgency: "critical" | "high" | "medium";
+  primary_supplier_id?: string | null;
+  primary_supplier_name?: string | null;
+  deficit: number;
+}
+
+export interface OverdueInvoiceQuickItem {
+  invoice_id: string;
+  invoice_number: string;
+  retailer_name: string;
+  due_date: string;
+  overdue_days: number;
+  balance_due: number;
+  status: string;
+}
+
+export interface OwnerDashboardResponse {
+  kpi_metrics: DashboardKPIMetrics;
+  top_fastest_moving: TopProductMovement[];
+  top_dead_stock: DeadStockRiskItem[];
+  movement_trend_30d: InboundOutboundDataPoint[];
+  low_stock_quick_list: LowStockQuickItem[];
+  overdue_invoices_quick_list: OverdueInvoiceQuickItem[];
+  is_empty_state: boolean;
 }
 
 interface WeeklyInsightMetrics {
@@ -61,8 +136,67 @@ interface WeeklyInsight {
   is_cached: boolean;
 }
 
+interface RecentOrder {
+  id: string;
+  orderNumber: string;
+  retailer: string;
+  itemsCount: number;
+  total: number;
+  status: "dispatched" | "processing" | "pending";
+}
+
+const DEFAULT_KPIS: DashboardKPIMetrics = {
+  monthly_sales_revenue: 0,
+  monthly_inventory_value: 0,
+  monthly_inventory_units: 0,
+  total_stock_value: 0,
+  open_pos_count: 0,
+  open_sos_count: 0,
+  low_stock_count: 0,
+  critical_stock_count: 0,
+  total_outstanding_receivables: 0,
+  overdue_invoices_count: 0,
+};
+
+interface TooltipPayloadItem {
+  name: string;
+  value: number;
+  color?: string;
+  stroke?: string;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string;
+}
+
+function CustomMovementTooltip({ active, payload, label }: CustomTooltipProps) {
+  if (!active || !payload || !payload.length) return null;
+  return (
+    <div className="p-3 rounded-xl bg-[var(--surface-overlay)] backdrop-blur-md border border-[var(--glass-border)] shadow-xl text-xs space-y-1">
+      <div className="font-mono font-bold text-white mb-1.5 border-b border-[var(--glass-border)] pb-1">
+        Date: {label}
+      </div>
+      {payload.map((entry, idx) => (
+        <div key={`tip-${idx}`} className="flex items-center justify-between gap-4">
+          <span className="flex items-center gap-1.5" style={{ color: entry.stroke || entry.color }}>
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.stroke || entry.color }} />
+            {entry.name}:
+          </span>
+          <span className="font-mono font-bold text-white">
+            {Number(entry.value).toLocaleString("en-IN")} units
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [ordersListRef] = useAutoAnimate();
+  const [dashboard, setDashboard] = useState<OwnerDashboardResponse | null>(null);
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
   const [insight, setInsight] = useState<WeeklyInsight | null>(null);
   const [loadingInsight, setLoadingInsight] = useState(false);
 
@@ -101,6 +235,27 @@ export default function DashboardPage() {
     },
   ]);
 
+  async function fetchDashboard() {
+    setLoadingDashboard(true);
+    try {
+      const data = await apiClient.get<OwnerDashboardResponse>("/analytics/dashboard");
+      setDashboard(data);
+    } catch (err) {
+      console.warn("Owner dashboard API unavailable:", err);
+      setDashboard({
+        kpi_metrics: DEFAULT_KPIS,
+        top_fastest_moving: [],
+        top_dead_stock: [],
+        movement_trend_30d: [],
+        low_stock_quick_list: [],
+        overdue_invoices_quick_list: [],
+        is_empty_state: true,
+      });
+    } finally {
+      setLoadingDashboard(false);
+    }
+  }
+
   async function fetchWeeklyInsight(forceRefresh = false) {
     setLoadingInsight(true);
     try {
@@ -120,7 +275,7 @@ export default function DashboardPage() {
     let ignore = false;
     async function load() {
       if (!ignore) {
-        await fetchWeeklyInsight(false);
+        await Promise.allSettled([fetchDashboard(), fetchWeeklyInsight(false)]);
       }
     }
     load();
@@ -148,14 +303,19 @@ export default function DashboardPage() {
     );
   };
 
+  const kpis = dashboard?.kpi_metrics || DEFAULT_KPIS;
+  const currentMonthName = useMemo(() => {
+    return new Date().toLocaleString("en-IN", { month: "long", year: "numeric" });
+  }, []);
+
   return (
     <AppLayout>
       <DashboardTemplate
-        title="Wholesale Command Center"
-        description="Real-time stock ledger, dispatch velocity, and automated reorder triggers across all distribution terminals."
+        title="Owner Wholesale Command Center"
+        description="Single round-trip enterprise pulse: 30-day velocity, receivables aging, inventory health, and rapid-action queues."
         badge={
           <GlassBadge variant="accent" dot>
-            Live Telemetry • Bhiwandi Hub #1
+            Live Telemetry • Bhiwandi Master Hub
           </GlassBadge>
         }
         primaryAction={
@@ -165,50 +325,92 @@ export default function DashboardPage() {
           </GlassButton>
         }
         secondaryActions={
-          <Link href="/admin/audit">
-            <GlassButton variant="outline" size="md">
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>Audit Ledger</span>
-            </GlassButton>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/admin/purchase-orders">
+              <GlassButton variant="outline" size="md">
+                <Truck className="w-3.5 h-3.5" />
+                <span>Purchase Orders</span>
+              </GlassButton>
+            </Link>
+            <Link href="/admin/audit">
+              <GlassButton variant="outline" size="md">
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Audit Ledger</span>
+              </GlassButton>
+            </Link>
+          </div>
         }
         kpiMetrics={[
           {
-            id: "kpi-revenue",
-            title: "Daily Wholesale Revenue",
-            value: <AnimatedNumber value={845200} prefix="₹" />,
-            change: "+18.4% vs yesterday",
-            trend: "up",
-            icon: <TrendingUp className="w-4 h-4" />,
+            id: "kpi-sales-revenue",
+            title: `Monthly Sales (${currentMonthName})`,
+            value: <AnimatedNumber value={kpis.monthly_sales_revenue} prefix="₹" />,
+            change: `${kpis.open_sos_count} active orders in pipeline`,
+            trend: kpis.monthly_sales_revenue > 0 ? "up" : "neutral",
+            icon: <TrendingUp className="w-4 h-4 text-emerald-400" />,
           },
           {
-            id: "kpi-dispatches",
-            title: "Active Vehicle Runs",
-            value: <AnimatedNumber value={38} suffix=" Orders" />,
-            change: "4 trucks en-route",
+            id: "kpi-inventory-val",
+            title: "Total Inventory Valuation",
+            value: <AnimatedNumber value={kpis.total_stock_value} prefix="₹" />,
+            change: `${Math.round(kpis.monthly_inventory_units).toLocaleString("en-IN")} units on hand`,
             trend: "neutral",
-            icon: <Truck className="w-4 h-4" />,
+            icon: <Package className="w-4 h-4 text-purple-400" />,
           },
           {
-            id: "kpi-low-stock",
-            title: "Low Stock Alerts",
-            value: <AnimatedNumber value={4} suffix=" SKUs" />,
-            change: "2 POs drafted",
-            trend: "down",
-            icon: <AlertTriangle className="w-4 h-4 text-amber-500" />,
+            id: "kpi-stock-health",
+            title: "Stock Alert Status",
+            value: (
+              <AnimatedNumber
+                value={kpis.low_stock_count + kpis.critical_stock_count}
+                suffix=" SKUs"
+              />
+            ),
+            change: `${kpis.critical_stock_count} critical • ${kpis.low_stock_count} low stock`,
+            trend: kpis.critical_stock_count > 0 ? "down" : "neutral",
+            icon: <AlertTriangle className="w-4 h-4 text-amber-400" />,
           },
           {
-            id: "kpi-inventory",
-            title: "Warehouse Bags in Stock",
-            value: <AnimatedNumber value={14820} suffix=" bags" />,
-            change: "98.2% capacity",
-            trend: "up",
-            icon: <Package className="w-4 h-4" />,
+            id: "kpi-receivables",
+            title: "Outstanding Receivables",
+            value: (
+              <AnimatedNumber value={kpis.total_outstanding_receivables} prefix="₹" />
+            ),
+            change: `${kpis.overdue_invoices_count} overdue invoices`,
+            trend: kpis.overdue_invoices_count > 0 ? "down" : "neutral",
+            icon: <IndianRupee className="w-4 h-4 text-rose-400" />,
           },
         ]}
         mainContent={
           <div className="space-y-6">
-            {/* AI Owner Weekly Intelligence Narrative Briefing */}
+            {/* 1. Empty State Guard for Fresh Deployments */}
+            {dashboard?.is_empty_state && !loadingDashboard && (
+              <GlassCard className="p-8 text-center border-dashed border-[var(--border)]">
+                <EmptyState
+                  icon={<Boxes className="w-8 h-8 text-[var(--accent)]" />}
+                  title="Fresh Deployment Initialized"
+                  description="Your wholesale warehouse environment is ready. Start by adding products, receiving purchase orders, or recording sales orders to populate real-time telemetry."
+                  action={
+                    <div className="flex items-center gap-3 justify-center pt-2">
+                      <Link href="/admin/products">
+                        <GlassButton variant="primary" size="md">
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Catalog Products</span>
+                        </GlassButton>
+                      </Link>
+                      <Link href="/admin/purchase-orders">
+                        <GlassButton variant="outline" size="md">
+                          <Truck className="w-3.5 h-3.5" />
+                          <span>Receive Stock (PO)</span>
+                        </GlassButton>
+                      </Link>
+                    </div>
+                  }
+                />
+              </GlassCard>
+            )}
+
+            {/* 2. AI Executive Weekly Intelligence Narrative Briefing */}
             {insight && (
               <GlassCard className="p-6 relative overflow-hidden border border-purple-500/30 bg-gradient-to-br from-purple-950/20 via-background to-background shadow-2xl">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--glass-border)]">
@@ -254,7 +456,6 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="pt-4 space-y-4">
-                  {/* Headline & 2-3 sentence grounded narrative */}
                   <div className="space-y-2">
                     <h3 className="text-sm font-bold text-white flex items-center gap-2">
                       <Zap className="w-4 h-4 text-amber-400 shrink-0" />
@@ -265,7 +466,6 @@ export default function DashboardPage() {
                     </p>
                   </div>
 
-                  {/* Grounded Underlying Metrics Strip */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 text-xs">
                     <div className="p-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--glass-border)]">
                       <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-mono">
@@ -307,7 +507,197 @@ export default function DashboardPage() {
               </GlassCard>
             )}
 
-            {/* Live Orders Table with AutoAnimate */}
+            {/* 3. Interactive 30-Day Inbound vs Outbound Movement Velocity Chart */}
+            <GlassCard className="p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <GlassCardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-[var(--accent)]" />
+                    30-Day Inventory Movement Velocity
+                  </GlassCardTitle>
+                  <GlassCardDescription className="text-xs">
+                    Aggregated daily inbound purchase receipts vs outbound wholesale dispatches.
+                  </GlassCardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <GlassBadge variant="success" className="text-[11px]">
+                    ● Inbound Receipts
+                  </GlassBadge>
+                  <GlassBadge variant="accent" className="text-[11px]">
+                    ● Outbound Dispatches
+                  </GlassBadge>
+                </div>
+              </div>
+
+              <div className="h-[280px] w-full pt-2">
+                {dashboard?.movement_trend_30d && dashboard.movement_trend_30d.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={dashboard.movement_trend_30d}
+                      margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="inboundGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                        </linearGradient>
+                        <linearGradient id="outboundGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
+                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                      <XAxis
+                        dataKey="date"
+                        tickFormatter={(d: string) => d.slice(5)}
+                        stroke="var(--text-muted)"
+                        fontSize={11}
+                      />
+                      <YAxis
+                        stroke="var(--text-muted)"
+                        fontSize={11}
+                        tickFormatter={(v: number) => Number(v).toLocaleString()}
+                      />
+                      <Tooltip content={<CustomMovementTooltip />} />
+                      <Legend
+                        verticalAlign="top"
+                        height={36}
+                        iconType="circle"
+                        formatter={(val) => (
+                          <span className="text-xs text-[var(--text-muted)] font-medium">
+                            {val}
+                          </span>
+                        )}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="inbound_qty"
+                        name="Inbound Receipts"
+                        stroke="#10b981"
+                        strokeWidth={2}
+                        fillOpacity={1}
+                        fill="url(#inboundGrad)"
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="outbound_qty"
+                        name="Outbound Dispatches"
+                        stroke="#8b5cf6"
+                        strokeWidth={2}
+                        fillOpacity={1}
+                        fill="url(#outboundGrad)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-xs text-[var(--text-muted)]">
+                    No movement telemetry recorded in the trailing 30 days.
+                  </div>
+                )}
+              </div>
+            </GlassCard>
+
+            {/* 4. Top Velocity Movers & Dead Stock Risk Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Top 5 Fastest-Moving Products */}
+              <GlassCard className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Flame className="w-4 h-4 text-emerald-400" />
+                    <GlassCardTitle className="text-sm font-semibold">
+                      Top Velocity Products (30 Days)
+                    </GlassCardTitle>
+                  </div>
+                  <GlassBadge variant="success" className="text-[10px]">
+                    Sales Velocity
+                  </GlassBadge>
+                </div>
+
+                {dashboard?.top_fastest_moving && dashboard.top_fastest_moving.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {dashboard.top_fastest_moving.map((p, idx) => (
+                      <div
+                        key={p.product_id || `fast-${idx}`}
+                        className="p-3 rounded-xl bg-[var(--surface-hover)] border border-[var(--glass-border)] flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-semibold text-white truncate" title={p.product_name}>
+                            {p.product_name}
+                          </div>
+                          <div className="text-[10px] text-[var(--text-muted)] font-mono">
+                            {p.sku} {p.category_name ? `• ${p.category_name}` : ""}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="font-mono font-bold text-emerald-400">
+                            {Number(p.units_moved).toLocaleString("en-IN")} units
+                          </div>
+                          <div className="text-[10px] text-[var(--text-muted)] font-mono">
+                            ₹{Number(p.revenue).toLocaleString("en-IN")}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-xs text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-xl">
+                    No outbound sales volume in trailing 30 days.
+                  </div>
+                )}
+              </GlassCard>
+
+              {/* Top 5 Dead Stock Capital Risks */}
+              <GlassCard className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertOctagon className="w-4 h-4 text-amber-400" />
+                    <GlassCardTitle className="text-sm font-semibold">
+                      Dead Stock Capital Risk (60+ Days)
+                    </GlassCardTitle>
+                  </div>
+                  <GlassBadge variant="warning" className="text-[10px]">
+                    Tied-Up Capital
+                  </GlassBadge>
+                </div>
+
+                {dashboard?.top_dead_stock && dashboard.top_dead_stock.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {dashboard.top_dead_stock.map((p, idx) => (
+                      <div
+                        key={p.product_id || `dead-${idx}`}
+                        className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-semibold text-white truncate" title={p.product_name}>
+                            {p.product_name}
+                          </div>
+                          <div className="text-[10px] text-amber-300/80 font-mono">
+                            {p.sku} • {p.days_inactive}d inactive ({p.units_on_hand} on-hand)
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="font-mono font-bold text-amber-400">
+                            ₹{Number(p.tied_up_capital).toLocaleString("en-IN")}
+                          </div>
+                          <Link
+                            href="/admin/inventory"
+                            className="text-[10px] text-[var(--accent)] hover:underline block"
+                          >
+                            Liquidate →
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-xs text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-xl">
+                    Zero dead stock identified. Inventory is actively turning.
+                  </div>
+                )}
+              </GlassCard>
+            </div>
+
+            {/* 5. Live Recent Sales Orders Stream Table */}
             <GlassCard className="p-6 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
@@ -388,7 +778,7 @@ export default function DashboardPage() {
               </div>
             </GlassCard>
 
-            {/* Quick Admin Navigation Shortcuts */}
+            {/* 6. Administrative & Security Navigation Controls */}
             <GlassCard className="p-6 space-y-4">
               <GlassCardTitle className="text-sm">
                 Administrative & Security Controls
@@ -432,41 +822,142 @@ export default function DashboardPage() {
         }
         sideContent={
           <div className="space-y-4">
-            {/* Urgent Operations Alert Queue */}
+            {/* 1. Low-Stock Quick-List Widget */}
             <GlassCard className="p-5 space-y-3">
               <div className="flex items-center justify-between">
-                <GlassCardTitle className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
-                  Urgent Operations Queue
-                </GlassCardTitle>
-                <GlassBadge variant="warning" className="text-[10px] py-0">
-                  2 Pending
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  <GlassCardTitle className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
+                    Low Stock Quick Action
+                  </GlassCardTitle>
+                </div>
+                <GlassBadge
+                  variant={
+                    (dashboard?.low_stock_quick_list?.length || 0) > 0 ? "warning" : "success"
+                  }
+                  className="text-[10px] py-0"
+                >
+                  {dashboard?.low_stock_quick_list?.length || 0} Alerts
                 </GlassBadge>
               </div>
 
-              <div className="space-y-2.5 text-xs">
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 space-y-1">
-                  <div className="font-bold flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-amber-400" />
-                    Reorder Basmati Export 25kg
-                  </div>
-                  <p className="text-[11px] text-amber-200/80">
-                    Warehouse 1 balance down to 120 bags. Draft PO #894 awaiting approval.
-                  </p>
-                </div>
+              {dashboard?.low_stock_quick_list && dashboard.low_stock_quick_list.length > 0 ? (
+                <div className="space-y-2.5 text-xs">
+                  {dashboard.low_stock_quick_list.slice(0, 5).map((item) => (
+                    <div
+                      key={item.product_id}
+                      className={`p-3 rounded-xl border space-y-1.5 ${
+                        item.urgency === "critical"
+                          ? "bg-rose-500/10 border-rose-500/30 text-rose-300"
+                          : "bg-amber-500/10 border-amber-500/20 text-amber-300"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-white truncate" title={item.product_name}>
+                          {item.product_name}
+                        </span>
+                        <GlassBadge
+                          variant={item.urgency === "critical" ? "error" : "warning"}
+                          className="text-[9px] uppercase tracking-wide font-mono px-1.5 py-0"
+                        >
+                          {item.urgency}
+                        </GlassBadge>
+                      </div>
 
-                <div className="p-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-[var(--accent)] space-y-1">
-                  <div className="font-bold flex items-center gap-1.5">
-                    <Truck className="w-3.5 h-3.5" />
-                    Dispatch Truck MH-04-AB-1290
-                  </div>
-                  <p className="text-[11px] text-[var(--text-muted)]">
-                    Route: Bhiwandi Central → APMC Terminal #4.
-                  </p>
+                      <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] font-mono">
+                        <span>
+                          On-Hand: <strong className="text-white">{item.current_stock}</strong> / Reorder: {item.reorder_point}
+                        </span>
+                        <span className="text-rose-400 font-bold">-{item.deficit} Deficit</span>
+                      </div>
+
+                      {item.primary_supplier_name && (
+                        <div className="text-[10px] text-[var(--text-subtle)] flex items-center gap-1 truncate">
+                          <Building2 className="w-3 h-3 text-purple-400 shrink-0" />
+                          <span className="truncate">Supplier: {item.primary_supplier_name}</span>
+                        </div>
+                      )}
+
+                      <div className="pt-1 flex items-center justify-end">
+                        <Link href="/admin/purchase-orders">
+                          <span className="text-[11px] text-[var(--accent)] hover:underline font-semibold flex items-center gap-1">
+                            + Restock PO →
+                          </span>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <div className="p-4 text-center text-xs text-[var(--text-muted)] bg-black/10 rounded-xl border border-[var(--glass-border)]">
+                  All inventory healthy above safety threshold.
+                </div>
+              )}
             </GlassCard>
 
-            {/* Warehouse Telemetry Status */}
+            {/* 2. Overdue Invoices Quick-List Widget */}
+            <GlassCard className="p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <IndianRupee className="w-4 h-4 text-rose-400" />
+                  <GlassCardTitle className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
+                    Overdue Receivables Queue
+                  </GlassCardTitle>
+                </div>
+                <GlassBadge
+                  variant={
+                    (dashboard?.overdue_invoices_quick_list?.length || 0) > 0
+                      ? "error"
+                      : "neutral"
+                  }
+                  className="text-[10px] py-0"
+                >
+                  {dashboard?.overdue_invoices_quick_list?.length || 0} Overdue
+                </GlassBadge>
+              </div>
+
+              {dashboard?.overdue_invoices_quick_list &&
+              dashboard.overdue_invoices_quick_list.length > 0 ? (
+                <div className="space-y-2.5 text-xs">
+                  {dashboard.overdue_invoices_quick_list.slice(0, 5).map((inv) => (
+                    <div
+                      key={inv.invoice_id}
+                      className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 space-y-1"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-white truncate" title={inv.retailer_name}>
+                          {inv.retailer_name}
+                        </span>
+                        <span className="font-mono text-[10px] text-rose-400 font-bold bg-rose-950/40 px-1.5 py-0.5 rounded">
+                          {inv.overdue_days}d Overdue
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] font-mono">
+                        <span className="text-[var(--text-muted)]">{inv.invoice_number}</span>
+                        <span className="font-bold text-rose-400">
+                          ₹{Number(inv.balance_due).toLocaleString("en-IN")}
+                        </span>
+                      </div>
+
+                      <div className="pt-1 flex items-center justify-end">
+                        <Link href="/admin/invoices">
+                          <span className="text-[11px] text-[var(--accent)] hover:underline font-semibold">
+                            Collect Payment →
+                          </span>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 text-center text-xs text-[var(--text-muted)] bg-black/10 rounded-xl border border-[var(--glass-border)]">
+                  Zero overdue receivables. All accounts current.
+                </div>
+              )}
+            </GlassCard>
+
+            {/* 3. Warehouse Telemetry Status */}
             <GlassCard className="p-5 space-y-3 text-xs">
               <GlassCardTitle className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
                 Terminal Sync Telemetry

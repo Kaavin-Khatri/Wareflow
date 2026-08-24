@@ -7,6 +7,7 @@ from app.core.di import (
     get_dead_stock_service,
     get_forecasting_service,
     get_insight_narrator_service,
+    get_owner_dashboard_service,
     get_reorder_suggestion_service,
 )
 from app.core.security import CurrentUser, get_current_user, require_permission
@@ -14,6 +15,7 @@ from app.schemas.analytics import (
     CreatePOFromSuggestionsRequest,
     DeadStockResponse,
     OrderAnomalyReportResponse,
+    OwnerDashboardResponse,
     ReorderSuggestionsResponse,
     WeeklyInsightResponse,
 )
@@ -23,9 +25,23 @@ from app.services.anomaly_detection_service import AnomalyDetectionService
 from app.services.dead_stock_service import DeadStockService
 from app.services.forecasting_service import ForecastingService
 from app.services.insight_narrator import InsightNarratorService
+from app.services.owner_dashboard_service import OwnerDashboardService
 from app.services.reorder_suggestion_service import ReorderSuggestionService
 
 router = APIRouter(prefix="/analytics", tags=["Analytics & AI"])
+
+
+@router.get(
+    "/dashboard",
+    response_model=OwnerDashboardResponse,
+    summary="Get complete wholesale owner analytics dashboard metrics and 30d series in one call",
+)
+def get_owner_dashboard(
+    service: OwnerDashboardService = Depends(get_owner_dashboard_service),
+    _user: CurrentUser = Depends(get_current_user),
+) -> OwnerDashboardResponse:
+    """Aggregate executive KPIs, 30d movement trendline, low-stock quick items, and accounts receivable aging."""
+    return service.get_owner_dashboard()
 
 
 @router.get(
