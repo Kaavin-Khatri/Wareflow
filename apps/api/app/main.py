@@ -35,6 +35,7 @@ from app.api.routers import (
     roles,
     sales_orders,
     sales_returns,
+    search,
     staff,
     stock,
     stock_analytics,
@@ -106,6 +107,7 @@ def create_app() -> FastAPI:
     application.include_router(purchase_returns.router)
     application.include_router(business_settings.router)
     application.include_router(alerts.router)
+    application.include_router(search.router)
 
     return application
 

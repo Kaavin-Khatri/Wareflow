@@ -150,7 +150,8 @@ wareflow/
 │   │   ├── components/
 │   │   │   ├── AppLayout.tsx       # Modern layout composing Sidebar, Topbar & PageTransitions
 │   │   │   ├── Sidebar.tsx         # Liquid glass floating nav with layoutId active pill & mobile sheet
-│   │   │   ├── Topbar.tsx          # Frosted GlassPanel header with telemetry & AutoAnimate notifications
+│   │   │   ├── Topbar.tsx          # Frosted GlassPanel header with telemetry, search trigger & notifications
+│   │   │   ├── SearchCommandPalette.tsx # Command-palette modal (Cmd+K) for global multi-domain search
 │   │   │   ├── PageHeader.tsx      # Standardized title/description/badge/action slot header
 │   │   │   ├── GradientBackdrop.tsx# Multi-orb GPU-accelerated animated gradient backdrop
 │   │   │   ├── ThemeProvider.tsx   # React 19 useSyncExternalStore theme + accent context
@@ -206,6 +207,8 @@ wareflow/
 │   │   │       ├── purchase-orders.test.tsx
 │   │   │       ├── owner-dashboard-ui.test.tsx
 │   │   │       ├── ar-aging-ui.test.tsx
+│   │   │       ├── search-ui.test.tsx
+│   │   │       ├── export-service.test.ts
 │   │   │       └── dashboard-shell.test.tsx
 │   │   └── app/                    # App Router pages
 │   │       ├── layout.tsx          # Root layout with anti-flash script & ThemeProvider
@@ -258,7 +261,7 @@ wareflow/
 │       ├── requirements-dev.txt    # ruff, pytest, pytest-cov, httpx
 │       ├── pyproject.toml          # ruff & pytest config
 │       ├── .env.example
-│       ├── tests/                  # Pytest test suite (205 tests, 100% green)
+│       ├── tests/                  # Pytest test suite (253 tests, 100% green)
 │       │   ├── test_appearance_preferences.py
 │       │   ├── test_di_and_health.py
 │       │   ├── test_models.py
@@ -276,7 +279,9 @@ wareflow/
 │       │   ├── test_suppliers.py
 │       │   ├── test_purchase_orders.py
 │       │   ├── test_whatsapp_channel.py
-│       │   └── test_stock_subscriptions_and_restock.py
+│       │   ├── test_stock_subscriptions_and_restock.py
+│       │   ├── test_export_service.py
+│       │   └── test_search.py
 │       └── app/
 │           ├── main.py             # Application factory + ASGI entry
 │           ├── api/
@@ -294,6 +299,7 @@ wareflow/
 │           │       ├── stock.py    # Multi-Warehouse Stock Overview, Adjustments, Ledger, Transfers, Recalls & Excel Exports (/stock/*, /stock/overview.xlsx, /stock/movements.xlsx)
 │           │       ├── stock_analytics.py # Stock Valuation & Composition Analytics (/analytics/stock/*)
 │           │       ├── analytics.py# Owner Dashboard, AR Aging, Weekly Insight & Excel Export (/analytics/owner-dashboard, /analytics/ar-aging, /analytics/ar-aging.xlsx, /analytics/weekly-insight)
+│           │       ├── search.py   # Global Unified ERP Search across domains (/search)
 │           │       ├── suppliers.py# Vendor / Supplier profiles (/suppliers)
 │           │       ├── purchase_orders.py # Purchase Orders, Receiving & PDF Export (/purchase-orders, /purchase-orders/{id}/pdf)
 │           │       ├── purchase_returns.py# Supplier Returns (/purchase-returns)
@@ -337,6 +343,7 @@ wareflow/
 │           │   ├── retailer_service.py
 │           │   ├── sales_order_service.py
 │           │   ├── sales_return_service.py
+│           │   ├── search_service.py   # Cross-domain search relevance & ranking engine
 │           │   ├── staff_service.py
 │           │   ├── stock_service.py
 │           │   ├── stock_analytics_service.py

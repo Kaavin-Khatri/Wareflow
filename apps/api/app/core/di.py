@@ -214,6 +214,7 @@ from app.services.reorder_suggestion_service import ReorderSuggestionService
 from app.services.retailer_service import RetailerService
 from app.services.sales_order_service import SalesOrderService
 from app.services.sales_return_service import SalesReturnService
+from app.services.search_service import SearchService
 from app.services.staff_service import StaffService
 from app.services.stock_analytics_service import StockAnalyticsService
 from app.services.stock_service import StockService
@@ -1162,3 +1163,23 @@ def get_owner_dashboard_service(
         insight_narrator=insight_narrator,
         supplier_repo=supplier_repo,
     )
+
+
+def get_search_service(
+    product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    sales_order_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
+    purchase_order_repo: PurchaseOrderRepositoryInterface = Depends(get_db_purchase_order_repository),
+    retailer_repo: RetailerRepository = Depends(get_retailer_repository),
+    supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
+    invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
+) -> SearchService:
+    """Factory for SearchService cross-domain unified search."""
+    return SearchService(
+        product_repo=product_repo,
+        sales_order_repo=sales_order_repo,
+        purchase_order_repo=purchase_order_repo,
+        retailer_repo=retailer_repo,
+        supplier_repo=supplier_repo,
+        invoice_repo=invoice_repo,
+    )
+

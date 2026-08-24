@@ -9,6 +9,7 @@ import ThemeToggle from "./ThemeToggle";
 import { GlassBadge } from "./glass";
 import { apiClient } from "@/lib/api-client";
 import { db } from "@/lib/firebase-client";
+import { SearchCommandPalette } from "./SearchCommandPalette";
 import {
   Menu,
   Bell,
@@ -21,6 +22,7 @@ import {
   ChevronDown,
   Sparkles,
   Info,
+  Search,
 } from "lucide-react";
 
 interface UserProfile {
@@ -97,6 +99,19 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   ]);
   const [unreadCount, setUnreadCount] = useState<number>(1);
   const [toast, setToast] = useState<ToastItem | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Global Cmd+K / Ctrl+K search palette shortcut listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Fetch current user profile
   useEffect(() => {
@@ -284,6 +299,25 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               Wholesale ERP
             </span>
           </div>
+        </div>
+
+        {/* Middle: Global Search Trigger Button */}
+        <div className="flex-1 max-w-sm lg:max-w-md mx-2 sm:mx-6">
+          <button
+            type="button"
+            data-testid="global-search-trigger"
+            onClick={() => setIsSearchOpen(true)}
+            className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-[var(--surface)] hover:bg-[var(--surface-hover)] border border-[var(--border)] text-xs text-[var(--text-muted)] transition-all hover:border-[var(--accent-border)] group"
+          >
+            <div className="flex items-center gap-2">
+              <Search className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
+              <span className="hidden sm:inline">Search across ERP (SKU, orders, invoices)...</span>
+              <span className="sm:hidden">Search ERP...</span>
+            </div>
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--glass-bg)] text-[10px] font-mono font-semibold text-[var(--text-muted)] group-hover:text-[var(--accent)] group-hover:border-[var(--accent-border)]">
+              ⌘K
+            </kbd>
+          </button>
         </div>
 
         {/* Right: Operational Status + Notifications + Theme + Profile Menu */}
@@ -508,6 +542,12 @@ export function Topbar({ onMenuClick }: TopbarProps) {
           </button>
         </aside>
       )}
+
+      {/* Global Admin Search Command Palette (Cmd+K) */}
+      <SearchCommandPalette
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+      />
     </>
   );
 }

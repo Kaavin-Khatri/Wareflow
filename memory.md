@@ -3617,6 +3617,55 @@
   - `GET /stock/movements.xlsx` (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`)
   - `GET /analytics/ar-aging.xlsx` (`application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`)
 
+---
+
+## Step 15.4 — Global Admin Search
+
+**Timestamp:** 2026-08-24T14:40:00Z
+**Status:** COMPLETE
+
+### What was done
+- **Backend Global Search Engine (`GET /search?q=`)**:
+  - Implemented `SearchService` in `apps/api/app/services/search_service.py` performing unified querying across 6 core wholesale domain models:
+    - Products (matched by SKU and product name)
+    - Sales Orders (matched by SO number, retailer name, or customer name)
+    - Purchase Orders (matched by PO number and supplier name)
+    - Invoices (matched by invoice number and buyer name)
+    - Retailers (matched by store name, contact person, and phone)
+    - Suppliers (matched by supplier name, contact person, and phone)
+  - Implemented multi-tier relevance scoring algorithm:
+    - **Score 100.0**: Exact natural key match (exact SKU, exact SO number, exact PO number, exact Invoice number)
+    - **Score 95.0**: Exact entity/product name match
+    - **Score 85.0**: Prefix match on natural key
+    - **Score 75.0**: Prefix match on name
+    - **Score 50.0**: Substring match anywhere in identifier, name, or metadata
+  - Created schema `SearchResponse` and `SearchResultItem` in `apps/api/app/schemas/search.py`.
+  - Registered `get_search_service` in `apps/api/app/core/di.py` injecting repository abstractions.
+  - Exposed `GET /search` in `apps/api/app/api/routers/search.py` and mounted to FastAPI app in `main.py`.
+- **Frontend Command Palette UI (`SearchCommandPalette`)**:
+  - Implemented `SearchCommandPalette.tsx` in `apps/web/components/SearchCommandPalette.tsx`:
+    - Full keyboard navigation: `ArrowDown`/`ArrowUp` to cycle selection, `Enter` to navigate (`router.push`), `Escape` to close.
+    - Debounced search query handler calling `GET /search?q=`.
+    - Liquid glassmorphism modal design with category icons (Package, ShoppingCart, Truck, Receipt, Store, Building2) and status badges.
+    - Keyboard shortcut hint bar (`↑↓ Navigate`, `↵ Select`, `ESC Close`).
+  - Added persistent search trigger bar in `apps/web/components/Topbar.tsx` with `⌘K` / `Ctrl+K` indicator.
+  - Added global `Cmd+K` / `Ctrl+K` keydown event listener in `Topbar.tsx` to open the palette from anywhere across the admin dashboard.
+- **Verification & QA**:
+  - Backend pytest suite: `apps/api/tests/test_search.py` (7/7 tests passing for exact SKU, retailer name, invoice number, orders, prefix ranking, and TestClient integration). Total backend tests: 253/253 passing.
+  - Frontend Vitest suite: `apps/web/lib/__tests__/search-ui.test.tsx` (5/5 tests passing for Topbar trigger, Cmd+K keypress, API query & rendering, arrow navigation, and Escape dismissal). Total frontend tests: 41 test suites (172 tests) passing.
+  - Next.js production build: Succeeded in 3.4s with 0 errors across all 43 static/dynamic routes.
+
+### Decisions
+- **Search Ranking Approach**: Simple relevance tiers (Exact identifier 100 > Exact name 95 > Prefix identifier 85 > Prefix name 75 > Substring 50). At this scale (thousands of wholesale rows), plain SQL / in-memory querying is sufficient and avoids third-party paid search service dependencies (free-tier guardrail).
+- **Global Command Palette**: Triggered via `Cmd+K` / `Ctrl+K` or topbar search box, ensuring mouse-free keyboard navigation.
+
+### Key values for future steps
+- Search Service: `SearchService` (`apps/api/app/services/search_service.py`)
+- DI Factory: `get_search_service` in `apps/api/app/core/di.py`
+- Endpoint: `GET /search?q={query}&limit={limit}` (Returns `SearchResponse`)
+- Frontend Component: `SearchCommandPalette` (`apps/web/components/SearchCommandPalette.tsx`)
+
+
 
 
 
