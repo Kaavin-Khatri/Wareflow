@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import GradientBackdrop from "@/components/GradientBackdrop";
 import { MotionProvider } from "@/components/motion/MotionProvider";
+import { PwaProvider } from "@/components/pwa/PwaProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -72,10 +73,12 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col font-sans bg-[var(--bg)] text-[var(--text)] transition-colors duration-300">
         <ThemeProvider>
-          <MotionProvider>
-            <GradientBackdrop />
-            {children}
-          </MotionProvider>
+          <PwaProvider>
+            <MotionProvider>
+              <GradientBackdrop />
+              {children}
+            </MotionProvider>
+          </PwaProvider>
         </ThemeProvider>
       </body>
     </html>

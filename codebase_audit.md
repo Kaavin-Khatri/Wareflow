@@ -46,6 +46,7 @@
 | Excel Engine (api) | openpyxl                  | >=3.1.0,<4.0.0 |
 | Barcode Engine     | python-barcode, qrcode    | >=0.15.0  |
 | Camera Scanner     | html5-qrcode (client-side)| ^2.3.8    |
+| Offline IndexedDB  | idb                       | ^8.0.2    |
 | Background Worker  | APScheduler               | >=3.10.0,<4.0.0 |
 | Test Runner (api)  | Pytest + pytest-cov       | >=8.0.0   |
 
@@ -636,6 +637,8 @@ wareflow/
 
 | Decision                                | Rationale                                                                                                                                                                                         |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Offline Scope Boundary & Race Guard     | Offline queuing is deliberately restricted to local warehouse floor operations (`stock_adjustment`, `stock_transfer`, `barcode_scan_lookup`). Financial and multi-user transactional flows (`sales_order_confirmed`, `receive_po`, `invoice_generation`, `payments`, `credit_limit_updates`) remain strictly online-only to prevent credit over-extension, duplicate sequential GST tax invoice numbering, and multi-user batch deduction race conditions |
+| Explicit Offline Conflict Surfacing     | When queued offline actions encounter changed server-side batch balances or validation errors upon reconnection (409 Conflict / 422 Unprocessable Content), sync pauses the item and surfaces an interactive conflict card with original vs server state, never silently dropping or overwriting data |
 | Preview-Before-Commit Pattern for Bulk Operations | All bulk catalog and operational CSV imports execute a dry-run validation pass returning line-by-line classification (`create`, `update`, `reject`) with explicit validation error messages before committing to the database, ensuring zero partial-failure pollution and complete user transparency |
 | Continuous Inventory Turnover Companion | `TurnoverService` provides continuous velocity ratios (Healthy ≥1.0x, Slowing 0.3-1.0x, At-Risk <0.3x) and days of stock as an early-warning signal before Step 12.2's 90-day binary dead-stock threshold |
 | Graph BFS Packaging Traversal           | `UomService` resolves multi-level packaging hierarchies (Pallet->Case->Pack->Piece) & inverses using graph traversal                                                                              |

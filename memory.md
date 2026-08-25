@@ -4072,6 +4072,52 @@
 - Required CSV Columns: `sku`, `name`, `wholesale_price`
 - Optional CSV Columns: `cost_price`, `category`, `unit`, `hsn_code`, `barcode`, `reorder_point`, `reorder_qty`, `description`
 
+---
+
+## Step 19.1 — PWA Shell, Caching & Local Queue
+**Timestamp:** 2026-08-25T04:53:00Z
+**Status:** COMPLETE
+
+### What was done
+- Built an installable PWA application shell:
+  - Created Web App Manifests in `apps/web/public/manifest.json` and `apps/web/app/manifest.ts` declaring standalone display, orientation, theme colors (`#8b5cf6`, `#090d16`), and app icons.
+  - Hand-rolled Service Worker in `apps/web/public/sw.js` implementing:
+    - Pre-caching static app shell (`/offline`, `/dashboard`, `/admin/inventory`, `/admin/products`, `/admin/stock/adjust`, `/admin/stock/transfer`).
+    - Cache-first strategy for static assets (`/_next/static/`, images, fonts, SVGs).
+    - Stale-while-revalidate strategy for catalog and stock overview GET requests (`/products`, `/stock`, `/categories`) so warehouse staff can browse inventory during WiFi dead spots.
+    - Navigation fallback to `/offline` fallback page.
+  - Created glassmorphic offline fallback page in `apps/web/app/offline/page.tsx` with cached operations overview and retry connection button.
+- Implemented IndexedDB-backed offline action queue in `apps/web/lib/offline-queue.ts` via `idb`:
+  - `enqueueOfflineAction`, `getAllQueueItems`, `getPendingQueueCount`, `removeQueueItem`, `resolveConflict`, `clearCompletedItems`.
+  - `flushOfflineQueue`: Dispatches pending items in FIFO order, detects 409/422 balance and conflict responses from server, and marks items with `conflict` status and `conflict_details`.
+- Built PWA UI components:
+  - `apps/web/components/pwa/OfflineBanner.tsx`: Floating glass banner displaying real-time offline status, pending count, and drawer trigger.
+  - `apps/web/components/pwa/SyncQueueModal.tsx`: Real-time sync modal with pending/synced/conflict stats, "Sync Now" button, and interactive conflict cards offering "Discard" or "Re-apply Against Current Stock".
+  - `apps/web/components/pwa/PwaProvider.tsx`: Global context managing service worker lifecycle, window online/offline listeners, auto-sync on reconnection, and global modal state.
+  - Wrapped `RootLayout` with `<PwaProvider>` in `apps/web/app/layout.tsx`.
+  - Added Sync Queue indicator button with live counter badge to `apps/web/components/Topbar.tsx`.
+- Tested with 5 queue engine unit tests in `apps/web/lib/__tests__/offline-queue.test.ts` and 4 UI tests in `apps/web/lib/__tests__/pwa-ui.test.tsx`.
+- Verified all 320 backend pytest tests passing, all 223 frontend vitest tests passing across 49 test files, and all 55 Next.js routes built cleanly.
+
+### Decisions
+- **Deliberate Offline Scope Boundary**: Offline queuing is strictly scoped to high-velocity floor operations:
+  1. `stock_adjustment` (`POST /stock/adjustments`)
+  2. `stock_transfer` (`POST /stock/transfers`)
+  3. `barcode_scan_lookup` (cached product lookups & scan events)
+  Financial and multi-user transactional flows (`sales_order_confirmed`, `receive_po`, `invoice_generation`, `payments`, `credit_limit_updates`) remain strictly online-only to prevent credit over-extension, duplicate sequential GST tax invoice numbering, and multi-user batch deduction race conditions.
+- **Explicit Conflict Surfacing**: When an offline action encounters server-side batch balance changes or validation rejections, sync flags the item as `conflict` and surfaces an interactive conflict card rather than silently dropping or overwriting data.
+- **Stale-While-Revalidate Caching for Floor Lookups**: Staff walking into deep warehouse dead spots can instantly browse cached product prices, SKUs, barcodes, and stock levels without spinning loaders.
+
+### Key values for future steps
+- PWA Service Worker: `apps/web/public/sw.js`
+- Web Manifest: `apps/web/public/manifest.json`, `apps/web/app/manifest.ts`
+- Offline Fallback Page: `/offline` (`apps/web/app/offline/page.tsx`)
+- Offline Queue Engine: `apps/web/lib/offline-queue.ts`
+- Sync Modal: `<SyncQueueModal>` in `apps/web/components/pwa/SyncQueueModal.tsx`
+- Offline Banner: `<OfflineBanner>` in `apps/web/components/pwa/OfflineBanner.tsx`
+- PWA Context: `usePwa` from `apps/web/components/pwa/PwaProvider.tsx`
+
+
 
 
 

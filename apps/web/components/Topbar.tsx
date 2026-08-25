@@ -10,6 +10,7 @@ import { GlassBadge } from "./glass";
 import { apiClient } from "@/lib/api-client";
 import { db } from "@/lib/firebase-client";
 import { SearchCommandPalette } from "./SearchCommandPalette";
+import { usePwa } from "./pwa/PwaProvider";
 import {
   Menu,
   Bell,
@@ -23,6 +24,8 @@ import {
   Sparkles,
   Info,
   Search,
+  WifiOff,
+  Layers,
 } from "lucide-react";
 
 interface UserProfile {
@@ -84,6 +87,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [notificationsListRef] = useAutoAnimate();
+  const { isOffline, pendingCount, hasConflicts, openSyncQueue } = usePwa();
   const notifRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -327,6 +331,42 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>0.02s Settlement</span>
           </div>
+
+          {/* Offline Sync Queue Trigger Button */}
+          <button
+            type="button"
+            onClick={openSyncQueue}
+            aria-label="Offline Sync Queue"
+            data-testid="sync-queue-trigger"
+            className={`relative p-2 rounded-xl transition-colors ${
+              hasConflicts
+                ? "text-rose-400 bg-rose-500/10 hover:bg-rose-500/20"
+                : isOffline
+                ? "text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
+                : pendingCount > 0
+                ? "text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20"
+                : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
+            }`}
+            title={
+              hasConflicts
+                ? "Sync Conflicts Require Attention"
+                : isOffline
+                ? "Offline Mode — Click to View Sync Queue"
+                : `${pendingCount} item(s) in Sync Queue`
+            }
+          >
+            {isOffline ? <WifiOff className="w-4 h-4" /> : <Layers className="w-4 h-4" />}
+            {pendingCount > 0 && (
+              <span
+                data-testid="sync-queue-badge"
+                className={`absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-[var(--surface)] shadow-sm animate-in zoom-in ${
+                  hasConflicts ? "bg-rose-500" : isOffline ? "bg-amber-500" : "bg-cyan-500"
+                }`}
+              >
+                {pendingCount > 99 ? "99+" : pendingCount}
+              </span>
+            )}
+          </button>
 
           {/* Notification Bell Dropdown */}
           <div ref={notifRef} className="relative">
