@@ -177,9 +177,17 @@ export function DataTable<T>({
                 <tr
                   key={keyExtractor(item, idx)}
                   onClick={() => onRowClick && onRowClick(item)}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onKeyDown={(e) => {
+                    if (onRowClick && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      onRowClick(item);
+                    }
+                  }}
                   className={cn(
-                    "hover:bg-[var(--surface-hover)] transition-colors",
-                    onRowClick && "cursor-pointer",
+                    "hover:bg-[var(--surface-hover)] transition-colors relative group",
+                    onRowClick &&
+                      "cursor-pointer focus-visible:bg-[var(--surface-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--accent)]",
                   )}
                 >
                   {columns.map((col) => {
@@ -194,8 +202,8 @@ export function DataTable<T>({
                       <td
                         key={col.key}
                         className={cn(
-                          "p-3.5 align-middle",
-                          col.align === "right" && "text-right",
+                          "p-3.5 align-middle transition-colors",
+                          col.align === "right" && "text-right font-mono tabular-nums tracking-tight",
                           col.align === "center" && "text-center",
                         )}
                       >
