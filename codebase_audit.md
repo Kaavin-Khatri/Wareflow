@@ -57,6 +57,7 @@
 | WhatsApp | Outbound B2B message alerts (Meta Cloud API) | —         | —                      | Free (1k convs/mo) | Meta Graph API (v21.0)                                                                          |
 | SMS Provider | Outbound SMS fallback & critical alerts (Twilio / Indian Gateway) | — | — | Free (Trial credit) | Twilio REST API / HTTPS                                                                         |
 | Groq     | LLM API (AI features)             | —                    | —                      | Free            | HTTPS API                                                                                       |
+| Google Places | Retail lead discovery & places search (New v1) | —   | Global                 | Free ($200/mo credit) | Places API New (Text/Nearby Search)                                                             |
 | Vercel   | Frontend hosting (Next.js)        | pending              | —                      | Free (Hobby)    | —                                                                                               |
 | Render   | Backend hosting (FastAPI)         | pending              | —                      | Free            | —                                                                                               |
 
@@ -104,6 +105,12 @@
 | `TWILIO_AUTH_TOKEN`                 | Twilio Auth Token                             | No (secret) |
 | `TWILIO_FROM_NUMBER`                | Twilio registered From phone number           | No          |
 | `GROQ_API_KEY`                      | Groq LLM API key                              | No          |
+| `GOOGLE_PLACES_API_KEY`             | Google Cloud API key for Places API (New)     | No (secret) |
+| `LEAD_SCAN_INTERVAL_DAYS`           | Scheduled lead scan recurrence in days (7d)   | No          |
+| `LEAD_SCAN_CENTER_LAT`              | Default warehouse center latitude for scan    | No          |
+| `LEAD_SCAN_CENTER_LNG`              | Default warehouse center longitude for scan   | No          |
+| `LEAD_SCAN_RADIUS_KM`               | Default search radius in kilometers (15km)    | No          |
+
 
 ## Layout & Shell Inventory (Step 4.6)
 
@@ -417,7 +424,7 @@ wareflow/
 
 ```
 
-## Database Schema (28 Tables Live)
+## Database Schema (30 Tables Live)
 
 | Table                     | Purpose                            | Columns                                                                                                                                                                                                                                                       | Indexes / Constraints                                                                   |
 | ------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
@@ -455,6 +462,8 @@ wareflow/
 | `stock_movements`         | Append-only inventory ledger       | `id` (PK, str), `product_id` (FK), `warehouse_id` (FK), `batch_id` (FK), `type` (enum), `quantity`, `reference_type`, `reference_id`, `created_by`, `created_at`                                                                                              | `INDEX(product_id)`, `INDEX(warehouse_id)`, `INDEX(created_at)`                         |
 | `notifications`           | System alerts & notices            | `id` (PK, str), `user_id`, `type`, `title`, `body`, `is_read`, `created_at`                                                                                                                                                                                   | `INDEX(user_id)`                                                                        |
 | `business_settings`       | Single-row business profile & GST  | `id` (PK, str), `business_name`, `gstin`, `fssai_license_no`, `fssai_expiry_date`, `address`, `phone`, `email`, `updated_at`                                                                                                                                  | —                                                                                       |
+| `leads`                   | Google Places retail shop leads    | `id` (PK, str), `place_id`, `name`, `category` (enum), `address`, `lat`, `lng`, `phone`, `google_maps_url`, `first_seen_at`, `is_new`, `contacted`, `contact_notes`, `converted_retailer_id` (FK)                                                            | `UNIQUE(place_id)`, `INDEX(place_id)`, `INDEX(category)`, `INDEX(is_new)`, `INDEX(first_seen_at)` |
+| `lead_scan_runs`          | Audit log of Places lead scans     | `id` (PK, str), `run_at`, `center_lat`, `center_lng`, `radius_m`, `results_count`, `new_count`                                                                                                                                                                | `INDEX(run_at)`                                                                         |
 
 ## API Endpoints
 
@@ -575,6 +584,14 @@ wareflow/
 | GET    | `/analytics/retailer-performance`      | Retailer revenue rank, velocity trend & 2x gap churn risk alerts | Yes (Authenticated User)        |
 | GET    | `/analytics/warehouse-breakdown`       | Per-facility inventory valuation, units stored, and 30d flow   | Yes (Authenticated User)        |
 | GET    | `/analytics/shrinkage`                 | Damage write-offs, discrepancies & shrinkage rate by product/cat| Yes (Authenticated User)        |
+| GET    | `/analytics/period-comparisons`        | Scorecard of 6 key enterprise metrics with prior-period deltas | Yes (Authenticated User)        |
+| GET    | `/analytics/weekly-report/latest`      | Current compiled weekly executive summary and actionable highlights | Yes (Authenticated User)   |
+| GET    | `/analytics/weekly-report/pdf`         | Direct PDF binary stream download for owner executive reporting | Yes (Authenticated User)       |
+| POST   | `/analytics/weekly-report/send-now`    | Manual on-demand report compilation and multi-channel dispatch | Yes (`settings:manage`)        |
+| POST   | `/leads/scan-now`                      | Trigger immediate Google Places lead scan with radius/center   | Yes (`leads.scan`)              |
+| GET    | `/leads`                               | List discovered retail leads (paginated, filterable)           | Yes (`leads.view`)              |
+| PATCH  | `/leads/{id}/contacted`                | Mark discovered lead as contacted with notes                   | Yes (`leads.manage`)            |
+| GET    | `/leads/scan-history`                  | List past lead scan audit runs                                 | Yes (`leads.view`)              |
 
 ## Architecture Layers
 
@@ -775,6 +792,7 @@ wareflow/
 - **Forward-Built Pre-Phase 6 Purchasing Spend Charts**: Spend-over-time, supplier spend, and category spend charts are intentionally forward-built to complete the Stock Analytics UI, but stay at zero / display empty states until Phase 6 (Purchase Orders & Receiving) produces real purchase order receipt transactions. This is expected and documented.
 - **Supabase Free Project Inactivity Pause**: Supabase free-tier projects automatically pause after ~1 week of inactivity. If API endpoints return connection errors after an idle period, unpause the project from the Supabase dashboard.
 - **In-Process APScheduler Lifetime**: The background alert scheduler runs in-process inside the FastAPI application lifespan. While ideal for single-instance free-tier deployments, multi-worker deployments (e.g. Gunicorn with >1 worker) would execute duplicate timer ticks unless bounded by `AlertLog` deduplication or migrated to an external Redis-backed Celery worker.
+- **Google Places Indexing Lag**: Google's own indexing latency means a real-world opening may take Google days-to-weeks to list, which is the physical floor on 'new' detection speed. 'New' in WareFlow strictly indicates *first time seen in our discovery database*, not necessarily the moment doors opened.
 
 
 

@@ -7,6 +7,7 @@ from app.models.catalog import Category, Product
 from app.models.delivery import Delivery, DeliveryStatusEnum
 from app.models.forecast import Forecast
 from app.models.inventory import StockMovement, StockMovementTypeEnum
+from app.models.lead import Lead, LeadCategoryEnum, LeadScanRun
 from app.models.notification import AlertLog, Notification, NotificationPreference
 from app.models.portal import (
     ChannelPreferenceEnum,
@@ -106,4 +107,8 @@ __all__ = [
     # Audit & Business Settings
     "AdminAuditLog",
     "BusinessSettings",
+    # Leads & Scan Runs
+    "Lead",
+    "LeadCategoryEnum",
+    "LeadScanRun",
 ]

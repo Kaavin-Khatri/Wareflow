@@ -24,6 +24,7 @@ from app.api.routers import (
     health,
     inquiries,
     invoices,
+    leads,
     me,
     notifications,
     portal,
@@ -108,6 +109,7 @@ def create_app() -> FastAPI:
     application.include_router(business_settings.router)
     application.include_router(alerts.router)
     application.include_router(search.router)
+    application.include_router(leads.router)
 
     return application
 

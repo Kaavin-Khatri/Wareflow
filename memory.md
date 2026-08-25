@@ -3826,6 +3826,57 @@
 - Central Hub Page: `/admin/analytics` (`apps/web/app/admin/analytics/page.tsx`)
 - Cron Schedule: Every Monday at 02:30 UTC via `AlertScheduler`
 
+---
+
+## Step 17.1 — Google Places Lead Scanner (schema + scheduled scan)
+**Timestamp:** 2026-08-25T01:45:00Z
+**Status:** COMPLETE
+
+### What was done
+- **Database Schema & Models (`leads`, `lead_scan_runs`)**:
+  - Created `Lead` and `LeadScanRun` SQLAlchemy models with `LeadCategoryEnum` (`gruh_udyog`, `snack_store`, `grocery_kirana`, `other`), unique `place_id` index, `is_new` boolean default, `contacted` tracking, `contact_notes`, and optional `converted_retailer_id` FK.
+  - Created Alembic migration `0007_leads_and_scan_runs.py` and registered models in `app.models.__init__.py`.
+- **Repository Abstraction Layer (DIP)**:
+  - Created `LeadRepositoryInterface` protocol defining methods: `get_lead_by_place_id`, `get_all_place_ids`, `create_lead`, `update_lead`, `list_leads`, `create_scan_run`, `list_scan_runs`, and `mark_lead_contacted`.
+  - Implemented `SqlAlchemyLeadRepository` with query optimizations and `InMemoryLeadRepository` for zero-IO testing.
+- **Google Places Lead Scanner Engine (`GooglePlacesLeadService`)**:
+  - Implemented `scan(center_lat, center_lng, radius_km)` querying Google Places API (New v1) across text searches (`gruh udyog`, `home industry food`, `kirana store`, `grocery store`, `namkeen shop`, `snacks shop`, `farsan shop`, `general store`) and nearby searches (`grocery_or_supermarket`, `convenience_store`).
+  - Implemented idempotent first-seen-ever upsert logic: newly discovered `place_id` records are created with `is_new=True`; previously seen leads update location/contact details while `is_new` is strictly preserved (never re-flagged).
+  - Wired notification dispatch via `NotificationService` (In-App, WhatsApp, Email) when `new_count > 0` to notify business owners to view newly opened leads.
+- **Background Scheduler Integration (APScheduler)**:
+  - Configured `AlertScheduler` with weekly lead scan cron trigger running Sundays at 03:00 UTC (configurable via `LEAD_SCAN_INTERVAL_DAYS`, default 7 days) around configured coordinates (`23.01185905490891, 72.53806563827865`, radius 15km).
+- **FastAPI Endpoints (`app/api/routers/leads.py`)**:
+  - `POST /leads/scan-now`: Immediate on-demand scan guarded by `leads.scan` permission.
+  - `GET /leads`: Paginated, filterable lead list guarded by `leads.view` permission.
+  - `PATCH /leads/{id}/contacted`: Update contact status & notes guarded by `leads.manage` permission.
+  - `GET /leads/scan-history`: Scan audit history list guarded by `leads.view` permission.
+- **Testing & Verification**:
+  - Pytest suite: `apps/api/tests/test_leads_scanner.py` (21/21 tests passing).
+  - Full backend test suite: 290/290 tests passing.
+  - Full frontend Vitest suite: 44/44 test files (191 tests) passing.
+  - Next.js production build: Succeeded across all 50 routes with 0 errors.
+
+### Decisions
+- **Definition of 'New'**: 'New' is strictly defined as *never seen in our database before*, rather than recently opened in physical reality. This distinction accounts for Google's indexing latency and prevents false assumptions.
+- **Scan Keywords & Types Verbatim List**:
+  - Keywords: `gruh udyog`, `home industry food`, `kirana store`, `grocery store`, `namkeen shop`, `snacks shop`, `farsan shop`, `general store`
+  - Nearby types: `grocery_or_supermarket`, `convenience_store`
+  - Cadence: Weekly default (Sundays 03:00 UTC), configurable via `LEAD_SCAN_INTERVAL_DAYS`.
+- **Idempotent Multi-Scan Protection**: Existing leads update mutable details (name, phone, address, location coordinates, Google Maps URI) on subsequent scans, but `is_new` is never re-armed, ensuring zero redundant notification spam.
+
+### Key values for future steps
+- Models: `Lead`, `LeadCategoryEnum`, `LeadScanRun` (`apps/api/app/models/lead.py`)
+- Service: `GooglePlacesLeadService` (`apps/api/app/services/places_lead_scanner.py`)
+- Repository Interface: `LeadRepositoryInterface` (`apps/api/app/repositories/interfaces/lead_repository.py`)
+- Repositories: `SqlAlchemyLeadRepository`, `InMemoryLeadRepository` (`apps/api/app/repositories/impl/lead_repository.py`)
+- DI Factories: `get_lead_repository`, `get_lead_service` in `apps/api/app/core/di.py`
+- Endpoints:
+  - `POST /leads/scan-now`
+  - `GET /leads`
+  - `PATCH /leads/{id}/contacted`
+  - `GET /leads/scan-history`
+- Env Vars: `GOOGLE_PLACES_API_KEY`, `LEAD_SCAN_INTERVAL_DAYS`, `LEAD_SCAN_CENTER_LAT`, `LEAD_SCAN_CENTER_LNG`, `LEAD_SCAN_RADIUS_KM`
+
 
 
 

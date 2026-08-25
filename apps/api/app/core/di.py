@@ -46,6 +46,9 @@ from app.repositories.impl.invoice_repository import (
     InMemoryInvoiceRepository,
     SqlAlchemyInvoiceRepository,
 )
+from app.repositories.impl.lead_repository import (
+    SqlAlchemyLeadRepository,
+)
 from app.repositories.impl.notification_preference_repository import (
     InMemoryNotificationPreferenceRepository,
     SqlAlchemyNotificationPreferenceRepository,
@@ -139,6 +142,7 @@ from app.repositories.interfaces.inquiry_repository import (
 from app.repositories.interfaces.invoice_repository import (
     InvoiceRepositoryInterface,
 )
+from app.repositories.interfaces.lead_repository import LeadRepositoryInterface
 from app.repositories.interfaces.notification_preference_repository import (
     NotificationPreferenceRepositoryInterface,
 )
@@ -204,6 +208,7 @@ from app.services.notification_preference_service import NotificationPreferenceS
 from app.services.notification_service import NotificationService
 from app.services.owner_dashboard_service import OwnerDashboardService
 from app.services.payment_service import PaymentService
+from app.services.places_lead_scanner import GooglePlacesLeadService
 from app.services.portal_auth_service import PortalAuthService
 from app.services.pricing_strategy import PricingEngineService
 from app.services.product_service import ProductService
@@ -509,7 +514,6 @@ def get_business_settings_service(
         repository=settings_repo,
         audit_service=audit_service,
     )
-
 
 
 @lru_cache
@@ -840,7 +844,9 @@ def get_ar_aging_service(
 
 def get_export_service(
     so_repo: SalesOrderRepositoryInterface = Depends(get_sales_order_repository),
-    business_settings_repo: BusinessSettingsRepositoryInterface = Depends(get_business_settings_repository),
+    business_settings_repo: BusinessSettingsRepositoryInterface = Depends(
+        get_business_settings_repository
+    ),
     delivery_repo: DeliveryRepositoryInterface = Depends(get_delivery_repository),
     stock_repo: StockRepositoryInterface = Depends(get_stock_repository),
     po_repo: PurchaseOrderRepositoryInterface = Depends(get_purchase_order_repository),
@@ -863,7 +869,6 @@ def get_export_service(
         supplier_repo=supplier_repo,
         ar_aging_service=ar_aging_service,
     )
-
 
 
 def get_notification_service(
@@ -906,14 +911,18 @@ def get_notification_preference_repository(
 
 
 def get_notification_preference_service(
-    repo: NotificationPreferenceRepositoryInterface = Depends(get_notification_preference_repository),
+    repo: NotificationPreferenceRepositoryInterface = Depends(
+        get_notification_preference_repository
+    ),
 ) -> NotificationPreferenceService:
     """Factory for NotificationPreferenceService."""
     return NotificationPreferenceService(pref_repo=repo)
 
 
 def get_supplier_portal_service(
-    token_repo: SupplierAccessTokenRepositoryInterface = Depends(get_supplier_access_token_repository),
+    token_repo: SupplierAccessTokenRepositoryInterface = Depends(
+        get_supplier_access_token_repository
+    ),
     po_repo: PurchaseOrderRepositoryInterface = Depends(get_db_purchase_order_repository),
     profile_repo: ProfileRepository = Depends(get_profile_repository),
     notif_service: NotificationService = Depends(get_notification_service),
@@ -928,6 +937,7 @@ def get_supplier_portal_service(
         audit_service=audit_service,
     )
 
+
 def get_purchase_order_service(
     po_repo: PurchaseOrderRepositoryInterface = Depends(get_db_purchase_order_repository),
     supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
@@ -935,7 +945,9 @@ def get_purchase_order_service(
     stock_service: StockService = Depends(get_stock_service),
     audit_service: AuditService = Depends(get_audit_service),
     supplier_portal_service: SupplierPortalService = Depends(get_supplier_portal_service),
-    token_repo: SupplierAccessTokenRepositoryInterface = Depends(get_supplier_access_token_repository),
+    token_repo: SupplierAccessTokenRepositoryInterface = Depends(
+        get_supplier_access_token_repository
+    ),
 ) -> PurchaseOrderService:
     """Factory for PurchaseOrderService with DIP dependencies."""
     return PurchaseOrderService(
@@ -970,7 +982,9 @@ def get_stock_subscription_repository(
 
 
 def get_stock_subscription_service(
-    subscription_repo: StockSubscriptionRepositoryInterface = Depends(get_stock_subscription_repository),
+    subscription_repo: StockSubscriptionRepositoryInterface = Depends(
+        get_stock_subscription_repository
+    ),
     product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
     retailer_repo: RetailerRepository = Depends(get_retailer_repository),
 ) -> StockSubscriptionService:
@@ -990,7 +1004,9 @@ def get_alert_engine_service(
     invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
     profile_repo: ProfileRepository = Depends(get_profile_repository),
     retailer_repo: RetailerRepository = Depends(get_retailer_repository),
-    stock_subscription_repo: StockSubscriptionRepositoryInterface = Depends(get_stock_subscription_repository),
+    stock_subscription_repo: StockSubscriptionRepositoryInterface = Depends(
+        get_stock_subscription_repository
+    ),
     supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
 ) -> AlertEngineService:
     """Factory for AlertEngineService coordinating rules and deduplication."""
@@ -1123,9 +1139,37 @@ def get_alert_scheduler() -> AlertScheduler:
             finally:
                 db.close()
 
+        def lead_scan_factory() -> GooglePlacesLeadService:
+            session_factory = get_session_factory()
+            db = session_factory()
+            try:
+                notif_repo = NotificationRepository(session=db)
+                settings = get_settings()
+                notif_service = NotificationService(
+                    notification_repo=notif_repo,
+                    channels=[
+                        InAppChannel(notification_repo=notif_repo),
+                        EmailChannel(api_key=settings.resend_api_key),
+                        WhatsAppChannel(
+                            access_token=settings.whatsapp_access_token,
+                            phone_number_id=settings.whatsapp_phone_number_id,
+                            api_version=settings.whatsapp_api_version,
+                        ),
+                    ],
+                )
+                lead_repo = SqlAlchemyLeadRepository(session=db)
+                return GooglePlacesLeadService(
+                    lead_repo=lead_repo,
+                    notification_service=notif_service,
+                    settings=settings,
+                )
+            finally:
+                db.close()
+
         _global_alert_scheduler = AlertScheduler(
             alert_engine_factory=alert_engine_factory,
             weekly_report_factory=weekly_report_factory,
+            lead_scan_factory=lead_scan_factory,
             interval_minutes=30,
         )
     return _global_alert_scheduler
@@ -1241,7 +1285,9 @@ def get_owner_dashboard_service(
 def get_search_service(
     product_repo: ProductRepositoryInterface = Depends(get_db_product_repository),
     sales_order_repo: SalesOrderRepositoryInterface = Depends(get_db_sales_order_repository),
-    purchase_order_repo: PurchaseOrderRepositoryInterface = Depends(get_db_purchase_order_repository),
+    purchase_order_repo: PurchaseOrderRepositoryInterface = Depends(
+        get_db_purchase_order_repository
+    ),
     retailer_repo: RetailerRepository = Depends(get_retailer_repository),
     supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
     invoice_repo: InvoiceRepositoryInterface = Depends(get_db_invoice_repository),
@@ -1285,8 +1331,12 @@ def get_turnover_service(
 
 def get_supplier_performance_service(
     supplier_repo: SupplierRepositoryInterface = Depends(get_db_supplier_repository),
-    purchase_order_repo: PurchaseOrderRepositoryInterface = Depends(get_db_purchase_order_repository),
-    purchase_return_repo: PurchaseReturnRepositoryInterface = Depends(get_db_purchase_return_repository),
+    purchase_order_repo: PurchaseOrderRepositoryInterface = Depends(
+        get_db_purchase_order_repository
+    ),
+    purchase_return_repo: PurchaseReturnRepositoryInterface = Depends(
+        get_db_purchase_return_repository
+    ),
 ) -> SupplierPerformanceService:
     """Factory for SupplierPerformanceService (Step 16.2)."""
     return SupplierPerformanceService(
@@ -1350,7 +1400,9 @@ def get_scheduled_report_service(
     profile_repo: ProfileRepository = Depends(get_profile_repository),
     comparison_service: ComparisonService = Depends(get_comparison_service),
     notification_service: NotificationService = Depends(get_notification_service),
-    business_settings_repo: BusinessSettingsRepositoryInterface = Depends(get_business_settings_repository),
+    business_settings_repo: BusinessSettingsRepositoryInterface = Depends(
+        get_business_settings_repository
+    ),
 ) -> ScheduledReportService:
     """Factory for ScheduledReportService (Step 16.3)."""
     return ScheduledReportService(
@@ -1365,5 +1417,19 @@ def get_scheduled_report_service(
     )
 
 
+def get_lead_repository(db: Session = Depends(get_db_session)) -> LeadRepositoryInterface:
+    """Factory for database-backed LeadRepositoryInterface."""
+    return SqlAlchemyLeadRepository(session=db)
 
 
+def get_lead_service(
+    lead_repo: LeadRepositoryInterface = Depends(get_lead_repository),
+    notification_service: NotificationService = Depends(get_notification_service),
+    settings: Settings = Depends(get_settings),
+) -> GooglePlacesLeadService:
+    """Factory for GooglePlacesLeadService (Step 17.1)."""
+    return GooglePlacesLeadService(
+        lead_repo=lead_repo,
+        notification_service=notification_service,
+        settings=settings,
+    )

@@ -62,6 +62,13 @@ class Settings(BaseSettings):
     forecast_strategy: str = "moving_average"  # 'moving_average' | 'exponential_smoothing'
     forecast_cache_ttl_hours: int = 24
 
+    # Google Places Lead Scanner (Step 17.1)
+    google_places_api_key: str = ""
+    lead_scan_interval_days: int = 7
+    lead_scan_center_lat: float = 23.0119
+    lead_scan_center_lng: float = 72.5381
+    lead_scan_radius_km: float = 15.0
+
     @field_validator("allowed_origins", mode="after")
     @classmethod
     def parse_allowed_origins(cls, value: str | list[str]) -> list[str]:
