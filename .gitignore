@@ -51,3 +51,7 @@ htmlcov/
 *.log
 .vercel
 .render
+backups/
+*.sql.gz
+*.sql
+

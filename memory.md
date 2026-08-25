@@ -4311,6 +4311,43 @@
 - Seed Script: `scripts/seed.py`
 - Test Coverage Baseline: 320 backend pytest tests, 233 frontend vitest tests, 55 Next.js production routes passing.
 
+---
+
+## Step 21.4 — Database Backup & Disaster Recovery Plan
+**Timestamp:** 2026-08-25T09:25:00Z
+**Status:** COMPLETE
+
+### What was done
+- Built automated database backup engine in `scripts/backup.py` and `scripts/backup.sh`:
+  - Connects to PostgreSQL over direct session pooler port 5432 (`DIRECT_DATABASE_URL`).
+  - Generates compressed SQL dump (`.sql.gz`) with table-by-table streaming serialization.
+  - Uploads dumps to Supabase Storage private bucket `backups`.
+  - Enforces 14-day rolling retention by automatically querying and pruning backups older than 14 days.
+- Created GitHub Actions daily backup cron workflow [`.github/workflows/database-backup.yml`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/.github/workflows/database-backup.yml):
+  - Scheduled daily at 02:00 UTC (07:30 AM IST).
+  - Also triggers on manual `workflow_dispatch`.
+  - Attaches 14-day workflow run artifacts for dual-redundancy.
+- Developed and tested disaster recovery restore engine in `scripts/restore.py`:
+  - Supports decompression and direct execution into target database.
+  - Executed and validated restore against scratch test target (`python scripts/restore.py <backup_file> --scratch-test`).
+- Documented full recovery runbook in [`docs/DISASTER_RECOVERY.md`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/docs/DISASTER_RECOVERY.md):
+  - Step-by-step restoration commands for both CLI (`psql`) and Python restore utility.
+  - Documented RPO (< 24 hours) and RTO (< 2 minutes, tested).
+- Updated `codebase_audit.md` Services table and Known Issues section with backup architecture.
+
+### Decisions
+- **Dual Cloud & Artifact Redundancy**: Backup files are uploaded simultaneously to Supabase Storage `backups` bucket and GitHub Actions 14-day run artifacts, guaranteeing that database snapshots survive even if one provider encounters downtime.
+- **Cross-Platform Resilience**: Provided both shell script (`backup.sh`) and Python CLI (`backup.py`, `restore.py`) so disaster recovery procedures can be run on Windows developer workstations, Linux servers, or CI/CD runners without requiring native `pg_dump` binaries.
+
+### Key values for future steps
+- Disaster Recovery Manual: `docs/DISASTER_RECOVERY.md`
+- Backup Engine: `scripts/backup.py` & `scripts/backup.sh`
+- Restore Tool: `scripts/restore.py`
+- Backup Schedule: Daily 02:00 UTC (GitHub Actions `.github/workflows/database-backup.yml`)
+- Backup Retention: 14 Days rolling window
+- Tested Backup File: `backups/wareflow_backup_20260825_091947.sql.gz`
+
+
 
 
 
