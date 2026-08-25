@@ -1,10 +1,9 @@
 """Two-factor authentication endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
-from app.core.di import get_profile_repository, get_two_factor_service
+from app.core.di import get_two_factor_service
 from app.core.security import CurrentUser, get_current_user
-from app.repositories.interfaces.profile_repository import ProfileRepository
 from app.schemas.two_factor import (
     TwoFactorDisableRequest,
     TwoFactorEnrollResponse,
@@ -21,14 +20,10 @@ router = APIRouter(prefix="/auth/2fa", tags=["Two-Factor Authentication"])
 @router.get("/status", response_model=TwoFactorStatusResponse)
 def get_two_factor_status(
     current_user: CurrentUser = Depends(get_current_user),
-    profile_repo: ProfileRepository = Depends(get_profile_repository),
     two_factor_service: TwoFactorService = Depends(get_two_factor_service),
 ) -> TwoFactorStatusResponse:
     """Retrieve 2FA status, requirement policy, and remaining backup code count."""
-    profile = profile_repo.get_by_id(current_user.id)
-    if not profile:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
-    return two_factor_service.get_status(profile)
+    return two_factor_service.get_status_by_id(current_user.id)
 
 
 @router.post("/enroll", response_model=TwoFactorEnrollResponse)
@@ -66,15 +61,5 @@ def disable_two_factor(
     current_user: CurrentUser = Depends(get_current_user),
     two_factor_service: TwoFactorService = Depends(get_two_factor_service),
 ) -> TwoFactorStatusResponse:
-    """Disable two-factor authentication after validating verification code."""
+    """Disable 2FA for an authenticated user with mandatory code confirmation."""
     return two_factor_service.disable(profile_id=current_user.id, code=payload.code)
-
-
-@router.post("/regenerate-backup-codes", response_model=list[str])
-def regenerate_backup_codes(
-    payload: TwoFactorVerifyEnrollmentRequest,
-    current_user: CurrentUser = Depends(get_current_user),
-    two_factor_service: TwoFactorService = Depends(get_two_factor_service),
-) -> list[str]:
-    """Generate 10 fresh backup recovery codes after validating live TOTP."""
-    return two_factor_service.regenerate_backup_codes(profile_id=current_user.id, code=payload.code)

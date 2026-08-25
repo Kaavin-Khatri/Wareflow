@@ -64,6 +64,13 @@ class TwoFactorService:
             remaining_backup_codes=remaining_codes,
         )
 
+    def get_status_by_id(self, profile_id: str) -> TwoFactorStatusResponse:
+        """Fetch profile and compute current 2FA status."""
+        profile = self._profile_repo.get_by_id(profile_id)
+        if not profile:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
+        return self.get_status(profile)
+
     def enroll(self, profile_id: str) -> TwoFactorEnrollResponse:
         """Initiate TOTP enrollment: generate secret, QR Code Data URL, and 10 backup codes."""
         profile = self._profile_repo.get_by_id(profile_id)

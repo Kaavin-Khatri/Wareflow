@@ -116,6 +116,17 @@
 | `LEAD_SCAN_CENTER_LNG`              | Default warehouse center longitude for scan   | No          |
 | `LEAD_SCAN_RADIUS_KM`               | Default search radius in kilometers (15km)    | No          |
 
+## Architecture Layers & SOLID Compliance (Step 22.2)
+
+WareFlow implements a clean hexagonal architecture documented in detail in [`docs/ARCHITECTURE.md`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/docs/ARCHITECTURE.md):
+
+1. **Presentation Layer (`apps/web`)**: Next.js 16 App Router UI with React Server / Client Components and GPU-accelerated liquid glass design.
+2. **Transport & Gateways (`apps/api/app/api/routers`)**: FastAPI routers adhering to **SRP** (pure serialization/deserialization) with **0 direct repository imports** (Verified by grep).
+3. **Inversion of Control (`apps/api/app/core/di.py`)**: Centralized dependency injection container wiring services with repository interfaces.
+4. **Domain Services Layer (`apps/api/app/services`)**: Business logic (FIFO depletion, GST invoicing, credit validation) depending strictly on abstractions (**DIP**).
+5. **Segregated Interfaces (`apps/api/app/repositories/interfaces`)**: Role-specific, narrow repository interfaces (**ISP**).
+6. **Data Persistence (`apps/api/app/repositories`)**: SQLAlchemy 2.0 ORM models with `NullPool` Supabase Postgres connection mode.
+7. **Open/Closed Extension**: 4 permanent CI strategy proofs verified in [`apps/api/tests/test_solid_ocp_proofs.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_solid_ocp_proofs.py) (Pricing tier plugin, Webhook notification channel, Exponential smoothing forecast, and dynamic RBAC role policy).
 
 ## Layout & Shell Inventory (Step 4.6)
 

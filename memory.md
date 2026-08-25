@@ -4383,6 +4383,41 @@
 - Frontend Security Headers: `apps/web/next.config.ts`
 - Total Test Baseline: 333 backend pytest tests (100% passing)
 
+---
+
+## Step 22.2 — SOLID Principles Review & Refactor Pass
+**Timestamp:** 2026-08-25T10:00:00Z
+**Status:** COMPLETE
+
+### What was done
+- **Comprehensive SOLID Principles Architecture Audit**:
+  - Walked every domain (products, suppliers, retailers, POs, SOs, invoices, returns, deliveries, stock, portal, alerts):
+    - **Single Responsibility (SRP)**: Routers handle only serialization and HTTP protocol binding; domain logic is strictly encapsulated in Services.
+    - **Dependency Inversion (DIP)**: Identified and resolved 1 DIP violation in `two_factor.py` router by encapsulating profile repository access inside `TwoFactorService.get_status_by_id`.
+    - **Interface Segregation (ISP)**: Verified repository interfaces are segregated and role-specific.
+    - Verified by `grep`: **0 direct repository imports in routers**.
+- **Permanent Open/Closed Principle (OCP) Proof Test Suite**:
+  - Authored [`apps/api/tests/test_solid_ocp_proofs.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_solid_ocp_proofs.py) (4 tests):
+    1. *Pricing Strategy OCP*: Wholesale tiered volume discount plugin swappability without modifying core catalog models.
+    2. *Notification Channel OCP*: Custom Slack/Webhook channel extension without altering `AlertDispatcher`.
+    3. *Forecasting Algorithm OCP*: Exponential smoothing demand algorithm swappability without modifying `ForecastingService`.
+    4. *RBAC Matrix OCP*: Dynamic runtime custom role extension without modifying auth middleware.
+- **Architecture Documentation**:
+  - Created [`docs/ARCHITECTURE.md`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/docs/ARCHITECTURE.md) with comprehensive Mermaid component diagram and code evidence for all 4 OCP extension points.
+- **Codebase Audit & Ledger Synchronization**:
+  - Added Architecture Layers & SOLID Compliance section to `codebase_audit.md`.
+
+### Decisions
+- **Complete Router-Repository Decoupling**: Enforced that no FastAPI router ever interacts directly with a database repository, guaranteeing that transport layers remain swappable (e.g. gRPC or CLI adapters can reuse domain services without modification).
+- **Permanent OCP Test Guard**: Added `test_solid_ocp_proofs.py` to the default pytest run to prevent architectural regressions as features expand.
+
+### Key values for future steps
+- Architecture Specification: `docs/ARCHITECTURE.md`
+- SOLID OCP Proof Suite: `apps/api/tests/test_solid_ocp_proofs.py` (4/4 passing)
+- Architecture Compliance: Zero repository imports in routers (100% DIP/SRP compliant)
+- Test Baseline: 337 backend pytest tests (100% green)
+
+
 
 
 
