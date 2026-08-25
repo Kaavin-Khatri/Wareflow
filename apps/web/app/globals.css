@@ -334,3 +334,29 @@ body {
 .low-power-glass .animate-ambient-3 {
   animation: none !important;
 }
+
+/* ==========================================================================
+   Accessibility (a11y) & Reduced-Motion Global Layer (Step 22.4)
+   ========================================================================== */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-ambient-1,
+  .animate-ambient-2,
+  .animate-ambient-3 {
+    animation: none !important;
+  }
+}
+

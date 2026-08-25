@@ -820,14 +820,15 @@ wareflow/
 - PostgreSQL connection passwords percent-encoded (`%40` for `@`) in connection strings
 - Server-side `httpOnly` session cookies protect Next.js routes with `sameSite: lax`
 
-## Security & Hardening (Step 22.1)
+## Security, Quality & Accessibility Audit (Step 22.4)
 
-| Control Area | Security Measure in Force | Verification & Proof | Status |
+| Control Area | Security & Quality Measure in Force | Verification & Proof | Status |
 | :--- | :--- | :--- | :---: |
 | **RBAC Authorization** | Every mutating route (products, orders, invoices, payments, staff) rejects unauthorized roles with 401/403 | [`apps/api/tests/test_permission_security.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_permission_security.py) (9 tests passing) | ✅ Active |
 | **Financial Integrity** | Overpayments strictly blocked (amount cannot exceed unpaid balance); Credit limits strictly enforced before order confirmation | [`apps/api/tests/test_financial_integrity.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_financial_integrity.py) (3 tests passing) | ✅ Active |
 | **Rate Limiting** | SlowAPI rate limiters on expensive Groq AI (5/min) and CSV bulk imports (10/min); 6th request triggers 429 Too Many Requests | [`apps/api/tests/test_rate_limiting.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_rate_limiting.py) & [`app/core/limiter.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/core/limiter.py) | ✅ Active |
 | **Security Headers** | HSTS (max-age 63072000), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` | [`apps/web/next.config.ts`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/next.config.ts) & [`apps/web/vercel.json`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/vercel.json) | ✅ Active |
+| **Accessibility (a11y)**| Universal `:focus-visible` outlines, ARIA modal dialog labels (`role="dialog"`, `aria-labelledby`, `aria-describedby`), semantic screen reader tags, and `@media (prefers-reduced-motion: reduce)` global override | [`apps/web/lib/__tests__/a11y-audit.test.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/lib/__tests__/a11y-audit.test.tsx) (5 tests passing) & [`apps/web/app/globals.css`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/globals.css) | ✅ Verified |
 | **CORS Lockdown** | FastApi `CORSMiddleware` restricted to exact production origin `https://wareflow-web-seven.vercel.app` | [`apps/api/app/main.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/main.py) & Render environment configuration | ✅ Active |
 | **Secrets Isolation** | Zero service accounts or private keys tracked in git history or exposed in client bundles | Git history scan, bundle audit, and `.gitignore` rule enforcement | ✅ Clean |
 

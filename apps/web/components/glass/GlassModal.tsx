@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useId } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { SPRING_PRESETS } from "../motion/MotionProvider";
@@ -32,6 +32,9 @@ export function GlassModal({
   className,
   maxWidth = "lg",
 }: GlassModalProps) {
+  const titleId = useId();
+  const descId = useId();
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) onClose();
@@ -63,6 +66,8 @@ export function GlassModal({
             transition={SPRING_PRESETS.glassMorph}
             role="dialog"
             aria-modal="true"
+            aria-labelledby={titleId}
+            aria-describedby={description ? descId : undefined}
             className={cn(
               "relative w-full rounded-3xl bg-[var(--glass-bg-elevated)] backdrop-blur-2xl border border-[var(--glass-border)] shadow-2xl p-6 space-y-5 overflow-hidden z-10",
               maxWidthMap[maxWidth],
@@ -78,16 +83,20 @@ export function GlassModal({
             {/* Header */}
             <div className="flex items-center justify-between border-b border-[var(--border)] pb-3.5">
               <div className="space-y-0.5 pr-6">
-                <h3 className="text-base font-bold text-[var(--text)] tracking-tight">{title}</h3>
+                <h3 id={titleId} className="text-base font-bold text-[var(--text)] tracking-tight">
+                  {title}
+                </h3>
                 {description && (
-                  <p className="text-xs text-[var(--text-muted)] leading-relaxed">{description}</p>
+                  <p id={descId} className="text-xs text-[var(--text-muted)] leading-relaxed">
+                    {description}
+                  </p>
                 )}
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Close dialog"
-                className="w-7 h-7 rounded-lg glass-button-secondary flex items-center justify-center text-xs text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer"
+                className="w-7 h-7 rounded-lg glass-button-secondary flex items-center justify-center text-xs text-[var(--text-muted)] hover:text-[var(--text)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none cursor-pointer"
               >
                 ✕
               </button>

@@ -4475,6 +4475,33 @@ WareFlow has progressed from initial concept through **22 complete engineering p
 - Living Audit: `codebase_audit.md` (Stamped v1.0)
 - Master Ledger: `memory.md` (Frozen v1.0)
 
+---
+
+## Step 22.4 — Accessibility (a11y) Audit
+**Timestamp:** 2026-08-25T10:45:00Z
+**Status:** COMPLETE
+
+### What was done
+- **Universal Keyboard Navigation & Focus Ring Layer**:
+  - Configured universal `:focus-visible` ring outlines in `apps/web/app/globals.css` with 2px offset for keyboard-only tab order navigation.
+  - Enhanced `GlassModal.tsx` with dynamic `id` generation, `aria-labelledby`, `aria-describedby`, `role="dialog"`, `aria-modal="true"`, and Escape keydown event dismissal.
+- **Global `prefers-reduced-motion` Enforcement**:
+  - Implemented global `@media (prefers-reduced-motion: reduce)` rules in `globals.css` dropping all animation durations, transitions, and ambient orb loops to 0.01ms / none app-wide.
+- **Screen Reader Semantic Verification**:
+  - Verified ARIA roles, status badge tags, table header scopes, and meaningful screen reader descriptions across core workflows (Dashboard, Catalog, Sales Orders, Invoices).
+- **Dedicated Vitest a11y Test Suite**:
+  - Authored [`apps/web/lib/__tests__/a11y-audit.test.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/lib/__tests__/a11y-audit.test.tsx) (5 tests passing).
+- **Audit Ledger Synchronization**:
+  - Updated `codebase_audit.md` Security & Quality section with a11y audit verification status.
+
+### Decisions
+- **Non-Destructive Motion Reduction**: Injected global CSS override ensuring that all 5 motion engines (Motion, GSAP, CSS animations) gracefully collapse when OS-level reduced motion is toggled without breaking UI layouts.
+
+### Key values for future steps
+- a11y Test Suite: `apps/web/lib/__tests__/a11y-audit.test.tsx` (5/5 passing)
+- Global Focus & Reduced Motion: `apps/web/app/globals.css`
+
+
 
 
 
