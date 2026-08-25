@@ -1,6 +1,7 @@
-# WareFlow — Codebase Audit
+# WareFlow — Codebase Audit (v1.0 Frozen — 2026-08-25)
 
 > Auto-maintained by coding agents. Do not delete.
+> **Version:** `v1.0 Production Release` (Audited, Hardened & Frozen on 2026-08-25)
 > This file is **rewritten in-place** — it reflects the system as it is NOW.
 > History belongs in `memory.md`.
 
@@ -839,6 +840,18 @@ wareflow/
 - **Phase 20 UI/UX Excellence Complete**: All 48 production routes audited and elevated to award-benchmark standard in `docs/UX_AUDIT.md` (platform average 9.32/10). Tabular figures (`font-mono tabular-nums`), custom desktop magnetic cursor, shape-matched skeletons, and custom 404 (`not-found.tsx`) / global error boundary (`error.tsx`) are live across all routes with unified Lucide icon set and strict 4px rhythm.
 - **Render Free-Tier 512MB RAM & 15-Minute Spin-Down**: Render's free tier allocates 512MB RAM and automatically spins down instances after 15 minutes of idle time (~30-50s cold-start). This is mitigated by an UptimeRobot HTTP monitor pinging `GET /health` every 5 minutes to keep the instance warm during active business hours. Migrations are executed locally against Supabase port 5432 (`DIRECT_DATABASE_URL`) before code deployment.
 - **Phase 21 Production Deployment & Smoke Test Verified**: Production frontend live on Vercel (`https://wareflow-web-seven.vercel.app`) and backend live on Render (`https://wareflow-api-kg2c.onrender.com`). Production database seeded with ~40 SKUs across 5 categories, 2 warehouses, 5 suppliers, 8 retailers with tiered credit limits, 5 RBAC roles with full permissions matrix, and low-stock batch triggers. Complete 11-step manufacturer-to-retailer-to-payment smoke test verified in `SMOKE.md` and `docs/SMOKE.md`.
+
+## Post-v1 Backlog & Future Roadmap
+
+| Priority | Item | Domain | Description / Justification | Target Phase |
+| :--- | :--- | :--- | :--- | :---: |
+| **P1** | Direct NIC E-Invoice API Gateway | Billing / Compliance | Replace mock statutory IRN generator with direct National Informatics Centre (NIC) sandbox/production GSP API connector. | Post-v1.1 |
+| **P1** | Redis-Backed Celery Background Queue | Infrastructure | Migrate APScheduler in-process background worker to Redis-backed distributed Celery workers when scaling to multi-worker API clusters. | Post-v1.1 |
+| **P2** | Bluetooth Thermal ESC/POS Printing | Hardware / Warehouse | Direct web-Bluetooth printing of 2-inch and 3-inch thermal receipts and packing slips for portable warehouse picking carts. | Post-v1.2 |
+| **P2** | WhatsApp Inbound Conversational Bot | Sales / Ordering | Allow retailers to type *"Send 5 cases Parle-G and 2 bags Sugar"* directly in WhatsApp to automatically create a draft Sales Order via LLM parser. | Post-v1.2 |
+| **P3** | Multi-Tenancy SaaS Partitioning | Architecture | Introduce `tenant_id` database partitioning and dynamic schema routing for white-label multi-distributor SaaS deployment. | Post-v2.0 |
+| **P3** | Native iOS & Android React Native App | Mobile | Wrap PWA into Capacitor or native React Native container for zero-friction distribution on Google Play Store and Apple App Store. | Post-v2.0 |
+
 
 
 
