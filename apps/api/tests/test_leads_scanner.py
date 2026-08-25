@@ -207,6 +207,52 @@ class TestInMemoryLeadRepository:
         assert total == 1
         assert new_leads[0].name == "New Shop"
 
+    def test_list_leads_with_search_and_bounding_box(
+        self, lead_repo: InMemoryLeadRepository
+    ) -> None:
+        """Search by text and geographic bounding box."""
+        lead_repo.create_lead(
+            Lead(
+                id="lead-ahmedabad",
+                place_id="p_ahm",
+                name="Sardar Gruh Udyog",
+                address="Paldi, Ahmedabad, Gujarat",
+                category=LeadCategoryEnum.GRUH_UDYOG,
+                lat=23.012,
+                lng=72.538,
+                first_seen_at=datetime.now(UTC),
+            )
+        )
+        lead_repo.create_lead(
+            Lead(
+                id="lead-surat",
+                place_id="p_surat",
+                name="Surat Farsan Center",
+                address="Ring Road, Surat, Gujarat",
+                category=LeadCategoryEnum.SNACK_STORE,
+                lat=21.170,
+                lng=72.831,
+                first_seen_at=datetime.now(UTC),
+            )
+        )
+
+        # Search by keyword
+        results, count = lead_repo.list_leads(search="Sardar")
+        assert count == 1
+        assert results[0].name == "Sardar Gruh Udyog"
+
+        # Search by address keyword
+        results, count = lead_repo.list_leads(search="Surat")
+        assert count == 1
+        assert results[0].name == "Surat Farsan Center"
+
+        # Bounding box around Ahmedabad
+        results, count = lead_repo.list_leads(
+            min_lat=22.9, max_lat=23.2, min_lng=72.4, max_lng=72.7
+        )
+        assert count == 1
+        assert results[0].id == "lead-ahmedabad"
+
     def test_mark_lead_contacted(self, lead_repo: InMemoryLeadRepository) -> None:
         """Mark a lead as contacted with notes."""
         lead_repo.create_lead(
@@ -505,6 +551,35 @@ class TestLeadsRouterAPI:
         data = resp.json()
         assert data["total"] >= 1
         assert any(lead_item["name"] == "Listable Kirana" for lead_item in data["leads"])
+
+    def test_list_leads_endpoint_with_search_and_bounds(
+        self, client: TestClient, lead_repo: InMemoryLeadRepository
+    ) -> None:
+        """GET /leads with search query and map bounds returns matched items."""
+        lead_repo.create_lead(
+            Lead(
+                id="lead-ahmedabad-api",
+                place_id="place_ahm_api",
+                name="Jay Jalaram Farsan House",
+                address="Navrangpura, Ahmedabad, Gujarat",
+                category=LeadCategoryEnum.SNACK_STORE,
+                lat=23.033,
+                lng=72.562,
+                first_seen_at=datetime.now(UTC),
+            )
+        )
+        # Search match
+        resp = client.get("/leads?search=Jalaram")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 1
+        assert data["leads"][0]["name"] == "Jay Jalaram Farsan House"
+
+        # Bounding box match
+        resp_bbox = client.get("/leads?min_lat=23.0&max_lat=23.1&min_lng=72.5&max_lng=72.6")
+        assert resp_bbox.status_code == 200
+        data_bbox = resp_bbox.json()
+        assert data_bbox["total"] >= 1
 
     def test_mark_contacted_endpoint(
         self, client: TestClient, lead_repo: InMemoryLeadRepository

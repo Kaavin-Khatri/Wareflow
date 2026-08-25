@@ -58,14 +58,24 @@ def list_leads(
     is_new: bool | None = Query(None, description="Filter by new status"),
     contacted: bool | None = Query(None, description="Filter by contacted status"),
     category: str | None = Query(None, description="Filter by category"),
+    search: str | None = Query(None, description="Search by name or address"),
+    min_lat: float | None = Query(None, description="Minimum latitude bounding box"),
+    max_lat: float | None = Query(None, description="Maximum latitude bounding box"),
+    min_lng: float | None = Query(None, description="Minimum longitude bounding box"),
+    max_lng: float | None = Query(None, description="Maximum longitude bounding box"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
 ) -> LeadListResponse:
-    """Return paginated list of leads with optional filters."""
+    """Return paginated list of leads with optional filters, text search, and map bounds."""
     leads, total = lead_service._lead_repo.list_leads(
         is_new=is_new,
         contacted=contacted,
         category=category,
+        search=search,
+        min_lat=min_lat,
+        max_lat=max_lat,
+        min_lng=min_lng,
+        max_lng=max_lng,
         page=page,
         page_size=page_size,
     )

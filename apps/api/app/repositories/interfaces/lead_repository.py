@@ -34,10 +34,15 @@ class LeadRepositoryInterface(ABC):
         is_new: bool | None = None,
         contacted: bool | None = None,
         category: str | None = None,
+        search: str | None = None,
+        min_lat: float | None = None,
+        max_lat: float | None = None,
+        min_lng: float | None = None,
+        max_lng: float | None = None,
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[Lead], int]:
-        """Return paginated leads with optional filters and total count."""
+        """Return paginated leads with optional filters, text search, bounding box, and total count."""
         raise NotImplementedError
 
     @abstractmethod

@@ -81,6 +81,7 @@
 | `NEXT_PUBLIC_SUPABASE_URL`                 | Supabase project URL              | Yes (client) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY`            | Supabase anon key (RLS protected) | Yes (client) |
 | `NEXT_PUBLIC_API_URL`                      | FastAPI backend URL               | Yes (client) |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`          | Google Maps JavaScript API key (client-side embed) | Yes (client) |
 
 ### apps/api (FastAPI Backend) → `.env`
 

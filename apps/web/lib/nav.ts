@@ -97,6 +97,12 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         requiredPermission: "inventory:view",
       },
       {
+        name: "Lead Discovery Map",
+        href: "/admin/leads/map",
+        icon: "MapPin",
+        requiredPermission: "inventory:view",
+      },
+      {
         name: "Purchase Orders",
 
         href: "/admin/purchase-orders",

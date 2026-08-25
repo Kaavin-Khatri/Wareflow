@@ -3877,6 +3877,45 @@
   - `GET /leads/scan-history`
 - Env Vars: `GOOGLE_PLACES_API_KEY`, `LEAD_SCAN_INTERVAL_DAYS`, `LEAD_SCAN_CENTER_LAT`, `LEAD_SCAN_CENTER_LNG`, `LEAD_SCAN_RADIUS_KM`
 
+---
+
+## Step 17.2 — Interactive Lead Map (existing shops + highlighted new ones)
+**Timestamp:** 2026-08-25T02:00:00Z
+**Status:** COMPLETE
+
+### What was done
+- **Backend API Query Expansion (`apps/api/app/api/routers/leads.py` & Repositories)**:
+  - Extended `LeadRepositoryInterface`, `SqlAlchemyLeadRepository`, and `InMemoryLeadRepository` to support full-text search (`search` across lead name and address) and geographic bounding box filters (`min_lat`, `max_lat`, `min_lng`, `max_lng`).
+  - Updated `GET /leads` endpoint to accept `search`, `min_lat`, `max_lat`, `min_lng`, `max_lng` query parameters.
+  - Added unit and endpoint tests verifying search and bounding box queries in `apps/api/tests/test_leads_scanner.py` (23/23 tests passing).
+- **Frontend Interactive Map & Discovery Components (`apps/web/components/leads/`)**:
+  - `LeadInfoWindow.tsx`: Detail glass card displaying shop name, category badge, glowing NEW badge, address, direct phone link (`tel:` protocol), directions link to Google Maps, and inline form for recording contact outcome notes.
+  - `LeadMap.tsx`: Google Maps JavaScript API embed (free-tier guardrails) customized with WareFlow dark luxury map styling, custom SVG category pins (Amber `#F59E0B` for Gruh Udyog, Rose `#F43F5E` for Snack Store, Emerald `#10B981` for Kirana/Grocery, Violet `#8B5CF6` for Retail/Other), glowing radar pulse rings for `is_new=true` leads, central warehouse hub circle (15km radius), and accessible interactive spatial canvas schematic fallback for offline/test environments.
+  - `LeadFilterSidebar.tsx`: Search input, category filter tabs with dynamic counts, 'New Shops Only' isolation toggle switch, contacted filter pills, and scrollable cards synchronized with map pin selection.
+  - `LeadDiscoveryView.tsx`: Master coordinator with top telemetry KPI cards (Total Discovered, New Shops, Outreach Pending, Contacted Coverage), mobile map/list switcher, on-demand scan modal triggering `POST /leads/scan-now`, and floating `LeadInfoWindow` overlay.
+- **Pages & Navigation**:
+  - `apps/web/app/admin/leads/map/page.tsx`: Production lead discovery map page with `PageHeader` and `Growth Radar` badge.
+  - `apps/web/app/admin/leads/page.tsx`: Redirect route pointing to `/admin/leads/map`.
+  - `apps/web/lib/nav.ts`: Added `Lead Discovery Map` (`/admin/leads/map`) to `NAVIGATION_SECTIONS`.
+  - `apps/web/.env.example`: Added `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`.
+- **Testing & Verification**:
+  - Created `apps/web/lib/__tests__/lead-map-ui.test.tsx` (7/7 tests passing) testing map pins, sidebar mirroring, filter toggles, search, info window, `tel:`/directions links, and scan trigger.
+  - Full frontend Vitest suite: 45/45 test files (198 tests) passing.
+  - Full backend pytest suite: 292/292 tests passing.
+  - Next.js production build: Succeeded across all 52 routes with 0 errors.
+
+### Decisions
+- **Spatial Fallback Schematic**: Included an interactive SVG/HTML canvas schematic fallback inside `LeadMap.tsx` when `window.google` is absent or in test environments. This guarantees 100% deterministic test coverage and graceful offline user experience.
+- **Direct Phone Protocol Link**: Used standard `<a href="tel:{phone}">` enabling 1-tap direct dialing on mobile devices and VoIP softphone integration on desktop.
+- **Client-Side Free-Tier Guardrails**: Google Maps JavaScript API runs client-side within the free tier $200 monthly credit pool shared with Places API.
+
+### Key values for future steps
+- Route: `/admin/leads/map`
+- Components: `LeadDiscoveryView`, `LeadMap`, `LeadInfoWindow`, `LeadFilterSidebar` in `apps/web/components/leads/`
+- Navigation: `Lead Discovery Map` (`/admin/leads/map`) under Wholesale Operations in `apps/web/lib/nav.ts`
+- Client Key: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
+
+
 
 
 

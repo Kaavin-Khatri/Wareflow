@@ -1,6 +1,6 @@
 """SQLAlchemy + In-Memory implementations of LeadRepositoryInterface."""
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models.lead import Lead, LeadScanRun
@@ -41,6 +41,11 @@ class SqlAlchemyLeadRepository(LeadRepositoryInterface):
         is_new: bool | None = None,
         contacted: bool | None = None,
         category: str | None = None,
+        search: str | None = None,
+        min_lat: float | None = None,
+        max_lat: float | None = None,
+        min_lng: float | None = None,
+        max_lng: float | None = None,
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[Lead], int]:
@@ -57,6 +62,22 @@ class SqlAlchemyLeadRepository(LeadRepositoryInterface):
         if category:
             stmt = stmt.where(Lead.category == category)
             count_stmt = count_stmt.where(Lead.category == category)
+        if search:
+            term = f"%{search}%"
+            stmt = stmt.where(or_(Lead.name.ilike(term), Lead.address.ilike(term)))
+            count_stmt = count_stmt.where(or_(Lead.name.ilike(term), Lead.address.ilike(term)))
+        if min_lat is not None:
+            stmt = stmt.where(Lead.lat >= min_lat)
+            count_stmt = count_stmt.where(Lead.lat >= min_lat)
+        if max_lat is not None:
+            stmt = stmt.where(Lead.lat <= max_lat)
+            count_stmt = count_stmt.where(Lead.lat <= max_lat)
+        if min_lng is not None:
+            stmt = stmt.where(Lead.lng >= min_lng)
+            count_stmt = count_stmt.where(Lead.lng >= min_lng)
+        if max_lng is not None:
+            stmt = stmt.where(Lead.lng <= max_lng)
+            count_stmt = count_stmt.where(Lead.lng <= max_lng)
 
         total = self._session.execute(count_stmt).scalar() or 0
         offset = (page - 1) * page_size
@@ -128,6 +149,11 @@ class InMemoryLeadRepository(LeadRepositoryInterface):
         is_new: bool | None = None,
         contacted: bool | None = None,
         category: str | None = None,
+        search: str | None = None,
+        min_lat: float | None = None,
+        max_lat: float | None = None,
+        min_lng: float | None = None,
+        max_lng: float | None = None,
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[Lead], int]:
@@ -139,6 +165,22 @@ class InMemoryLeadRepository(LeadRepositoryInterface):
             results = [r for r in results if r.contacted == contacted]
         if category:
             results = [r for r in results if r.category == category]
+        if search:
+            q = search.lower()
+            results = [
+                r
+                for r in results
+                if (r.name and q in r.name.lower()) or (r.address and q in r.address.lower())
+            ]
+        if min_lat is not None:
+            results = [r for r in results if r.lat is not None and r.lat >= min_lat]
+        if max_lat is not None:
+            results = [r for r in results if r.lat is not None and r.lat <= max_lat]
+        if min_lng is not None:
+            results = [r for r in results if r.lng is not None and r.lng >= min_lng]
+        if max_lng is not None:
+            results = [r for r in results if r.lng is not None and r.lng <= max_lng]
+
         total = len(results)
         results.sort(key=lambda r: r.first_seen_at or "", reverse=True)
         offset = (page - 1) * page_size
