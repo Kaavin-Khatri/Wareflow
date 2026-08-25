@@ -14,6 +14,7 @@ from app.repositories.interfaces.product_repository import ProductRepositoryInte
 from app.schemas.categories import CategoryCreateRequest, CategoryUpdateRequest
 from app.schemas.products import ProductCreateRequest, ProductUpdateRequest
 from app.services.audit_service import AuditService
+from app.services.barcode_service import BarcodeService, generate_internal_ean13
 from app.services.storage_service import StorageServiceInterface
 
 
@@ -54,6 +55,54 @@ class ProductService:
             )
         return product
 
+    def get_product_by_barcode(self, barcode: str) -> Any:
+        """Fetch a product by its exact barcode or fallback SKU match."""
+        if not barcode or not barcode.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Barcode query cannot be empty.",
+            )
+        barcode_clean = barcode.strip()
+        product = self._repo.get_by_barcode(barcode_clean)
+        if not product:
+            # Fallback check against SKU in case an alphanumeric SKU was scanned
+            product = self._repo.get_by_sku(barcode_clean)
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Product with barcode or SKU '{barcode_clean}' not found.",
+            )
+        return product
+
+    def get_product_barcode_image(self, product_id: str) -> bytes:
+        """Generate high-resolution PNG barcode image for product."""
+        product = self.get_product(product_id)
+        barcode_val = (
+            getattr(product, "barcode", None)
+            or (product.get("barcode") if isinstance(product, dict) else None)
+        )
+        if not barcode_val or not str(barcode_val).strip():
+            sku = (
+                getattr(product, "sku", None)
+                or (product.get("sku") if isinstance(product, dict) else None)
+            )
+            barcode_val = sku or product_id
+        return BarcodeService.render_barcode_png(str(barcode_val).strip())
+
+    def get_product_qr_image(self, product_id: str) -> bytes:
+        """Generate high-resolution PNG QR code image for product."""
+        product = self.get_product(product_id)
+        barcode_val = (
+            getattr(product, "barcode", None)
+            or (product.get("barcode") if isinstance(product, dict) else None)
+        )
+        sku = (
+            getattr(product, "sku", None)
+            or (product.get("sku") if isinstance(product, dict) else None)
+        )
+        payload_data = barcode_val or sku or product_id
+        return BarcodeService.render_qr_code_png(str(payload_data).strip())
+
     def list_products(
         self,
         skip: int = 0,
@@ -72,7 +121,7 @@ class ProductService:
         )
 
     def create_product(self, payload: ProductCreateRequest, actor_id: str | None = None) -> Any:
-        """Create a new catalog product ensuring SKU uniqueness and price sanity."""
+        """Create a new catalog product ensuring SKU uniqueness, price sanity, and auto-EAN-13 generation."""
         sku_clean = payload.sku.strip()
 
         # Business Rule 1: SKU Natural Key Uniqueness
@@ -92,6 +141,13 @@ class ProductService:
 
         product_dict = payload.model_dump(exclude_unset=True)
         product_dict["sku"] = sku_clean
+
+        # Auto-generate EAN-13 barcode if omitted
+        raw_barcode = payload.barcode.strip() if payload.barcode and payload.barcode.strip() else None
+        if not raw_barcode:
+            raw_barcode = generate_internal_ean13()
+        product_dict["barcode"] = raw_barcode
+
         created = self._repo.create_product(product_dict)
 
         prod_id = created.id if hasattr(created, "id") else created["id"]
@@ -107,6 +163,7 @@ class ProductService:
                 after={
                     "sku": sku_clean,
                     "name": prod_name,
+                    "barcode": raw_barcode,
                     "wholesale_price": float(payload.wholesale_price),
                     "cost_price": float(payload.cost_price),
                 },

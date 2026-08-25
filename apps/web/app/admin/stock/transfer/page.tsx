@@ -19,7 +19,10 @@ import {
   History,
   ShieldAlert,
   Send,
+  Camera,
+  ScanLine,
 } from "lucide-react";
+import { BarcodeScannerModal, ScannedProduct } from "@/components/barcode/BarcodeScannerModal";
 
 interface ProductOption {
   id: string;
@@ -108,6 +111,7 @@ export default function StockTransferPage() {
 
   // Form State
   const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [scannerOpen, setScannerOpen] = useState<boolean>(false);
   const [selectedFromWhId, setSelectedFromWhId] = useState<string>("");
   const [selectedToWhId, setSelectedToWhId] = useState<string>("");
   const [selectedBatchId, setSelectedBatchId] = useState<string>("");
@@ -461,9 +465,19 @@ export default function StockTransferPage() {
 
                 {/* Product Select */}
                 <div className="space-y-1">
-                  <label htmlFor="trf-product" className="block text-xs font-medium text-[var(--text-muted)]">
-                    Product to Relocate *
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="trf-product" className="block text-xs font-medium text-[var(--text-muted)]">
+                      Product to Relocate *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setScannerOpen(true)}
+                      className="text-[11px] text-[var(--accent)] hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      <Camera className="w-3 h-3" />
+                      <span>Scan Barcode</span>
+                    </button>
+                  </div>
                   <select
                     id="trf-product"
                     value={selectedProductId}
@@ -725,6 +739,27 @@ export default function StockTransferPage() {
           />
         </div>
       </div>
+
+      {/* Barcode Scanner Modal */}
+      {scannerOpen && (
+        <BarcodeScannerModal
+          isOpen={scannerOpen}
+          onClose={() => setScannerOpen(false)}
+          title="Scan Product for Relocation"
+          description="Scan barcode on goods to quickly locate stock batches for transfer."
+          onScanSuccess={(code, prod) => {
+            if (prod) {
+              setProducts((prev) => {
+                if (!prev.some((p) => p.id === prod.id)) {
+                  return [...prev, { id: prod.id, name: prod.name, sku: prod.sku }];
+                }
+                return prev;
+              });
+              setSelectedProductId(prod.id);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -44,6 +44,8 @@
 | Encryption         | cryptography              | >=42.0.0  |
 | PDF Engine (api)   | ReportLab (platypus)      | >=4.0.0   |
 | Excel Engine (api) | openpyxl                  | >=3.1.0,<4.0.0 |
+| Barcode Engine     | python-barcode, qrcode    | >=0.15.0  |
+| Camera Scanner     | html5-qrcode (client-side)| ^2.3.8    |
 | Background Worker  | APScheduler               | >=3.10.0,<4.0.0 |
 | Test Runner (api)  | Pytest + pytest-cov       | >=8.0.0   |
 
@@ -755,6 +757,8 @@ wareflow/
 | Google Places Lead Discovery Scanner | `GooglePlacesLeadService` runs scheduled weekly background scans and on-demand discovery sweeps for regional FMCG retail shops (Gruh Udyog, Namkeen, Kirana), deduplicating via Google `place_id` and alerting owners on newly discovered storefronts |
 | Lead Contact Tracking & Highlight Clearance | Marking a lead contacted or converted automatically sets `is_new=False`, clearing the pulsing highlight badge across the interactive map and list views so sales focus stays on uncontacted prospects |
 | Unified Lead-to-Retailer Conversion | `POST /leads/{lead_id}/convert-to-retailer` pre-fills discovered lead attributes (name, phone, address) and invokes `RetailerService.create_retailer`, ensuring consistent validation, pricing tier assignment, and audit logs while preventing duplicate conversions |
+| Internal EAN-13 & Dynamic Barcode/QR Rendering | Products without manufacturer barcodes auto-generate internal 13-digit EAN-13 barcodes with GS1 prefix 20 and modulo-10 checksum; `GET /products/{id}/barcode.png` and `/qr.png` render high-res scannable images directly in-memory |
+| Pure Client-Side Camera & File Barcode Scanning | `Html5Qrcode` enables zero-cost browser camera scanning with audio feedback and instant API product resolution across inventory, catalog, stock adjustments, and transfers |
 
 ## Security & Audit Log Coverage
 

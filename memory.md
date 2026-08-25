@@ -3964,6 +3964,72 @@
 - Contact Tracking Endpoint: `PATCH /leads/{lead_id}/contacted` or `PATCH /leads/{lead_id}`
 - Conversion UI: `<ConvertToRetailerModal>` in `apps/web/components/leads/ConvertToRetailerModal.tsx`
 
+---
+
+## Step 18.1 — Barcode/QR Generation & Camera Scanning
+
+**Timestamp:** 2026-08-25T04:45:00Z
+**Status:** COMPLETE
+
+### What was done
+
+- **Backend Barcode & QR Engine (`apps/api/app/services/barcode_service.py`)**:
+  - Implemented GS1 modulo-10 EAN-13 check digit calculator: `calculate_ean13_checksum(digits12: str) -> int`.
+  - Implemented internal EAN-13 generator: `generate_internal_ean13(prefix="20", sequence_id=None) -> str` using restricted circulation prefix `20` + random/sequence 10 digits + modulo-10 checksum.
+  - Implemented `BarcodeService.render_barcode_png(code: str, options=None) -> bytes` rendering high-resolution EAN-13 (with Code128 fallback for arbitrary alphanumeric SKUs) in-memory using `python-barcode` + Pillow `ImageWriter`.
+  - Implemented `BarcodeService.render_qr_code_png(data: str, box_size=8, border=2) -> bytes` rendering crisp 2D matrix QR codes.
+- **Product Model & Repository Barcode Resolution**:
+  - Added `get_by_barcode(barcode: str) -> Product | None` in `ProductRepositoryInterface`, `InMemoryProductRepository`, and `SqlAlchemyProductRepository`.
+  - Updated `ProductService.create_product`: if `payload.barcode` is omitted or empty, auto-generates a valid internal 13-digit EAN-13 barcode (`20...`).
+  - Added `ProductService.get_product_by_barcode(barcode: str)` resolving product by barcode with fallback lookup against SKU.
+  - Added `ProductService.get_product_barcode_image(product_id: str)` and `get_product_qr_image(product_id: str)` returning PNG byte streams.
+- **FastAPI Endpoints (`apps/api/app/api/routers/products.py`)**:
+  - `GET /products/by-barcode/{barcode}`: Instantly resolves and returns product schema for scanner lookups.
+  - `GET /products/{id}/barcode.png`: Returns high-resolution scannable PNG barcode image with `image/png` content-type.
+  - `GET /products/{id}/qr.png`: Returns high-resolution 2D matrix QR code PNG image with `image/png` content-type.
+- **Comprehensive Backend Pytest Suite (`apps/api/tests/test_barcodes.py`)**:
+  - Added 14 unit and integration tests verifying EAN-13 check digit calculation, internal barcode structure, PNG image headers (`\x89PNG`), Code128 fallback, auto-generation on creation, and all 3 new endpoints.
+  - Full backend pytest suite: **310/310 tests passing**.
+- **Frontend Camera Scanning & Label Generation Components (`apps/web/components/barcode/`)**:
+  - `BarcodeScannerModal.tsx`:
+    - Integrated client-side scanner using `html5-qrcode` (`Html5Qrcode`).
+    - Triple-mode interface: Live camera feed with laser reticle animation & camera flip toggle, image file upload scanner (`scanFile`), and manual barcode/SKU entry.
+    - Synthesized Web Audio API scan confirmation beep on detection for warehouse floor feedback.
+    - Instant API resolution against `/products/by-barcode/{code}` with matched product banner.
+  - `ProductLabelSheetModal.tsx`:
+    - Multi-label sheet printing engine supporting standard formats (A4 - 24 labels 3×8 grid, A4 - 14 labels 2×7 grid, Single Sticker 50×30mm).
+    - Configurable label count (1–96), price inclusion toggle, SKU inclusion toggle, and 1D Barcode vs 2D QR switcher.
+    - Crisp `@media print` layout preventing cuts and ensuring monochrome contrast.
+  - `ProductBarcodeCard.tsx`:
+    - Interactive 1D Barcode and 2D QR preview card with one-click PNG downloads, copy code button, and print label sheet trigger.
+- **Integrated Warehouse Floor Scanning Across Views**:
+  - Product Catalog (`/admin/products`): Added topbar "Scan Barcode" button, "Label" action button in table rows, and inline "Scan via Camera" button for product creation/edit form.
+  - Inventory Overview (`/admin/inventory`): Added "Scan Barcode" button next to Excel export to instantly filter and highlight matching stock items.
+  - Stock Adjustment (`/admin/stock/adjust`): Added "Scan Barcode" button next to Product dropdown to instantly select target damaged/audited product.
+  - Stock Transfer (`/admin/stock/transfer`): Added "Scan Barcode" button next to Product select to instantly locate source product batches.
+- **Frontend Vitest Suite & Build**:
+  - `apps/web/lib/__tests__/barcode-scanner.test.tsx`: Tested mode switching, manual input lookup, cancel handlers, label sheet rendering, and barcode card switching.
+  - Full frontend vitest suite: **209/209 tests passing**.
+  - Production build: `pnpm --filter web build` completed cleanly across all 52 routes with 0 errors.
+
+### Decisions
+
+- **GS1 Restricted Circulation Prefix (20)**: Internal warehouse barcodes use GS1 prefix `20` reserved globally for internal enterprise use. This prevents collision with commercial manufacturer EAN-13 prefixes (such as Indian `890` prefix).
+- **Graceful Code128 Fallback**: If a product has an alphanumeric SKU instead of a 12/13-digit numeric code, `render_barcode_png` transparently falls back to Code128 format rather than crashing.
+- **Pure Client-Side Zero-Cost Camera Scanning**: Uses `html5-qrcode` executing directly in the browser with Web Workers, requiring 0 external cloud scanning APIs and remaining 100% free-tier compliant.
+- **In-Memory Image Streaming**: Barcode and QR code PNGs are rendered directly to memory buffers using `io.BytesIO` and streamed via FastAPI `Response(content=..., media_type="image/png")` without creating temporary files on disk.
+
+### Key values for future steps
+
+- Barcode Service: `apps/api/app/services/barcode_service.py`
+- Barcode Lookup API: `GET /products/by-barcode/{barcode}`
+- Barcode PNG Render API: `GET /products/{id}/barcode.png`
+- QR Code PNG Render API: `GET /products/{id}/qr.png`
+- Scanner Component: `<BarcodeScannerModal>` in `apps/web/components/barcode/BarcodeScannerModal.tsx`
+- Label Sheet Modal: `<ProductLabelSheetModal>` in `apps/web/components/barcode/ProductLabelSheetModal.tsx`
+- Barcode Card Component: `<ProductBarcodeCard>` in `apps/web/components/barcode/ProductBarcodeCard.tsx`
+
+
 
 
 

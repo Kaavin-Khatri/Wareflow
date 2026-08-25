@@ -13,7 +13,10 @@ import {
   Package,
   ShieldAlert,
   Lock,
+  Camera,
+  ScanLine,
 } from "lucide-react";
+import { BarcodeScannerModal, ScannedProduct } from "@/components/barcode/BarcodeScannerModal";
 
 interface ProductOption {
   id: string;
@@ -51,6 +54,7 @@ export default function StockAdjustPage() {
 
   // Form state
   const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [scannerOpen, setScannerOpen] = useState<boolean>(false);
 
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>("");
   const [selectedBatchId, setSelectedBatchId] = useState<string>("");
@@ -312,9 +316,19 @@ export default function StockAdjustPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Product Select */}
                 <div className="space-y-1">
-                  <label htmlFor="adjust-product" className="block text-xs font-medium text-[var(--text-muted)]">
-                    Product *
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="adjust-product" className="block text-xs font-medium text-[var(--text-muted)]">
+                      Product *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setScannerOpen(true)}
+                      className="text-[11px] text-[var(--accent)] hover:underline flex items-center gap-1 font-semibold"
+                    >
+                      <Camera className="w-3 h-3" />
+                      <span>Scan Barcode</span>
+                    </button>
+                  </div>
                   <select
                     id="adjust-product"
                     value={selectedProductId}
@@ -500,6 +514,27 @@ export default function StockAdjustPage() {
           </form>
         )}
       </div>
+
+      {/* Barcode Scanner Modal */}
+      {scannerOpen && (
+        <BarcodeScannerModal
+          isOpen={scannerOpen}
+          onClose={() => setScannerOpen(false)}
+          title="Scan Product for Adjustment"
+          description="Scan barcode on damaged / audited item to instantly select its product."
+          onScanSuccess={(code, prod) => {
+            if (prod) {
+              setProducts((prev) => {
+                if (!prev.some((p) => p.id === prod.id)) {
+                  return [...prev, { id: prod.id, name: prod.name, sku: prod.sku }];
+                }
+                return prev;
+              });
+              setSelectedProductId(prod.id);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

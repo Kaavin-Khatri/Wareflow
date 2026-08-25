@@ -23,6 +23,10 @@ class ProductRepositoryInterface(Protocol):
         """Fetch a single product by SKU natural key."""
         ...
 
+    def get_by_barcode(self, barcode: str) -> Product | None:
+        """Fetch a single product by exact barcode."""
+        ...
+
     def list_products(
         self,
         skip: int = 0,

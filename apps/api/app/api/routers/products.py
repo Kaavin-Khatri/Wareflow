@@ -1,6 +1,6 @@
 """Product catalog router."""
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 
 from app.core.di import (
     get_forecasting_service,
@@ -70,6 +70,22 @@ def create_product(
 
 
 @router.get(
+    "/by-barcode/{barcode}",
+    response_model=ProductResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Resolve product by barcode or SKU",
+)
+def get_product_by_barcode(
+    barcode: str,
+    current_user: CurrentUser = Depends(get_current_user),
+    service: ProductService = Depends(get_product_service),
+) -> ProductResponse:
+    """Instantly lookup and return a product by its barcode or scanned code."""
+    product = service.get_product_by_barcode(barcode)
+    return ProductResponse.model_validate(product)
+
+
+@router.get(
     "/{product_id}",
     response_model=ProductResponse,
     status_code=status.HTTP_200_OK,
@@ -83,6 +99,46 @@ def get_product(
     """Retrieve product details by UUID."""
     product = service.get_product(product_id)
     return ProductResponse.model_validate(product)
+
+
+@router.get(
+    "/{product_id}/barcode.png",
+    response_class=Response,
+    status_code=status.HTTP_200_OK,
+    summary="Generate and render product barcode as PNG image",
+    responses={200: {"content": {"image/png": {}}}},
+)
+def get_product_barcode_png(
+    product_id: str,
+    service: ProductService = Depends(get_product_service),
+) -> Response:
+    """Render high-resolution scannable barcode PNG image for printing, labels, and mobile display."""
+    png_bytes = service.get_product_barcode_image(product_id)
+    return Response(
+        content=png_bytes,
+        media_type="image/png",
+        headers={"Content-Disposition": f'inline; filename="product_{product_id}_barcode.png"'},
+    )
+
+
+@router.get(
+    "/{product_id}/qr.png",
+    response_class=Response,
+    status_code=status.HTTP_200_OK,
+    summary="Generate and render product QR code as PNG image",
+    responses={200: {"content": {"image/png": {}}}},
+)
+def get_product_qr_png(
+    product_id: str,
+    service: ProductService = Depends(get_product_service),
+) -> Response:
+    """Render 2D QR code PNG image for fast camera scanning and label sheets."""
+    png_bytes = service.get_product_qr_image(product_id)
+    return Response(
+        content=png_bytes,
+        media_type="image/png",
+        headers={"Content-Disposition": f'inline; filename="product_{product_id}_qr.png"'},
+    )
 
 
 @router.patch(

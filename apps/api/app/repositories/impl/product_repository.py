@@ -84,6 +84,13 @@ class InMemoryProductRepository(ProductRepositoryInterface):
                 return prod
         return None
 
+    def get_by_barcode(self, barcode: str) -> Any:
+        barcode_clean = barcode.strip().lower()
+        for prod in self._products.values():
+            if str(prod.get("barcode", "")).strip().lower() == barcode_clean:
+                return prod
+        return None
+
     def list_products(
         self,
         skip: int = 0,
@@ -208,6 +215,13 @@ class SqlAlchemyProductRepository(ProductRepositoryInterface):
             select(Product)
             .options(joinedload(Product.category), joinedload(Product.base_uom))
             .where(func.lower(Product.sku) == sku.strip().lower())
+        )
+
+    def get_by_barcode(self, barcode: str) -> Product | None:
+        return self.session.scalar(
+            select(Product)
+            .options(joinedload(Product.category), joinedload(Product.base_uom))
+            .where(func.lower(Product.barcode) == barcode.strip().lower())
         )
 
     def list_products(

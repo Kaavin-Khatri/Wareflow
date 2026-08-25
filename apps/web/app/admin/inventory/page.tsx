@@ -20,8 +20,11 @@ import {
   Calendar,
   Layers,
   FileSpreadsheet,
+  ScanLine,
+  Camera,
 } from "lucide-react";
 import Image from "next/image";
+import { BarcodeScannerModal } from "@/components/barcode/BarcodeScannerModal";
 
 export interface WarehouseSummary {
   id: string;
@@ -118,6 +121,7 @@ export default function InventoryAdminPage() {
   const [selectedProduct, setSelectedProduct] = useState<StockOverviewItem | null>(null);
   const [productDetail, setProductDetail] = useState<ProductStockDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   useEffect(() => {
     let ignore = false;
@@ -350,21 +354,32 @@ export default function InventoryAdminPage() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         primaryAction={
-          <GlassButton
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              try {
-                await apiClient.downloadBlob("/stock/overview.xlsx", "Stock_Overview.xlsx");
-              } catch (err) {
-                console.error("Stock overview export failed:", err);
-              }
-            }}
-            className="text-xs h-9 gap-1.5 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
-            title="Export Stock Overview as Excel (.xlsx)"
-          >
-            <FileSpreadsheet className="w-4 h-4" /> Export Excel
-          </GlassButton>
+          <div className="flex items-center gap-2">
+            <GlassButton
+              variant="secondary"
+              size="sm"
+              onClick={() => setScannerOpen(true)}
+              className="text-xs h-9 gap-1.5"
+            >
+              <ScanLine className="w-4 h-4 text-purple-400" />
+              <span>Scan Barcode</span>
+            </GlassButton>
+            <GlassButton
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await apiClient.downloadBlob("/stock/overview.xlsx", "Stock_Overview.xlsx");
+                } catch (err) {
+                  console.error("Stock overview export failed:", err);
+                }
+              }}
+              className="text-xs h-9 gap-1.5 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
+              title="Export Stock Overview as Excel (.xlsx)"
+            >
+              <FileSpreadsheet className="w-4 h-4" /> Export Excel
+            </GlassButton>
+          </div>
         }
         filters={
           <div className="flex items-center gap-2 flex-wrap">
@@ -537,6 +552,19 @@ export default function InventoryAdminPage() {
           )}
         </div>
       </GlassModal>
+
+      {/* Inventory Barcode Scanner Modal */}
+      {scannerOpen && (
+        <BarcodeScannerModal
+          isOpen={scannerOpen}
+          onClose={() => setScannerOpen(false)}
+          title="Scan Inventory Item"
+          description="Point camera at product barcode or QR to filter stock overview instantly."
+          onScanSuccess={(code) => {
+            setSearchQuery(code);
+          }}
+        />
+      )}
     </AppLayout>
   );
 }

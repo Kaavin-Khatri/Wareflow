@@ -26,8 +26,13 @@ import {
   MessageSquare,
   Mail,
   Users,
+  Barcode,
+  ScanLine,
+  Camera,
 } from "lucide-react";
 import Image from "next/image";
+import { BarcodeScannerModal, ScannedProduct } from "@/components/barcode/BarcodeScannerModal";
+import { ProductLabelSheetModal } from "@/components/barcode/ProductLabelSheetModal";
 
 export interface StockSubscriberItem {
   id: string;
@@ -158,6 +163,11 @@ export default function ProductsAdminPage() {
   const [loadingSubscribers, setLoadingSubscribers] = useState(false);
   const [notifyError, setNotifyError] = useState<string | null>(null);
   const [notifySuccess, setNotifySuccess] = useState<string | null>(null);
+
+  // Barcode & Scanning States (Step 18.1)
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [barcodeModalProduct, setBarcodeModalProduct] = useState<ProductItem | null>(null);
+  const [fieldScannerOpen, setFieldScannerOpen] = useState(false);
 
   const fetchCatalogData = async () => {
     try {
@@ -607,6 +617,15 @@ export default function ProductsAdminPage() {
       render: (p) => (
         <div className="flex items-center justify-end gap-1.5">
           <GlassButton
+            onClick={() => setBarcodeModalProduct(p)}
+            variant="secondary"
+            size="sm"
+            className="px-2 py-1 text-xs text-purple-300 hover:text-purple-200"
+            title="Barcode & Printable Label Sheets"
+          >
+            <Barcode className="w-3.5 h-3.5 mr-1" /> Label
+          </GlassButton>
+          <GlassButton
             onClick={() => handleOpenNotifyModal(p)}
             variant="secondary"
             size="sm"
@@ -664,9 +683,19 @@ export default function ProductsAdminPage() {
         title="Product Catalog"
         description="Manage master SKU specifications, packaging ratios, and wholesale pricing."
         primaryAction={
-          <GlassButton onClick={handleOpenCreate} variant="primary">
-            <Plus className="w-4 h-4 mr-1.5" /> Add Product
-          </GlassButton>
+          <div className="flex items-center gap-2">
+            <GlassButton
+              onClick={() => setScannerOpen(true)}
+              variant="secondary"
+              className="flex items-center gap-1.5"
+            >
+              <ScanLine className="w-4 h-4 text-[var(--accent)]" />
+              <span>Scan Barcode</span>
+            </GlassButton>
+            <GlassButton onClick={handleOpenCreate} variant="primary">
+              <Plus className="w-4 h-4 mr-1.5" /> Add Product
+            </GlassButton>
+          </div>
         }
         searchPlaceholder="Search by name, SKU, or barcode..."
         searchQuery={searchQuery}
@@ -871,14 +900,27 @@ export default function ProductsAdminPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1.5 uppercase tracking-wider">
-                Barcode / EAN
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-white/70 uppercase tracking-wider">
+                  Barcode / EAN-13
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setFieldScannerOpen(true)}
+                  className="text-[11px] text-[var(--accent)] hover:underline flex items-center gap-1 font-medium"
+                >
+                  <Camera className="w-3 h-3" />
+                  <span>Scan via Camera</span>
+                </button>
+              </div>
               <GlassInput
                 placeholder="e.g. 8901234567890"
                 value={barcode}
                 onChange={(e) => setBarcode(e.target.value)}
               />
+              <p className="text-[11px] text-[var(--text-muted)] mt-1 font-mono">
+                Leave empty to auto-generate an EAN-13 warehouse barcode.
+              </p>
             </div>
           </div>
 
@@ -1350,6 +1392,46 @@ export default function ProductsAdminPage() {
           </div>
         </div>
       </GlassModal>
+
+      {/* General Catalog Barcode Scanner Modal */}
+      {scannerOpen && (
+        <BarcodeScannerModal
+          isOpen={scannerOpen}
+          onClose={() => setScannerOpen(false)}
+          title="Catalog Scanner"
+          description="Scan a product barcode or QR code to find and filter the product."
+          onScanSuccess={(code, prod) => {
+            setSearchQuery(code);
+            if (prod) {
+              setSuccess(`Found product "${prod.name}" (${prod.sku})`);
+            }
+          }}
+        />
+      )}
+
+      {/* Field Input Camera Scanner Modal */}
+      {fieldScannerOpen && (
+        <BarcodeScannerModal
+          isOpen={fieldScannerOpen}
+          onClose={() => setFieldScannerOpen(false)}
+          title="Scan Barcode into Form"
+          description="Point camera at product barcode sticker to fill this field."
+          autoLookupProduct={false}
+          onScanSuccess={(code) => {
+            setBarcode(code);
+            setSuccess(`Scanned barcode: ${code}`);
+          }}
+        />
+      )}
+
+      {/* Product Label Sheet Printing Modal */}
+      {barcodeModalProduct && (
+        <ProductLabelSheetModal
+          isOpen={Boolean(barcodeModalProduct)}
+          onClose={() => setBarcodeModalProduct(null)}
+          product={barcodeModalProduct}
+        />
+      )}
     </AppLayout>
   );
 }
