@@ -4205,6 +4205,43 @@
 - Final UX Audit & Scores: `docs/UX_AUDIT.md`
 - Error Test Suite: `apps/web/lib/__tests__/error-pages.test.tsx`
 
+---
+
+## Step 21.1 — API → Render (guided)
+**Timestamp:** 2026-08-25T06:15:00Z
+**Status:** COMPLETE
+
+### What was done
+- Conducted pre-deploy backend audit:
+  - Validated dynamic `$PORT` binding with uvicorn start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
+  - Configured Render blueprint in `render.yaml` with root directory `apps/api` and health check `/health`.
+  - Added `serviceAccountKey*.json` patterns to `.gitignore` to guarantee zero secret leakage.
+- Guided Render Web Service deployment (`wareflow-api`):
+  - Service deployed on Render Free Tier (Singapore `ap-southeast-1` region, 512MB RAM).
+  - Environment variables and Firebase Service Account Secret File (`/etc/secrets/serviceAccountKey.json`) mounted securely.
+  - Generated secure Fernet `TOTP_ENCRYPTION_KEY` for production 2FA secrets.
+- Verified live deployment:
+  - `GET https://wareflow-api-kg2c.onrender.com/health` -> `200 OK` (`{"status":"ok"}`).
+  - `GET https://wareflow-api-kg2c.onrender.com/health/db` -> `200 OK` (`{"status":"ok","database":"connected"}`).
+  - Measured warm API response latency: ~940ms round-trip.
+  - Documented cold-start spin-down behavior (30-50s after 15 minutes of inactivity).
+  - Guided setup of 5-minute UptimeRobot HTTP monitor on `/health` to keep instance continuously warm.
+- Updated `codebase_audit.md` Services table and Known Issues with Render live configuration.
+
+### Decisions
+- **Local Migration Execution against Session Pooler**: Render free tier has no interactive shell or persistent disk. Schema DDL migrations are strictly executed locally via Alembic against Supabase Port 5432 (`DIRECT_DATABASE_URL`), and runtime queries use Port 6543 (`DATABASE_URL`) with `NullPool` to prevent double-pooling.
+- **UptimeRobot Keep-Alive Strategy**: Pinging `GET /health` every 5 minutes prevents Render free instances from sleeping during working hours, providing zero cold-start latency for warehouse operations.
+- **Strict Secrets Segregation**: Zero credentials committed to git or shared in chat; credentials mounted exclusively via Render environment dashboard and Secret Files.
+
+### Key values for future steps
+- Live API Base URL: `https://wareflow-api-kg2c.onrender.com`
+- Live Health Endpoint: `https://wareflow-api-kg2c.onrender.com/health`
+- Live Database Health Endpoint: `https://wareflow-api-kg2c.onrender.com/health/db`
+- Render Service ID: `srv-da6j42jnfac73atbfj0`
+- Render Region: `Singapore (ap-southeast-1)`
+- Migration Workflow: Run `alembic upgrade head` locally against `DIRECT_DATABASE_URL`, then push to deploy.
+
+
 
 
 

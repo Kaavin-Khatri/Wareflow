@@ -62,7 +62,7 @@
 | Groq     | LLM API (AI features)             | —                    | —                      | Free            | HTTPS API                                                                                       |
 | Google Places | Retail lead discovery & places search (New v1) | —   | Global                 | Free ($200/mo credit) | Places API New (Text/Nearby Search)                                                             |
 | Vercel   | Frontend hosting (Next.js)        | pending              | —                      | Free (Hobby)    | —                                                                                               |
-| Render   | Backend hosting (FastAPI)         | pending              | —                      | Free            | —                                                                                               |
+| Render   | Backend hosting (FastAPI)         | wareflow-api (srv-da6j42jnfac73atbfj0) | Singapore (ap-southeast-1) | Free (512MB RAM) | HTTPS API (https://wareflow-api-kg2c.onrender.com)                                             |
 
 ### Supabase Connection Modes Explained:
 
@@ -814,6 +814,7 @@ wareflow/
 - **In-Process APScheduler Lifetime**: The background alert scheduler runs in-process inside the FastAPI application lifespan. While ideal for single-instance free-tier deployments, multi-worker deployments (e.g. Gunicorn with >1 worker) would execute duplicate timer ticks unless bounded by `AlertLog` deduplication or migrated to an external Redis-backed Celery worker.
 - **Google Places Indexing Lag**: Google's own indexing latency means a real-world opening may take Google days-to-weeks to list, which is the physical floor on 'new' detection speed. 'New' in WareFlow strictly indicates *first time seen in our discovery database*, not necessarily the moment doors opened.
 - **Phase 20 UI/UX Excellence Complete**: All 48 production routes audited and elevated to award-benchmark standard in `docs/UX_AUDIT.md` (platform average 9.32/10). Tabular figures (`font-mono tabular-nums`), custom desktop magnetic cursor, shape-matched skeletons, and custom 404 (`not-found.tsx`) / global error boundary (`error.tsx`) are live across all routes with unified Lucide icon set and strict 4px rhythm.
+- **Render Free-Tier 512MB RAM & 15-Minute Spin-Down**: Render's free tier allocates 512MB RAM and automatically spins down instances after 15 minutes of idle time (~30-50s cold-start). This is mitigated by an UptimeRobot HTTP monitor pinging `GET /health` every 5 minutes to keep the instance warm during active business hours. Migrations are executed locally against Supabase port 5432 (`DIRECT_DATABASE_URL`) before code deployment.
 
 
 

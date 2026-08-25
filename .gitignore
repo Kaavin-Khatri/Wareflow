@@ -35,6 +35,8 @@ desktop.ini
 # ===== Firebase =====
 *-firebase-adminsdk-*.json
 firebase-service-account*.json
+serviceAccountKey*.json
+*serviceAccountKey*.json
 
 # ===== Phase 0 temp =====
 _phase0_outcomes.md
