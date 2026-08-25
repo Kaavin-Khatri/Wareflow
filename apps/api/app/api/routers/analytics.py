@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from app.core.limiter import limiter
 
 from app.core.di import (
     get_anomaly_detection_service,
@@ -176,7 +177,9 @@ def get_order_anomalies(
     response_model=WeeklyInsightResponse,
     summary="Get 7-day executive intelligence briefing summarizing sales velocity and inventory risks",
 )
+@limiter.limit("5/minute")
 def get_weekly_insight(
+    request: Request,
     force_refresh: bool = Query(
         False, description="Force recalculation bypassing 7-day cache"
     ),

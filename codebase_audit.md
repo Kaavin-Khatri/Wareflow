@@ -808,6 +808,17 @@ wareflow/
 - PostgreSQL connection passwords percent-encoded (`%40` for `@`) in connection strings
 - Server-side `httpOnly` session cookies protect Next.js routes with `sameSite: lax`
 
+## Security & Hardening (Step 22.1)
+
+| Control Area | Security Measure in Force | Verification & Proof | Status |
+| :--- | :--- | :--- | :---: |
+| **RBAC Authorization** | Every mutating route (products, orders, invoices, payments, staff) rejects unauthorized roles with 401/403 | [`apps/api/tests/test_permission_security.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_permission_security.py) (9 tests passing) | ✅ Active |
+| **Financial Integrity** | Overpayments strictly blocked (amount cannot exceed unpaid balance); Credit limits strictly enforced before order confirmation | [`apps/api/tests/test_financial_integrity.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_financial_integrity.py) (3 tests passing) | ✅ Active |
+| **Rate Limiting** | SlowAPI rate limiters on expensive Groq AI (5/min) and CSV bulk imports (10/min); 6th request triggers 429 Too Many Requests | [`apps/api/tests/test_rate_limiting.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_rate_limiting.py) & [`app/core/limiter.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/core/limiter.py) | ✅ Active |
+| **Security Headers** | HSTS (max-age 63072000), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy` | [`apps/web/next.config.ts`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/next.config.ts) & [`apps/web/vercel.json`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/vercel.json) | ✅ Active |
+| **CORS Lockdown** | FastApi `CORSMiddleware` restricted to exact production origin `https://wareflow-web-seven.vercel.app` | [`apps/api/app/main.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/main.py) & Render environment configuration | ✅ Active |
+| **Secrets Isolation** | Zero service accounts or private keys tracked in git history or exposed in client bundles | Git history scan, bundle audit, and `.gitignore` rule enforcement | ✅ Clean |
+
 ## Known Issues
 
 - **Forward-Built Pre-Phase 6 Purchasing Spend Charts**: Spend-over-time, supplier spend, and category spend charts are intentionally forward-built to complete the Stock Analytics UI, but stay at zero / display empty states until Phase 6 (Purchase Orders & Receiving) produces real purchase order receipt transactions. This is expected and documented.

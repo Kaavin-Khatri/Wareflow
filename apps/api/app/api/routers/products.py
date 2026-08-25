@@ -1,6 +1,7 @@
 """Product catalog router."""
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
+from app.core.limiter import limiter
 
 from app.core.di import (
     get_forecasting_service,
@@ -78,7 +79,9 @@ def create_product(
     status_code=status.HTTP_200_OK,
     summary="Bulk CSV product import with dry-run preview and upsert",
 )
+@limiter.limit("10/minute")
 async def import_products_csv(
+    request: Request,
     file: UploadFile = File(...),
     dry_run: bool = Query(True, description="When True, validates and previews without committing to DB"),
     current_user: CurrentUser = Depends(require_permission("inventory:manage")),

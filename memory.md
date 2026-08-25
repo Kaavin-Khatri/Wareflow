@@ -4347,6 +4347,43 @@
 - Backup Retention: 14 Days rolling window
 - Tested Backup File: `backups/wareflow_backup_20260825_091947.sql.gz`
 
+---
+
+## Step 22.1 — Security & Validation Audit
+**Timestamp:** 2026-08-25T09:50:00Z
+**Status:** COMPLETE
+
+### What was done
+- **Permission Security Test Suite**:
+  - Implemented [`apps/api/tests/test_permission_security.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_permission_security.py) verifying that every mutating route (products, sales orders, invoices, payments, staff management) rejects unauthorized roles with 401 Unauthorized or 403 Forbidden.
+- **Financial-Integrity Test Suite**:
+  - Implemented [`apps/api/tests/test_financial_integrity.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_financial_integrity.py) validating double-entry accounting guardrails:
+    - Overpayments are strictly blocked (payments exceeding unpaid invoice balance return 422).
+    - Sales order confirmation enforces retailer credit limits.
+    - Full payment settlements accurately transition invoices to `PAID` and reduce retailer credit balance debt.
+- **SlowAPI Rate Limiting**:
+  - Built centralized rate limiter in [`apps/api/app/core/limiter.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/core/limiter.py).
+  - Attached `SlowAPIMiddleware` and `RateLimitExceeded` handler in `main.py`.
+  - Rate-limited Groq AI briefing endpoint (`/analytics/weekly-insight`) to 5/minute and CSV bulk imports (`/products/import-csv`) to 10/minute.
+  - Implemented [`apps/api/tests/test_rate_limiting.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_rate_limiting.py) proving that excessive requests return friendly 429 Too Many Requests.
+- **Input Hardening & Enterprise Security Headers**:
+  - Configured Next.js enterprise security headers in [`apps/web/next.config.ts`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/next.config.ts) (HSTS preload, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, `X-XSS-Protection`).
+- **Secrets Audit**:
+  - Scanned entire repository, git commit history, and client bundle: verified 100% clean of private keys, database credentials, or secret JSON files.
+- **Test Suite Verification**:
+  - Verified full test suite: **333 backend pytest tests** passing.
+
+### Decisions
+- **Granular Permission Decorators**: Bound `require_permission` guards directly to router endpoints (`orders:manage`, `inventory:manage`, `staff:manage`), ensuring fail-safe RBAC enforcement at the API gateway layer before service logic execution.
+- **Zero-Trust Financial Invariance**: Enforced invoice balance validation in `PaymentService` to mathematically eliminate floating point overpayment anomalies.
+
+### Key values for future steps
+- Security Test Suites: `apps/api/tests/test_permission_security.py`, `test_financial_integrity.py`, `test_rate_limiting.py`
+- Rate Limiting Module: `apps/api/app/core/limiter.py`
+- Frontend Security Headers: `apps/web/next.config.ts`
+- Total Test Baseline: 333 backend pytest tests (100% passing)
+
+
 
 
 

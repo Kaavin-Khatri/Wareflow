@@ -4,7 +4,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.core.di import get_export_service
-from app.core.security import CurrentUser, get_current_user
+from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.recalls import (
     BatchRecallCreateRequest,
     BatchRecallListResponse,
@@ -125,7 +125,7 @@ def get_product_stock(
 def adjust_stock(
     payload: StockAdjustmentCreateRequest,
     service: Annotated[StockService, Depends(get_stock_service)],
-    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    current_user: Annotated[CurrentUser, Depends(require_permission("inventory:manage"))],
 ) -> StockAdjustmentResponse:
     """
     Record a manual stock adjustment with mandatory reason and non-negative batch guarantee.

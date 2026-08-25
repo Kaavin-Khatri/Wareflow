@@ -47,6 +47,10 @@ from app.api.routers import (
 )
 from app.core.config import get_settings
 from app.core.di import get_alert_scheduler
+from app.core.limiter import limiter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 
 @asynccontextmanager
@@ -70,6 +74,11 @@ def create_app() -> FastAPI:
         description="AI-assisted wholesale inventory management API",
         lifespan=lifespan,
     )
+
+    # Rate limiting (SlowAPI)
+    application.state.limiter = limiter
+    application.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    application.add_middleware(SlowAPIMiddleware)
 
     application.add_middleware(
         CORSMiddleware,
