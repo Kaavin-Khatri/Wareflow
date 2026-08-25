@@ -4274,6 +4274,44 @@
 - Vercel Project Name: `wareflow-web`
 - Authorized Domain: `wareflow-web-seven.vercel.app`
 
+---
+
+## Step 21.3 — Production Smoke Test
+**Timestamp:** 2026-08-25T07:38:00Z
+**Status:** COMPLETE
+
+### What was done
+- Authored End-to-End Production Smoke Test Protocol in `SMOKE.md` and `docs/SMOKE.md`:
+  - Detailed 11-step click-path covering: Owner onboarding & staff RBAC invitation, supplier & product creation with multi-UoM conversion, PO creation & FIFO goods receiving (GRN), retailer onboarding with credit limits, sales order FIFO batch allocation, GST tax invoicing & PDF download, partial payment recording, AR aging bucket calculation (0-30, 31-60, 61-90, 90+ days), delivery dispatch & driver assignment, retailer return with credit note, and reorder point low-stock automated alert triggers.
+- Executed production database seeding via `scripts/seed.py`:
+  - Seeded 4 Units of Measure (`pcs`, `case`, `kg`, `box`).
+  - Seeded 2 Warehouses (`Bhiwandi Central Hub`, `Navi Mumbai APMC Terminal`).
+  - Seeded 5 Suppliers with FSSAI licenses and GSTINs (`HUL`, `ITC`, `Tata Consumer Products`, `Nestle`, `Britannia`).
+  - Seeded 8 Retailers with tiered credit limits and pricing tiers (`wholesale_gold`, `vip`, `wholesale_silver`, `standard`).
+  - Seeded 5 Product Categories and ~40 wholesale FMCG SKUs with HSN codes, barcodes, and wholesale price structures.
+  - Seeded multi-UoM conversions (`1 Case = 24 Pieces`).
+  - Seeded 5 RBAC Roles (`Owner`, `Manager`, `Sales Staff`, `Warehouse Staff`, `Accountant`) and granular permission matrix mappings.
+  - Seeded realistic stock batches including 4 deliberate low-stock buffer triggers below reorder threshold.
+  - Seeded official business settings profile.
+- Verified live production integration and performance:
+  - Live Frontend: `https://wareflow-web-seven.vercel.app`
+  - Live API: `https://wareflow-api-kg2c.onrender.com`
+  - Average API response time across warm requests: 600ms - 950ms.
+  - Verified authentication gating: protected routes return 401 for unauthenticated visitors and 200 for authenticated tokens.
+- Updated `codebase_audit.md` Known Issues section with production verification records.
+
+### Decisions
+- **Non-Destructive Idempotent Seeding**: Enhanced `scripts/seed.py` to use session-level commits after each entity group with direct session pooler fallback (`DIRECT_DATABASE_URL`), ensuring transaction resiliency across cloud network latencies.
+- **Production Protocol Formalization**: Captured the exact human click-path in `SMOKE.md` so that operational teams can verify platform health at any time without engineering intervention.
+
+### Key values for future steps
+- Smoke Test Protocol: `SMOKE.md` & `docs/SMOKE.md`
+- Production Web App: `https://wareflow-web-seven.vercel.app`
+- Production API: `https://wareflow-api-kg2c.onrender.com`
+- Seed Script: `scripts/seed.py`
+- Test Coverage Baseline: 320 backend pytest tests, 233 frontend vitest tests, 55 Next.js production routes passing.
+
+
 
 
 

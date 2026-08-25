@@ -224,7 +224,7 @@ def get_or_create_permission(db: Session, code: str, desc: str) -> Permission:
     if not perm:
         perm = Permission(code=code, description=desc)
         db.add(perm)
-        db.flush()
+        db.commit()
     return perm
 
 
@@ -234,7 +234,7 @@ def get_or_create_role(db: Session, name: str, desc: str) -> Role:
     if not role:
         role = Role(name=name, description=desc)
         db.add(role)
-        db.flush()
+        db.commit()
     return role
 
 
@@ -288,7 +288,19 @@ def upsert_stock_batch(
 def seed_database():
     """Main database seeding orchestration function."""
     print("🌱 Connecting to database for seeding...")
-    engine = get_engine()
+    from sqlalchemy import create_engine
+    from app.core.config import get_settings
+    from app.db.session import normalize_database_url
+
+    settings = get_settings()
+    raw_url = settings.direct_database_url or settings.database_url
+    db_url = normalize_database_url(raw_url)
+    
+    if db_url:
+        engine = create_engine(db_url, connect_args={"prepare_threshold": None})
+    else:
+        engine = get_engine()
+
     with Session(engine) as db:
         # 1. Units of Measure
         print("-> Seeding Units of Measure...")
@@ -296,6 +308,7 @@ def seed_database():
         uom_case = get_or_create_uom(db, "Case (24 pcs)", "case")
         uom_kg = get_or_create_uom(db, "Kilogram", "kg")
         uom_box = get_or_create_uom(db, "Box (10 pcs)", "box")
+        db.commit()
 
         # 2. Warehouses
         print("-> Seeding Warehouses...")
@@ -307,6 +320,7 @@ def seed_database():
         wh_vashi = get_or_create_warehouse(
             db, "Navi Mumbai APMC Terminal", "Sector 19, APMC Market, Vashi, Navi Mumbai, MH 400703"
         )
+        db.commit()
 
         # 3. Suppliers (with FSSAI + GSTIN)
         print("-> Seeding Suppliers...")
@@ -365,6 +379,7 @@ def seed_database():
             "10015043001129",
             date(2027, 8, 15),
         )
+        db.commit()
 
         # 4. Retailers (Mixed Tiers & Credit Limits)
         print("-> Seeding Retailers...")
@@ -435,10 +450,10 @@ def seed_database():
             "+919821667788",
             "sahyadri.mart@yahoo.com",
             "Panchpakhadi, Near Nitin Co., Thane West 400602",
-            "27AAFFS6655H1ZP",
+            "27AALPS1122Q1ZZ",
             "wholesale_silver",
             75000.00,
-            24500.00,
+            15000.00,
         )
         upsert_retailer(
             db,
@@ -464,6 +479,7 @@ def seed_database():
             400000.00,
             92000.00,
         )
+        db.commit()
 
         # 5. Product Categories
         print("-> Seeding Categories...")
@@ -472,6 +488,7 @@ def seed_database():
         cat_snacks = get_or_create_category(db, "Snacks & Biscuits")
         cat_personal = get_or_create_category(db, "Personal Care & Hygiene")
         cat_packaged = get_or_create_category(db, "Packaged Foods & Sauces")
+        db.commit()
 
         # 6. ~40 Products across Categories
         print("-> Seeding Products (~40 SKUs)...")
@@ -1010,6 +1027,7 @@ def seed_database():
                 db, sku, name, desc, hsn, barcode, cat_id, uom_id, cost, wholesale, r_pt, r_qty
             )
             seeded_products[sku] = prod
+        db.commit()
 
         # 7. Base Product UOM Conversions (1 Case = 24 Pieces)
         print("-> Seeding UOM Conversions...")
@@ -1031,6 +1049,7 @@ def seed_database():
                 )
                 db.add(conv)
                 db.flush()
+        db.commit()
 
         # 8. RBAC: 5 Roles & Starting Permission Matrix
         print("-> Seeding RBAC Roles & Permissions Matrix...")
@@ -1098,14 +1117,10 @@ def seed_database():
         for role_id, perm_codes in role_matrix.items():
             for code in perm_codes:
                 sync_role_permission(db, role_id, seeded_perms[code].id)
+        db.commit()
 
         # 9. Stock Batches (Healthy Stock + Deliberate Low-Stock Items)
         print("-> Seeding Stock Batches & Low-Stock Alerts...")
-        # 3 products deliberately UNDER reorder_point:
-        # 1. Nescafe 200g: reorder_point=25, seeded qty=6 across warehouses
-        # 2. Taj Mahal Tea 500g: reorder_point=30, seeded qty=8
-        # 3. Kissan Mixed Fruit Jam 1kg: reorder_point=30, seeded qty=5
-        # 4. Del Monte Penne Pasta: reorder_point=40, seeded qty=10
         low_stock_skus = {
             "SKU-COF-NESC-200G": 6.0,
             "SKU-TEA-TAJ-500G": 8.0,
@@ -1118,7 +1133,6 @@ def seed_database():
 
         for sku, prod in seeded_products.items():
             if sku in low_stock_skus:
-                # Seed deliberately below reorder_point
                 upsert_stock_batch(
                     db,
                     prod.id,
@@ -1128,7 +1142,6 @@ def seed_database():
                     exp_future_1y,
                 )
             else:
-                # Healthy stock distributed between Bhiwandi and Vashi
                 upsert_stock_batch(
                     db,
                     prod.id,
@@ -1145,6 +1158,7 @@ def seed_database():
                     prod.reorder_qty * 0.8,
                     exp_future_2y,
                 )
+            db.commit()
 
         # 10. Business Settings Profile
         print("-> Seeding Business Profile Settings...")
