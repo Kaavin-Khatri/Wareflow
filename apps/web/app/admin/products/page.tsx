@@ -29,8 +29,10 @@ import {
   Barcode,
   ScanLine,
   Camera,
+  FileSpreadsheet,
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { BarcodeScannerModal, ScannedProduct } from "@/components/barcode/BarcodeScannerModal";
 import { ProductLabelSheetModal } from "@/components/barcode/ProductLabelSheetModal";
 
@@ -683,7 +685,17 @@ export default function ProductsAdminPage() {
         title="Product Catalog"
         description="Manage master SKU specifications, packaging ratios, and wholesale pricing."
         primaryAction={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link href="/admin/products/import">
+              <GlassButton
+                variant="secondary"
+                className="flex items-center gap-1.5 text-xs font-semibold"
+                title="Bulk CSV Import / Export"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                <span>Import / Export CSV</span>
+              </GlassButton>
+            </Link>
             <GlassButton
               onClick={() => setScannerOpen(true)}
               variant="secondary"

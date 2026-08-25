@@ -499,7 +499,13 @@ wareflow/
 | DELETE | `/categories/{id}`                     | Delete product category                             | Yes (`inventory:manage`)        |
 | GET    | `/products`                            | List all wholesale products with pricing & filters  | Yes (Authenticated)             |
 | POST   | `/products`                            | Create wholesale product entity (SKU unique)        | Yes (`inventory:manage`)        |
+| POST   | `/products/import`                     | Bulk CSV product import with dry-run preview & upsert| Yes (`inventory:manage`)        |
+| GET    | `/products/export.csv`                 | Download full wholesale catalog as CSV spreadsheet | Yes (Authenticated)             |
+| GET    | `/products/template.csv`               | Download standardized product import CSV template   | Yes (Authenticated)             |
+| GET    | `/products/by-barcode/{barcode}`       | Instantly resolve product by barcode or SKU         | Yes (Authenticated)             |
 | GET    | `/products/{id}`                       | Get wholesale product details                       | Yes (Authenticated)             |
+| GET    | `/products/{id}/barcode.png`           | Generate & render product EAN-13/Code128 barcode PNG| Yes (Authenticated)             |
+| GET    | `/products/{id}/qr.png`                | Generate & render product 2D matrix QR code PNG     | Yes (Authenticated)             |
 | PATCH  | `/products/{id}`                       | Update product metadata and pricing                 | Yes (`inventory:manage`)        |
 | PATCH  | `/products/{id}/price`                 | Update product selling/cost prices (audited)        | Yes (`inventory:manage`)        |
 | POST   | `/products/{id}/deactivate`            | Deactivate product (guarded against open orders)    | Yes (`inventory:manage`)        |
@@ -630,6 +636,7 @@ wareflow/
 
 | Decision                                | Rationale                                                                                                                                                                                         |
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Preview-Before-Commit Pattern for Bulk Operations | All bulk catalog and operational CSV imports execute a dry-run validation pass returning line-by-line classification (`create`, `update`, `reject`) with explicit validation error messages before committing to the database, ensuring zero partial-failure pollution and complete user transparency |
 | Continuous Inventory Turnover Companion | `TurnoverService` provides continuous velocity ratios (Healthy ≥1.0x, Slowing 0.3-1.0x, At-Risk <0.3x) and days of stock as an early-warning signal before Step 12.2's 90-day binary dead-stock threshold |
 | Graph BFS Packaging Traversal           | `UomService` resolves multi-level packaging hierarchies (Pallet->Case->Pack->Piece) & inverses using graph traversal                                                                              |
 | Strict Base UoM Stock Ledger            | `stock_movements` and `stock_batches` strictly store quantities in product's `base_uom_id` via `convert_to_base_uom`                                                                              |

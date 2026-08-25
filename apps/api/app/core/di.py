@@ -196,6 +196,7 @@ from app.services.export_service import ExportService
 from app.services.forecasting.exponential_smoothing import ExponentialSmoothingForecast
 from app.services.forecasting.moving_average import MovingAverageForecast
 from app.services.forecasting_service import ForecastingService
+from app.services.import_service import ProductImportService
 from app.services.inquiry_service import InquiryService
 from app.services.insight_narrator import InsightNarratorService
 from app.services.invoice_service import InvoiceService
@@ -302,6 +303,17 @@ def get_product_service(
         repository=repo,
         audit_service=audit_service,
         storage_service=storage_service,
+    )
+
+
+def get_product_import_service(
+    repo: ProductRepositoryInterface = Depends(get_db_product_repository),
+    audit_service: AuditService = Depends(get_audit_service),
+) -> ProductImportService:
+    """Factory for ProductImportService."""
+    return ProductImportService(
+        repository=repo,
+        audit_service=audit_service,
     )
 
 

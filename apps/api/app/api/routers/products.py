@@ -4,11 +4,13 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, Up
 
 from app.core.di import (
     get_forecasting_service,
+    get_product_import_service,
     get_product_service,
     get_stock_subscription_service,
 )
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.forecast import ProductForecastResponse
+from app.schemas.imports import ProductImportResponse
 from app.schemas.products import (
     ProductCreateRequest,
     ProductImageUploadResponse,
@@ -21,6 +23,7 @@ from app.schemas.stock_subscriptions import (
     StockSubscriptionResponse,
 )
 from app.services.forecasting_service import ForecastingService
+from app.services.import_service import ProductImportService
 from app.services.product_service import ProductService
 from app.services.stock_subscription_service import StockSubscriptionService
 
@@ -67,6 +70,81 @@ def create_product(
     """Create a new wholesale product record."""
     created = service.create_product(payload, actor_id=current_user.id)
     return ProductResponse.model_validate(created)
+
+
+@router.post(
+    "/import",
+    response_model=ProductImportResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Bulk CSV product import with dry-run preview and upsert",
+)
+async def import_products_csv(
+    file: UploadFile = File(...),
+    dry_run: bool = Query(True, description="When True, validates and previews without committing to DB"),
+    current_user: CurrentUser = Depends(require_permission("inventory:manage")),
+    import_service: ProductImportService = Depends(get_product_import_service),
+) -> ProductImportResponse:
+    """Upload CSV to preview or commit bulk catalog products with safe upsert-by-SKU."""
+    if not file.filename or not (
+        file.filename.lower().endswith(".csv")
+        or file.content_type in ("text/csv", "application/vnd.ms-excel", "text/plain", "application/octet-stream")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be a valid CSV document.",
+        )
+
+    content_bytes = await file.read()
+    if not content_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded CSV file is empty.",
+        )
+
+    if dry_run:
+        return import_service.preview_import(content_bytes)
+    else:
+        return import_service.execute_import(content_bytes, actor_id=current_user.id)
+
+
+@router.get(
+    "/export.csv",
+    response_class=Response,
+    status_code=status.HTTP_200_OK,
+    summary="Export all catalog products to CSV",
+    responses={200: {"content": {"text/csv": {}}}},
+)
+def export_products_csv(
+    current_user: CurrentUser = Depends(get_current_user),
+    import_service: ProductImportService = Depends(get_product_import_service),
+) -> Response:
+    """Download full wholesale catalog as a CSV spreadsheet."""
+    csv_str = import_service.export_catalog_csv()
+    return Response(
+        content=csv_str.encode("utf-8-sig"),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="wareflow_products_catalog.csv"'},
+    )
+
+
+@router.get(
+    "/template.csv",
+    response_class=Response,
+    status_code=status.HTTP_200_OK,
+    summary="Download sample CSV template for product import",
+    responses={200: {"content": {"text/csv": {}}}},
+)
+def download_import_template_csv(
+    current_user: CurrentUser = Depends(get_current_user),
+    import_service: ProductImportService = Depends(get_product_import_service),
+) -> Response:
+    """Download standard sample CSV template with expected headers and sample FMCG products."""
+    template_str = import_service.generate_csv_template()
+    return Response(
+        content=template_str.encode("utf-8"),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="wareflow_product_import_template.csv"'},
+    )
 
 
 @router.get(

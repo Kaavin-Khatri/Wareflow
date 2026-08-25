@@ -4029,6 +4029,50 @@
 - Label Sheet Modal: `<ProductLabelSheetModal>` in `apps/web/components/barcode/ProductLabelSheetModal.tsx`
 - Barcode Card Component: `<ProductBarcodeCard>` in `apps/web/components/barcode/ProductBarcodeCard.tsx`
 
+---
+
+## Step 18.2 — Bulk CSV Import / Export
+**Timestamp:** 2026-08-25T04:45:00Z
+**Status:** COMPLETE
+
+### What was done
+- Built `ProductImportService` in `apps/api/app/services/import_service.py` implementing:
+  - Header normalization and parsing for CSV files with line-level index tracking.
+  - Pydantic validation via `ProductImportRow` and dry-run preview classification (`create`, `update`, `reject`).
+  - Actionable error reporting (missing SKU/name, invalid/negative wholesale & cost prices, malformed thresholds).
+  - Transactional upsert execution by SKU with auto-creation of missing categories, auto EAN-13 generation for blank barcodes, and audit log generation (`product_created`, `product_updated`).
+  - Standard CSV template generation with FMCG wholesale product examples.
+  - Full catalog export to CSV with UTF-8 BOM encoding.
+- Registered `get_product_import_service()` in `apps/api/app/core/di.py`.
+- Added FastAPI endpoints in `apps/api/app/api/routers/products.py`:
+  - `POST /products/import?dry_run=true|false`: Multipart CSV upload with dry-run preview and upsert commit modes.
+  - `GET /products/export.csv`: Full catalog CSV export.
+  - `GET /products/template.csv`: Standardized sample CSV template download.
+- Created Next.js Bulk Import interface in `apps/web/app/admin/products/import/page.tsx`:
+  - Drag-and-drop CSV dropzone with format validation.
+  - Summary KPI cards (Total Rows, Creates, Updates, Rejections).
+  - Filterable dry-run validation preview table with color-coded badges, error callouts, and line numbers.
+  - Confirm & commit workflow with user confirmation and post-commit success overview.
+  - Download template and export catalog buttons wired to `apiClient.downloadBlob`.
+- Added "Import / Export CSV" button in `/admin/products` top action bar.
+- Tested with 10 unit and API integration tests in `apps/api/tests/test_csv_import_export.py` and 5 Vitest tests in `apps/web/lib/__tests__/product-import-ui.test.tsx`.
+- Verified all 320 backend pytest tests passing, all 214 frontend vitest tests passing (47 test files), and 53 Next.js routes built cleanly.
+
+### Decisions
+- **Preview-Before-Commit Pattern for Bulk Operations**: All bulk catalog and operational CSV imports execute a dry-run validation pass returning line-by-line classification (`create`, `update`, `reject`) with explicit error reasons before committing changes to the database.
+- **Idempotent Upsert-by-SKU**: SKU acts as the natural key for upserting products. Repeatedly importing the same CSV file updates existing records safely without duplicating records or throwing conflict errors.
+- **On-the-fly Category & Barcode Handling**: CSV rows with new category names automatically create the category record in the repository, and rows with blank barcodes auto-generate internal enterprise EAN-13 barcodes.
+
+### Key values for future steps
+- Product Import Service: `apps/api/app/services/import_service.py`
+- Product Import API: `POST /products/import?dry_run=true|false`
+- Product Export API: `GET /products/export.csv`
+- Product CSV Template API: `GET /products/template.csv`
+- Web Import Page: `/admin/products/import` (`apps/web/app/admin/products/import/page.tsx`)
+- Required CSV Columns: `sku`, `name`, `wholesale_price`
+- Optional CSV Columns: `cost_price`, `category`, `unit`, `hsn_code`, `barcode`, `reorder_point`, `reorder_qty`, `description`
+
+
 
 
 
