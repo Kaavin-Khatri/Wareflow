@@ -4241,6 +4241,40 @@
 - Render Region: `Singapore (ap-southeast-1)`
 - Migration Workflow: Run `alembic upgrade head` locally against `DIRECT_DATABASE_URL`, then push to deploy.
 
+---
+
+## Step 21.2 — Web → Vercel + Auth URL Wiring (guided)
+**Timestamp:** 2026-08-25T07:05:00Z
+**Status:** COMPLETE
+
+### What was done
+- Deployed Next.js 16 frontend to Vercel Hobby Tier:
+  - Root directory set to `apps/web`.
+  - Configured client environment variables: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_FIREBASE_*`, `NEXT_PUBLIC_SUPABASE_*`.
+  - Created `apps/web/vercel.json` with strict security headers (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`) and PWA service worker caching rules.
+- Wired Firebase Authentication & Authorized Domains:
+  - Added production domain `wareflow-web-seven.vercel.app` to Firebase Authentication Authorized Domains.
+- Locked down CORS on Render:
+  - Updated Render `ALLOWED_ORIGINS` to `https://wareflow-web-seven.vercel.app,http://localhost:3000`.
+- Ran Bundle Security Audit:
+  - Grepped compiled client bundle (`apps/web/.next`) for private keys, `BEGIN PRIVATE KEY`, and server secrets.
+  - Verified 100% clean: zero server-side secrets or service-role credentials present in the client bundle.
+- Verified Live Production Frontend:
+  - `GET https://wareflow-web-seven.vercel.app` loads with full SSR and hydration.
+  - Confirmed authentication gating on protected endpoints (`PATCH /profiles/preferences` returns 401 for unauthenticated visitors, demonstrating active route guarding).
+- Updated `codebase_audit.md` Services table and appended Step 21.2 log to `memory.md`.
+
+### Decisions
+- **Strict Origin Whitelisting**: Restricted backend CORS to the exact Vercel production URL + local development to prevent unauthorized cross-origin requests from third-party sites.
+- **Client Bundle Secret Shield**: Firebase public web configuration is safely bundled on client; all sensitive operations (service role keys, Fernet TOTP keys, database credentials) remain strictly server-side on Render.
+
+### Key values for future steps
+- Production Web URL: `https://wareflow-web-seven.vercel.app`
+- Production API URL: `https://wareflow-api-kg2c.onrender.com`
+- Vercel Project Name: `wareflow-web`
+- Authorized Domain: `wareflow-web-seven.vercel.app`
+
+
 
 
 

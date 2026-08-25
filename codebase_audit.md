@@ -61,7 +61,7 @@
 | SMS Provider | Outbound SMS fallback & critical alerts (Twilio / Indian Gateway) | — | — | Free (Trial credit) | Twilio REST API / HTTPS                                                                         |
 | Groq     | LLM API (AI features)             | —                    | —                      | Free            | HTTPS API                                                                                       |
 | Google Places | Retail lead discovery & places search (New v1) | —   | Global                 | Free ($200/mo credit) | Places API New (Text/Nearby Search)                                                             |
-| Vercel   | Frontend hosting (Next.js)        | pending              | —                      | Free (Hobby)    | —                                                                                               |
+| Vercel   | Frontend hosting (Next.js)        | wareflow-web                         | Global Edge            | Free (Hobby)    | HTTPS Web (https://wareflow-web-seven.vercel.app)                                               |
 | Render   | Backend hosting (FastAPI)         | wareflow-api (srv-da6j42jnfac73atbfj0) | Singapore (ap-southeast-1) | Free (512MB RAM) | HTTPS API (https://wareflow-api-kg2c.onrender.com)                                             |
 
 ### Supabase Connection Modes Explained:
