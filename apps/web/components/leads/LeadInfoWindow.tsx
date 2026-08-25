@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   MapPin,
   Phone,
@@ -14,6 +15,8 @@ import {
   Building2,
   Calendar,
   MessageSquare,
+  UserPlus,
+  ArrowUpRight,
 } from "lucide-react";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassBadge } from "@/components/glass/GlassBadge";
@@ -39,6 +42,7 @@ export interface LeadInfoWindowProps {
   lead: LeadItem;
   onClose?: () => void;
   onMarkContacted?: (leadId: string, notes?: string) => Promise<void>;
+  onOpenConvertModal?: (lead: LeadItem) => void;
   isCompact?: boolean;
 }
 
@@ -83,6 +87,7 @@ export function LeadInfoWindow({
   lead,
   onClose,
   onMarkContacted,
+  onOpenConvertModal,
   isCompact = false,
 }: LeadInfoWindowProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -117,6 +122,8 @@ export function LeadInfoWindow({
       `${lead.name} ${lead.address || ""}`
     )}`;
 
+  const isConverted = Boolean(lead.converted_retailer_id);
+
   return (
     <div
       className={`relative rounded-2xl bg-[var(--surface-overlay)] backdrop-blur-xl border border-[var(--glass-border)] shadow-2xl p-4 text-[var(--text)] select-text transition-all ${
@@ -141,14 +148,14 @@ export function LeadInfoWindow({
               <h3 className="font-bold text-sm text-[var(--text)] tracking-tight leading-snug truncate">
                 {lead.name}
               </h3>
-              {lead.is_new && (
+              {lead.is_new && !lead.contacted && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-orange-500 text-black shadow-[0_0_12px_rgba(245,158,11,0.5)] animate-pulse">
                   <Sparkles className="w-2.5 h-2.5" />
                   New
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span
                 className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${catMeta.bgClass}`}
               >
@@ -158,6 +165,12 @@ export function LeadInfoWindow({
                 <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
                   <CheckCircle2 className="w-3 h-3" />
                   Contacted
+                </span>
+              )}
+              {isConverted && (
+                <span className="inline-flex items-center gap-1 text-[10px] text-cyan-400 font-bold bg-cyan-500/10 px-2 py-0.5 rounded-md border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.2)]">
+                  <Store className="w-3 h-3 text-cyan-400" />
+                  Converted Retailer
                 </span>
               )}
             </div>
@@ -242,39 +255,70 @@ export function LeadInfoWindow({
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex items-center gap-2 mt-3 flex-wrap">
-        {lead.phone && (
+      {/* Primary Action Buttons */}
+      <div className="space-y-2 mt-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {lead.phone && (
+            <a
+              href={`tel:${lead.phone}`}
+              className="flex-1 min-w-[110px] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all shadow-sm active:scale-95"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              <span>Call ({lead.phone})</span>
+            </a>
+          )}
+
           <a
-            href={`tel:${lead.phone}`}
-            className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all shadow-sm active:scale-95"
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 min-w-[110px] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--surface-active)] transition-all active:scale-95"
           >
-            <Phone className="w-3.5 h-3.5" />
-            <span>Call ({lead.phone})</span>
+            <ExternalLink className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+            <span>Directions</span>
           </a>
-        )}
+        </div>
 
-        <a
-          href={mapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-[var(--surface-hover)] text-[var(--text)] border border-[var(--border)] hover:bg-[var(--surface-active)] transition-all active:scale-95"
-        >
-          <ExternalLink className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-          <span>Directions</span>
-        </a>
+        {/* Growth actions: Mark Contacted / Convert to Retailer */}
+        <div className="pt-1 space-y-1.5">
+          {!lead.contacted && onMarkContacted && !showNotesInput && (
+            <button
+              type="button"
+              onClick={() => setShowNotesInput(true)}
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-[var(--text)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-colors"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Mark as Contacted</span>
+            </button>
+          )}
 
-        {!lead.contacted && onMarkContacted && !showNotesInput && (
-          <button
-            type="button"
-            onClick={() => setShowNotesInput(true)}
-            className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-[var(--accent)] hover:bg-[var(--accent-subtle)] border border-dashed border-[var(--accent-border)] transition-colors"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Mark as Contacted</span>
-          </button>
-        )}
+          {isConverted ? (
+            <Link
+              href={
+                lead.converted_retailer_id
+                  ? `/admin/retailers/${lead.converted_retailer_id}/ledger`
+                  : "/admin/retailers"
+              }
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/25 transition-all"
+            >
+              <Store className="w-3.5 h-3.5" />
+              <span>View Retailer Account</span>
+              <ArrowUpRight className="w-3.5 h-3.5 ml-0.5" />
+            </Link>
+          ) : (
+            <GlassButton
+              variant="primary"
+              size="sm"
+              onClick={() => onOpenConvertModal && onOpenConvertModal(lead)}
+              className="w-full flex items-center justify-center gap-1.5 font-bold shadow-md"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Convert to Wholesale Retailer</span>
+            </GlassButton>
+          )}
+        </div>
       </div>
     </div>
   );
 }
+

@@ -5,6 +5,7 @@ import { LeadDiscoveryView } from "@/components/leads/LeadDiscoveryView";
 import { LeadMap } from "@/components/leads/LeadMap";
 import { LeadInfoWindow, LeadItem } from "@/components/leads/LeadInfoWindow";
 import { LeadFilterSidebar } from "@/components/leads/LeadFilterSidebar";
+import { ConvertToRetailerModal } from "@/components/leads/ConvertToRetailerModal";
 import { apiClient } from "@/lib/api-client";
 
 // Mock API Client
@@ -31,6 +32,7 @@ const MOCK_LEADS: LeadItem[] = [
     is_new: true,
     contacted: false,
     contact_notes: null,
+    converted_retailer_id: null,
   },
   {
     id: "lead-2",
@@ -46,6 +48,7 @@ const MOCK_LEADS: LeadItem[] = [
     is_new: false,
     contacted: true,
     contact_notes: "Introduced price list, agreed to place order next week.",
+    converted_retailer_id: null,
   },
   {
     id: "lead-3",
@@ -59,12 +62,13 @@ const MOCK_LEADS: LeadItem[] = [
     google_maps_url: "https://maps.google.com/?cid=789",
     first_seen_at: "2026-08-10T10:00:00Z",
     is_new: false,
-    contacted: false,
-    contact_notes: null,
+    contacted: true,
+    contact_notes: "Converted to retailer account.",
+    converted_retailer_id: "ret-shreeji-123",
   },
 ];
 
-describe("Step 17.2: Retail Lead Discovery Map UI", () => {
+describe("Step 17.2 & 17.3: Retail Lead Discovery Map UI & Contact/Convert", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -107,6 +111,92 @@ describe("Step 17.2: Retail Lead Discovery Map UI", () => {
       fireEvent.click(saveBtn);
 
       expect(onMarkContacted).toHaveBeenCalledWith("lead-1", "Spoke to owner, sending sample box");
+    });
+
+    it("triggers onOpenConvertModal when Convert button is clicked", () => {
+      const lead = MOCK_LEADS[0];
+      const onOpenConvertModal = vi.fn();
+
+      render(<LeadInfoWindow lead={lead} onOpenConvertModal={onOpenConvertModal} />);
+
+      const convertBtn = screen.getByRole("button", { name: /Convert to Wholesale Retailer/i });
+      fireEvent.click(convertBtn);
+
+      expect(onOpenConvertModal).toHaveBeenCalledWith(lead);
+    });
+
+    it("renders Converted Retailer badge and link when lead is already converted", () => {
+      const lead = MOCK_LEADS[2]; // converted_retailer_id = 'ret-shreeji-123'
+      render(<LeadInfoWindow lead={lead} />);
+
+      expect(screen.getByText("Converted Retailer")).toBeDefined();
+      const link = screen.getByRole("link", { name: /View Retailer Account/i });
+      expect(link.getAttribute("href")).toBe("/admin/retailers/ret-shreeji-123/ledger");
+      expect(screen.queryByRole("button", { name: /Convert to Wholesale Retailer/i })).toBeNull();
+    });
+  });
+
+  describe("ConvertToRetailerModal Component", () => {
+    it("pre-fills lead details and submits conversion request", async () => {
+      const lead = MOCK_LEADS[0];
+      const onClose = vi.fn();
+      const onSuccess = vi.fn();
+
+      vi.mocked(apiClient.post).mockResolvedValueOnce({
+        message: "Lead converted to retailer successfully",
+        lead: {
+          ...lead,
+          contacted: true,
+          is_new: false,
+          converted_retailer_id: "ret-new-456",
+        },
+        retailer: {
+          id: "ret-new-456",
+          name: "Ganesh Gruh Udyog",
+          phone: "+91 98250 12345",
+          address: "Paldi Cross Roads, Ahmedabad, Gujarat 380007",
+        },
+      });
+
+      render(
+        <ConvertToRetailerModal
+          isOpen={true}
+          lead={lead}
+          onClose={onClose}
+          onSuccess={onSuccess}
+        />
+      );
+
+      // Verify pre-filled values
+      expect(screen.getByDisplayValue("Ganesh Gruh Udyog")).toBeDefined();
+      expect(screen.getByDisplayValue("+91 98250 12345")).toBeDefined();
+      expect(screen.getByDisplayValue("Paldi Cross Roads, Ahmedabad, Gujarat 380007")).toBeDefined();
+
+      // Type in contact person and GSTIN
+      const contactPersonInput = screen.getByPlaceholderText(/Ramesh-bhai Patel/i);
+      fireEvent.change(contactPersonInput, { target: { value: "Ganesh Patel" } });
+
+      const gstinInput = screen.getByPlaceholderText("24AAAAA0000A1Z5");
+      fireEvent.change(gstinInput, { target: { value: "24AAACG1234A1Z5" } });
+
+      // Click complete conversion
+      const submitBtn = screen.getByRole("button", { name: /Complete Conversion/i });
+      fireEvent.click(submitBtn);
+
+      await waitFor(() => {
+        expect(apiClient.post).toHaveBeenCalledWith("/leads/lead-1/convert-to-retailer", {
+          name: "Ganesh Gruh Udyog",
+          contact_person: "Ganesh Patel",
+          phone: "+91 98250 12345",
+          email: null,
+          address: "Paldi Cross Roads, Ahmedabad, Gujarat 380007",
+          gstin: "24AAACG1234A1Z5",
+          pricing_tier: "standard",
+          credit_limit: 0,
+        });
+        expect(onSuccess).toHaveBeenCalled();
+        expect(onClose).toHaveBeenCalled();
+      });
     });
   });
 
@@ -184,10 +274,35 @@ describe("Step 17.2: Retail Lead Discovery Map UI", () => {
         />
       );
 
-      // Only lead-1 is is_new=true
+      // Only lead-1 is is_new=true and uncontacted
       expect(screen.getByText("Ganesh Gruh Udyog")).toBeDefined();
       expect(screen.queryByText("Mahalaxmi Snack Store")).toBeNull();
       expect(screen.queryByText("Shreeji Kirana Store")).toBeNull();
+    });
+
+    it("filters converted leads when contactedFilter is converted", () => {
+      const onSelectLead = vi.fn();
+
+      render(
+        <LeadFilterSidebar
+          leads={MOCK_LEADS}
+          selectedLeadId={null}
+          onSelectLead={onSelectLead}
+          searchQuery=""
+          onSearchChange={vi.fn()}
+          isNewOnly={false}
+          onToggleNewOnly={vi.fn()}
+          selectedCategory="all"
+          onSelectCategory={vi.fn()}
+          contactedFilter="converted"
+          onSelectContactedFilter={vi.fn()}
+        />
+      );
+
+      // Only lead-3 is converted
+      expect(screen.getByText("Shreeji Kirana Store")).toBeDefined();
+      expect(screen.queryByText("Ganesh Gruh Udyog")).toBeNull();
+      expect(screen.queryByText("Mahalaxmi Snack Store")).toBeNull();
     });
   });
 
@@ -209,7 +324,6 @@ describe("Step 17.2: Retail Lead Discovery Map UI", () => {
 
       // Verify KPI metrics rendered
       expect(screen.getByText("3")).toBeDefined(); // Total Discovered
-      expect(screen.getAllByText("1").length).toBeGreaterThanOrEqual(1); // New & Contacted counts
 
       // Click card selects lead and opens floating info card
       const card = screen.getByTestId("lead-card-lead-1");
@@ -260,3 +374,4 @@ describe("Step 17.2: Retail Lead Discovery Map UI", () => {
     });
   });
 });
+

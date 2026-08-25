@@ -19,15 +19,18 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.config import Settings
-from app.core.di import get_lead_service
+from app.core.di import get_lead_service, get_retailer_service
 from app.core.security import CurrentUser, get_current_user
 from app.main import app
 from app.models.lead import Lead, LeadCategoryEnum, LeadScanRun
+from app.repositories.impl.audit_repository import InMemoryAuditRepository
 from app.repositories.impl.lead_repository import InMemoryLeadRepository
+from app.repositories.impl.retailer_repository import InMemoryRetailerRepository
 from app.services.places_lead_scanner import (
     TEXT_SEARCH_KEYWORDS,
     GooglePlacesLeadService,
 )
+from app.services.retailer_service import RetailerService
 
 # --------------------------------------------------------------------------- #
 # Fixtures
@@ -38,6 +41,26 @@ from app.services.places_lead_scanner import (
 def lead_repo() -> InMemoryLeadRepository:
     """Fresh in-memory lead repository."""
     return InMemoryLeadRepository()
+
+
+@pytest.fixture()
+def retailer_repo() -> InMemoryRetailerRepository:
+    """Fresh in-memory retailer repository."""
+    return InMemoryRetailerRepository()
+
+
+@pytest.fixture()
+def audit_repo() -> InMemoryAuditRepository:
+    """Fresh in-memory audit log repository."""
+    return InMemoryAuditRepository()
+
+
+@pytest.fixture()
+def retailer_service(
+    retailer_repo: InMemoryRetailerRepository,
+) -> RetailerService:
+    """RetailerService with in-memory repositories."""
+    return RetailerService(retailer_repo=retailer_repo)
 
 
 @pytest.fixture()
@@ -254,20 +277,41 @@ class TestInMemoryLeadRepository:
         assert results[0].id == "lead-ahmedabad"
 
     def test_mark_lead_contacted(self, lead_repo: InMemoryLeadRepository) -> None:
-        """Mark a lead as contacted with notes."""
+        """Mark a lead as contacted with notes and verify is_new is cleared."""
         lead_repo.create_lead(
             Lead(
                 id="lead-contact",
                 place_id="p_contact",
                 name="Contact Me",
                 category=LeadCategoryEnum.GRUH_UDYOG,
+                is_new=True,
                 first_seen_at=datetime.now(UTC),
             )
         )
         result = lead_repo.mark_lead_contacted("lead-contact", "Called owner, interested.")
         assert result is not None
         assert result.contacted is True
+        assert result.is_new is False
         assert result.contact_notes == "Called owner, interested."
+
+    def test_link_converted_retailer(self, lead_repo: InMemoryLeadRepository) -> None:
+        """Link converted retailer to lead and verify status updates."""
+        lead_repo.create_lead(
+            Lead(
+                id="lead-convert-repo",
+                place_id="p_convert_repo",
+                name="Convert Target",
+                category=LeadCategoryEnum.SNACK_STORE,
+                is_new=True,
+                contacted=False,
+                first_seen_at=datetime.now(UTC),
+            )
+        )
+        result = lead_repo.link_converted_retailer("lead-convert-repo", "ret-uuid-999")
+        assert result is not None
+        assert result.converted_retailer_id == "ret-uuid-999"
+        assert result.contacted is True
+        assert result.is_new is False
 
     def test_create_and_list_scan_runs(self, lead_repo: InMemoryLeadRepository) -> None:
         """Create and list scan run audit records."""
@@ -491,9 +535,14 @@ class TestLeadsRouterAPI:
     """Verify HTTP endpoints in app.api.routers.leads."""
 
     @pytest.fixture()
-    def client(self, lead_service: GooglePlacesLeadService) -> TestClient:
+    def client(
+        self,
+        lead_service: GooglePlacesLeadService,
+        retailer_service: RetailerService,
+    ) -> TestClient:
         """Create test client with overridden lead service and full permissions."""
         app.dependency_overrides[get_lead_service] = lambda: lead_service
+        app.dependency_overrides[get_retailer_service] = lambda: retailer_service
         app.dependency_overrides[get_current_user] = lambda: CurrentUser(
             id="user-owner-1",
             email="owner@wareflow.in",
@@ -581,16 +630,18 @@ class TestLeadsRouterAPI:
         data_bbox = resp_bbox.json()
         assert data_bbox["total"] >= 1
 
-    def test_mark_contacted_endpoint(
+    def test_mark_contacted_endpoint_clears_is_new(
         self, client: TestClient, lead_repo: InMemoryLeadRepository
     ) -> None:
-        """PATCH /leads/{id}/contacted marks lead and stores notes."""
+        """PATCH /leads/{id}/contacted marks lead as contacted and clears is_new highlight."""
         lead_repo.create_lead(
             Lead(
                 id="lead-contact-api",
                 place_id="place_contact_api",
                 name="Contact Target Shop",
                 category=LeadCategoryEnum.GRUH_UDYOG,
+                is_new=True,
+                contacted=False,
                 first_seen_at=datetime.now(UTC),
             )
         )
@@ -601,6 +652,7 @@ class TestLeadsRouterAPI:
         assert resp.status_code == 200
         data = resp.json()
         assert data["contacted"] is True
+        assert data["is_new"] is False  # Highlight cleared!
         assert data["contact_notes"] == "Spoke to proprietor, offered price list."
 
     def test_mark_contacted_not_found(self, client: TestClient) -> None:
@@ -608,6 +660,81 @@ class TestLeadsRouterAPI:
         resp = client.patch(
             "/leads/non-existent-lead-id/contacted",
             json={"notes": "Note"},
+        )
+        assert resp.status_code == 404
+
+    def test_convert_lead_to_retailer_endpoint(
+        self, client: TestClient, lead_repo: InMemoryLeadRepository
+    ) -> None:
+        """POST /leads/{id}/convert-to-retailer creates retailer account and links to lead."""
+        lead_repo.create_lead(
+            Lead(
+                id="lead-convert-target",
+                place_id="place_convert_target",
+                name="Jay Ambe Gruh Udyog",
+                category=LeadCategoryEnum.GRUH_UDYOG,
+                address="Near Shivalik Plaza, Ambawadi, Ahmedabad, Gujarat 380015",
+                phone="+91 98250 99999",
+                is_new=True,
+                contacted=False,
+                first_seen_at=datetime.now(UTC),
+            )
+        )
+
+        resp = client.post(
+            "/leads/lead-convert-target/convert-to-retailer",
+            json={
+                "contact_person": "Ambalal Patel",
+                "email": "ambalal@jayambe.in",
+                "gstin": "24ABCDE1234F1Z5",
+                "pricing_tier": "silver",
+                "credit_limit": 25000.0,
+            },
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+
+        # Check lead was updated
+        assert data["lead"]["id"] == "lead-convert-target"
+        assert data["lead"]["contacted"] is True
+        assert data["lead"]["is_new"] is False
+        assert data["lead"]["converted_retailer_id"] is not None
+
+        # Check retailer was created with lead & payload details
+        assert data["retailer"]["id"] == data["lead"]["converted_retailer_id"]
+        assert data["retailer"]["name"] == "Jay Ambe Gruh Udyog"
+        assert data["retailer"]["phone"] == "+91 98250 99999"
+        assert "Ambawadi" in data["retailer"]["address"]
+        assert data["retailer"]["contact_person"] == "Ambalal Patel"
+        assert data["retailer"]["pricing_tier"] == "silver"
+        assert data["retailer"]["credit_limit"] == 25000.0
+
+    def test_convert_lead_duplicate_blocked(
+        self, client: TestClient, lead_repo: InMemoryLeadRepository
+    ) -> None:
+        """POST /leads/{id}/convert-to-retailer blocks duplicate conversion of same lead."""
+        lead_repo.create_lead(
+            Lead(
+                id="lead-already-converted",
+                place_id="place_already_converted",
+                name="Converted Kirana",
+                category=LeadCategoryEnum.GROCERY_KIRANA,
+                converted_retailer_id="ret-existing-123",
+                first_seen_at=datetime.now(UTC),
+            )
+        )
+        resp = client.post(
+            "/leads/lead-already-converted/convert-to-retailer",
+            json={},
+        )
+        assert resp.status_code == 400
+        assert "already been converted" in resp.json()["detail"]
+
+    def test_convert_lead_not_found(self, client: TestClient) -> None:
+        """POST /leads/{id}/convert-to-retailer returns 404 for unknown lead."""
+        resp = client.post(
+            "/leads/non-existent-lead/convert-to-retailer",
+            json={},
         )
         assert resp.status_code == 404
 

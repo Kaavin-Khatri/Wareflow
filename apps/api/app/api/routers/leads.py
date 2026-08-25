@@ -2,9 +2,11 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.core.di import get_lead_service
+from app.core.di import get_lead_service, get_retailer_service
 from app.core.security import CurrentUser, require_permission
 from app.schemas.leads import (
+    ConvertLeadToRetailerRequest,
+    ConvertLeadToRetailerResponse,
     LeadListResponse,
     LeadResponse,
     MarkContactedRequest,
@@ -12,9 +14,12 @@ from app.schemas.leads import (
     ScanNowResponse,
     ScanRunListResponse,
 )
+from app.schemas.retailers import RetailerCreateRequest, RetailerResponse
 from app.services.places_lead_scanner import GooglePlacesLeadService
+from app.services.retailer_service import RetailerService
 
 router = APIRouter(prefix="/leads", tags=["Leads"])
+
 
 
 @router.post(
@@ -88,24 +93,100 @@ def list_leads(
 
 
 @router.patch(
+    "/{lead_id}",
+    response_model=LeadResponse,
+    summary="Update lead contact status and notes",
+)
+@router.patch(
     "/{lead_id}/contacted",
     response_model=LeadResponse,
     summary="Mark a lead as contacted",
 )
-def mark_contacted(
+def update_lead_contact(
     lead_id: str,
     request: MarkContactedRequest,
     current_user: CurrentUser = Depends(require_permission("leads.manage")),
     lead_service: GooglePlacesLeadService = Depends(get_lead_service),
 ) -> LeadResponse:
-    """Mark a discovered lead as contacted, with optional notes."""
-    lead = lead_service._lead_repo.mark_lead_contacted(lead_id, request.notes)
+    """Mark a discovered lead as contacted (clearing is_new highlight) with optional notes."""
+    lead = lead_service._lead_repo.mark_lead_contacted(
+        lead_id=lead_id, notes=request.notes, contacted=request.contacted
+    )
     if not lead:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Lead '{lead_id}' not found.",
         )
     return LeadResponse.model_validate(lead)
+
+
+@router.post(
+    "/{lead_id}/convert-to-retailer",
+    response_model=ConvertLeadToRetailerResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Convert a lead into a wholesale retailer account",
+)
+def convert_lead_to_retailer(
+    lead_id: str,
+    request: ConvertLeadToRetailerRequest,
+    current_user: CurrentUser = Depends(require_permission("leads.manage")),
+    lead_service: GooglePlacesLeadService = Depends(get_lead_service),
+    retailer_service: RetailerService = Depends(get_retailer_service),
+) -> ConvertLeadToRetailerResponse:
+    """
+    Convert a discovered lead into an active wholesale retailer account.
+
+    Pre-fills business name, phone, and address from the lead.
+    Sets lead.converted_retailer_id, lead.contacted = True, lead.is_new = False.
+    Prevents duplicate conversion if lead has already been converted.
+    """
+    lead = lead_service._lead_repo.get_lead_by_id(lead_id)
+    if not lead:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Lead '{lead_id}' not found.",
+        )
+
+    if lead.converted_retailer_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Lead has already been converted to a retailer.",
+        )
+
+    # Pre-fill retailer create request using lead details with optional overrides
+    retailer_payload = RetailerCreateRequest(
+        name=request.name or lead.name,
+        contact_person=request.contact_person,
+        phone=request.phone or lead.phone,
+        email=request.email,
+        address=request.address or lead.address,
+        gstin=request.gstin,
+        pricing_tier=request.pricing_tier,
+        credit_limit=request.credit_limit,
+        is_active=True,
+    )
+
+    # Create retailer record through standard RetailerService (applies validation & audit logs)
+    created_retailer = retailer_service.create_retailer(
+        payload=retailer_payload, actor_id=current_user.id
+    )
+
+    # Link lead to created retailer and clear is_new highlight
+    updated_lead = lead_service._lead_repo.link_converted_retailer(
+        lead_id=lead_id, retailer_id=created_retailer.id
+    )
+    if not updated_lead:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update lead conversion link.",
+        )
+
+    return ConvertLeadToRetailerResponse(
+        lead=LeadResponse.model_validate(updated_lead),
+        retailer=RetailerResponse.model_validate(created_retailer),
+        message=f"Shop '{created_retailer.name}' successfully converted to wholesale retailer account.",
+    )
+
 
 
 @router.get(

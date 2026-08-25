@@ -752,6 +752,9 @@ wareflow/
 | Pluggable Forecast Strategy Engine (OCP) | `ForecastStrategy` interface abstracts statistical demand forecasting algorithms (`MovingAverageForecast`, `ExponentialSmoothingForecast`), allowing new mathematical models without altering service orchestration or API routers |
 | 24-Hour Forecast Database Caching | Forecast calculations cache historical outbound demand predictions per product in `forecasts` table with `expires_at` (24h TTL), guaranteeing sub-millisecond response latency with instant `force_refresh` support |
 | Honest Zero-History Diagnostic Guard | Products with zero historical outbound movements return explicit `insufficient_data` status with 0.0 confidence rather than fabricating synthetic demand projections |
+| Google Places Lead Discovery Scanner | `GooglePlacesLeadService` runs scheduled weekly background scans and on-demand discovery sweeps for regional FMCG retail shops (Gruh Udyog, Namkeen, Kirana), deduplicating via Google `place_id` and alerting owners on newly discovered storefronts |
+| Lead Contact Tracking & Highlight Clearance | Marking a lead contacted or converted automatically sets `is_new=False`, clearing the pulsing highlight badge across the interactive map and list views so sales focus stays on uncontacted prospects |
+| Unified Lead-to-Retailer Conversion | `POST /leads/{lead_id}/convert-to-retailer` pre-fills discovered lead attributes (name, phone, address) and invokes `RetailerService.create_retailer`, ensuring consistent validation, pricing tier assignment, and audit logs while preventing duplicate conversions |
 
 ## Security & Audit Log Coverage
 
@@ -764,7 +767,7 @@ wareflow/
   - `einvoice_irn_generated`: Generation of statutory 64-hex IRN and signed QR code (`POST /invoices/{id}/generate-irn`)
   - `eway_bill_generated`: Generation of statutory 12-digit E-Way Bill for transit (`POST /invoices/{id}/generate-eway-bill`)
   - `overdue_invoices_flagged`: Batch scan flagging unpaid past-due invoices as overdue (`POST /invoices/detect-overdue`)
-  - `retailer_created`: Registration of a new wholesale retailer account (`POST /retailers`)
+  - `retailer_created`: Registration of a new wholesale retailer account or converted lead (`POST /retailers`, `POST /leads/{id}/convert-to-retailer`)
   - `retailer_updated`: Updates to retailer contact info, pricing tier, or active status (`PATCH /retailers/{id}`)
   - `retailer_credit_limit_updated`: Retailer authorized credit limit adjustments (`PATCH /retailers/{id}/credit-limit`)
   - `business_settings_updated`: Legal business entity details, GSTIN, or FSSAI license updates (`PUT /settings/business`)

@@ -11,6 +11,7 @@ import {
   MapPin,
   Clock,
   Building2,
+  Store,
 } from "lucide-react";
 import { LeadItem, getCategoryMetadata } from "./LeadInfoWindow";
 
@@ -24,8 +25,8 @@ export interface LeadFilterSidebarProps {
   onToggleNewOnly: (newOnly: boolean) => void;
   selectedCategory: string;
   onSelectCategory: (category: string) => void;
-  contactedFilter: "all" | "uncontacted" | "contacted";
-  onSelectContactedFilter: (filter: "all" | "uncontacted" | "contacted") => void;
+  contactedFilter: "all" | "uncontacted" | "contacted" | "converted";
+  onSelectContactedFilter: (filter: "all" | "uncontacted" | "contacted" | "converted") => void;
   loading?: boolean;
 }
 
@@ -54,8 +55,12 @@ export function LeadFilterSidebar({
   const activeCardRef = useRef<HTMLDivElement>(null);
 
   // Counts for filters
-  const newCount = useMemo(() => leads.filter((l) => l.is_new).length, [leads]);
+  const newCount = useMemo(() => leads.filter((l) => l.is_new && !l.contacted).length, [leads]);
   const contactedCount = useMemo(() => leads.filter((l) => l.contacted).length, [leads]);
+  const convertedCount = useMemo(
+    () => leads.filter((l) => Boolean(l.converted_retailer_id)).length,
+    [leads]
+  );
 
   // Filtered leads
   const filteredLeads = useMemo(() => {
@@ -69,7 +74,7 @@ export function LeadFilterSidebar({
       }
 
       // 2. New Only filter
-      if (isNewOnly && !lead.is_new) {
+      if (isNewOnly && (!lead.is_new || lead.contacted)) {
         return false;
       }
 
@@ -78,7 +83,10 @@ export function LeadFilterSidebar({
         return false;
       }
 
-      // 4. Contacted Filter
+      // 4. Contacted / Converted Filter
+      if (contactedFilter === "converted" && !lead.converted_retailer_id) {
+        return false;
+      }
       if (contactedFilter === "contacted" && !lead.contacted) {
         return false;
       }
@@ -146,7 +154,7 @@ export function LeadFilterSidebar({
                 New Shops Only
               </span>
               <span className="text-[10px] text-[var(--text-muted)]">
-                Highlight never-seen leads
+                Highlight never-contacted leads
               </span>
             </div>
           </div>
@@ -189,13 +197,13 @@ export function LeadFilterSidebar({
           })}
         </div>
 
-        {/* Contacted Filter & Result Count Bar */}
-        <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] font-mono pt-1">
+        {/* Contacted / Converted Filter & Result Count Bar */}
+        <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] font-mono pt-1 flex-wrap gap-1">
           <span>
             {filteredLeads.length} of {leads.length} leads
           </span>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-wrap">
             <button
               type="button"
               onClick={() => onSelectContactedFilter("all")}
@@ -230,6 +238,19 @@ export function LeadFilterSidebar({
               }`}
             >
               Contacted ({contactedCount})
+            </button>
+            <span>•</span>
+            <button
+              type="button"
+              data-testid="filter-converted"
+              onClick={() => onSelectContactedFilter("converted")}
+              className={`px-1.5 py-0.5 rounded ${
+                contactedFilter === "converted"
+                  ? "text-cyan-400 font-bold bg-cyan-500/10"
+                  : "hover:text-cyan-400"
+              }`}
+            >
+              Converted ({convertedCount})
             </button>
           </div>
         </div>
@@ -268,6 +289,7 @@ export function LeadFilterSidebar({
           filteredLeads.map((lead) => {
             const isSelected = lead.id === selectedLeadId;
             const catMeta = getCategoryMetadata(lead.category);
+            const isConverted = Boolean(lead.converted_retailer_id);
 
             return (
               <div
@@ -289,7 +311,7 @@ export function LeadFilterSidebar({
                       <h4 className="text-xs font-bold text-[var(--text)] truncate">
                         {lead.name}
                       </h4>
-                      {lead.is_new && (
+                      {lead.is_new && !lead.contacted && (
                         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500 text-black shrink-0">
                           <Sparkles className="w-2.5 h-2.5" />
                           New
@@ -297,11 +319,19 @@ export function LeadFilterSidebar({
                       )}
                     </div>
 
-                    <span
-                      className={`text-[9px] px-1.5 py-0.5 rounded font-medium shrink-0 border ${catMeta.bgClass}`}
-                    >
-                      {catMeta.label}
-                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isConverted && (
+                        <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                          <Store className="w-2.5 h-2.5" />
+                          Converted
+                        </span>
+                      )}
+                      <span
+                        className={`text-[9px] px-1.5 py-0.5 rounded font-medium border ${catMeta.bgClass}`}
+                      >
+                        {catMeta.label}
+                      </span>
+                    </div>
                   </div>
 
                   {lead.address && (
@@ -325,14 +355,16 @@ export function LeadFilterSidebar({
                       <span>No phone listed</span>
                     )}
 
-                    {lead.contacted ? (
-                      <span className="inline-flex items-center gap-0.5 text-emerald-400 font-sans font-medium">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Contacted
-                      </span>
-                    ) : (
-                      <span className="text-[var(--text-subtle)] font-sans">Pending</span>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {lead.contacted ? (
+                        <span className="inline-flex items-center gap-0.5 text-emerald-400 font-sans font-medium">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Contacted
+                        </span>
+                      ) : (
+                        <span className="text-[var(--text-subtle)] font-sans">Pending</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

@@ -13,6 +13,11 @@ class SqlAlchemyLeadRepository(LeadRepositoryInterface):
     def __init__(self, session: Session) -> None:
         self._session = session
 
+    def get_lead_by_id(self, lead_id: str) -> Lead | None:
+        """Return a lead by its primary key id, or None if not found."""
+        stmt = select(Lead).where(Lead.id == lead_id)
+        return self._session.execute(stmt).scalar_one_or_none()
+
     def get_lead_by_place_id(self, place_id: str) -> Lead | None:
         """Return a lead by its Google Places place_id, or None if not found."""
         stmt = select(Lead).where(Lead.place_id == place_id)
@@ -103,15 +108,31 @@ class SqlAlchemyLeadRepository(LeadRepositoryInterface):
         runs = list(self._session.execute(stmt).scalars().all())
         return runs, total
 
-    def mark_lead_contacted(self, lead_id: str, notes: str | None = None) -> Lead | None:
-        """Mark lead as contacted and optionally record notes."""
+    def mark_lead_contacted(
+        self, lead_id: str, notes: str | None = None, contacted: bool = True
+    ) -> Lead | None:
+        """Mark lead as contacted and clear is_new highlight."""
         stmt = select(Lead).where(Lead.id == lead_id)
         lead = self._session.execute(stmt).scalar_one_or_none()
         if not lead:
             return None
-        lead.contacted = True
-        if notes:
+        lead.contacted = contacted
+        if contacted:
+            lead.is_new = False
+        if notes is not None:
             lead.contact_notes = notes
+        self._session.flush()
+        return lead
+
+    def link_converted_retailer(self, lead_id: str, retailer_id: str) -> Lead | None:
+        """Link lead to a created retailer record, marking contacted=True and is_new=False."""
+        stmt = select(Lead).where(Lead.id == lead_id)
+        lead = self._session.execute(stmt).scalar_one_or_none()
+        if not lead:
+            return None
+        lead.converted_retailer_id = retailer_id
+        lead.contacted = True
+        lead.is_new = False
         self._session.flush()
         return lead
 
@@ -122,6 +143,10 @@ class InMemoryLeadRepository(LeadRepositoryInterface):
     def __init__(self) -> None:
         self._leads: dict[str, Lead] = {}
         self._scan_runs: list[LeadScanRun] = []
+
+    def get_lead_by_id(self, lead_id: str) -> Lead | None:
+        """Lookup lead by ID in memory."""
+        return self._leads.get(lead_id)
 
     def get_lead_by_place_id(self, place_id: str) -> Lead | None:
         """Lookup lead by place_id."""
@@ -198,12 +223,27 @@ class InMemoryLeadRepository(LeadRepositoryInterface):
         offset = (page - 1) * page_size
         return runs[offset : offset + page_size], total
 
-    def mark_lead_contacted(self, lead_id: str, notes: str | None = None) -> Lead | None:
-        """Mark lead as contacted in memory."""
+    def mark_lead_contacted(
+        self, lead_id: str, notes: str | None = None, contacted: bool = True
+    ) -> Lead | None:
+        """Mark lead as contacted in memory and clear is_new."""
         lead = self._leads.get(lead_id)
         if not lead:
             return None
-        lead.contacted = True
-        if notes:
+        lead.contacted = contacted
+        if contacted:
+            lead.is_new = False
+        if notes is not None:
             lead.contact_notes = notes
         return lead
+
+    def link_converted_retailer(self, lead_id: str, retailer_id: str) -> Lead | None:
+        """Link lead to a created retailer in memory."""
+        lead = self._leads.get(lead_id)
+        if not lead:
+            return None
+        lead.converted_retailer_id = retailer_id
+        lead.contacted = True
+        lead.is_new = False
+        return lead
+

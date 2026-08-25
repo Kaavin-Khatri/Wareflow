@@ -9,6 +9,11 @@ class LeadRepositoryInterface(ABC):
     """Interface for managing leads and scan run audit records."""
 
     @abstractmethod
+    def get_lead_by_id(self, lead_id: str) -> Lead | None:
+        """Return a lead by its primary key id, or None if not found."""
+        raise NotImplementedError
+
+    @abstractmethod
     def get_lead_by_place_id(self, place_id: str) -> Lead | None:
         """Return a lead by its Google Places place_id, or None if not found."""
         raise NotImplementedError
@@ -56,6 +61,13 @@ class LeadRepositoryInterface(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def mark_lead_contacted(self, lead_id: str, notes: str | None = None) -> Lead | None:
-        """Mark a lead as contacted with optional notes. Return updated lead or None."""
+    def mark_lead_contacted(
+        self, lead_id: str, notes: str | None = None, contacted: bool = True
+    ) -> Lead | None:
+        """Mark a lead as contacted (clearing is_new). Return updated lead or None."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def link_converted_retailer(self, lead_id: str, retailer_id: str) -> Lead | None:
+        """Link lead to a newly created retailer, marking contacted=True and is_new=False."""
         raise NotImplementedError

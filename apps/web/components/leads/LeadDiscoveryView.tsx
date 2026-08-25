@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/api-client";
 import { LeadItem, LeadInfoWindow } from "./LeadInfoWindow";
 import { LeadMap } from "./LeadMap";
 import { LeadFilterSidebar } from "./LeadFilterSidebar";
+import { ConvertToRetailerModal } from "./ConvertToRetailerModal";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassBadge } from "@/components/glass/GlassBadge";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -18,6 +19,7 @@ import {
   SlidersHorizontal,
   Compass,
   AlertCircle,
+  UserCheck,
 } from "lucide-react";
 
 interface LeadListApiResponse {
@@ -58,10 +60,15 @@ export function LeadDiscoveryView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isNewOnly, setIsNewOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [contactedFilter, setContactedFilter] = useState<"all" | "uncontacted" | "contacted">("all");
+  const [contactedFilter, setContactedFilter] = useState<
+    "all" | "uncontacted" | "contacted" | "converted"
+  >("all");
 
   // Selection state
   const [selectedLead, setSelectedLead] = useState<LeadItem | null>(null);
+
+  // Conversion Modal state
+  const [convertModalLead, setConvertModalLead] = useState<LeadItem | null>(null);
 
   // Scan state
   const [isScanning, setIsScanning] = useState(false);
@@ -133,9 +140,18 @@ export function LeadDiscoveryView() {
     }
   };
 
+  // Handle Convert to Retailer Success
+  const handleConvertSuccess = (updatedLead: LeadItem, createdRetailer: any) => {
+    setLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+    if (selectedLead?.id === updatedLead.id) {
+      setSelectedLead(updatedLead);
+    }
+  };
+
   // KPI calculations
   const totalLeads = leads.length;
-  const newLeadsCount = leads.filter((l) => l.is_new).length;
+  const newLeadsCount = leads.filter((l) => l.is_new && !l.contacted).length;
+  const convertedCount = leads.filter((l) => Boolean(l.converted_retailer_id)).length;
   const contactedCount = leads.filter((l) => l.contacted).length;
   const pendingCount = totalLeads - contactedCount;
 
@@ -168,33 +184,36 @@ export function LeadDiscoveryView() {
             {newLeadsCount}
           </div>
           <span className="text-[10px] text-amber-400/80 font-mono mt-1 block">
-            First-time seen leads
+            Uncontacted leads
           </span>
         </GlassCard>
 
         <GlassCard className="p-4 relative overflow-hidden">
           <div className="flex items-center justify-between text-[var(--text-muted)] text-xs mb-1">
-            <span>Outreach Pending</span>
-            <AlertCircle className="w-4 h-4 text-rose-400" />
-          </div>
-          <div className="text-2xl font-black tracking-tight text-[var(--text)]">
-            {pendingCount}
-          </div>
-          <span className="text-[10px] text-[var(--text-subtle)] font-mono mt-1 block">
-            Awaiting first contact
-          </span>
-        </GlassCard>
-
-        <GlassCard className="p-4 relative overflow-hidden">
-          <div className="flex items-center justify-between text-[var(--text-muted)] text-xs mb-1">
-            <span>Contacted & Converted</span>
+            <span>Outreach Contacted</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-2xl font-black tracking-tight text-emerald-400">
+          <div className="text-2xl font-black tracking-tight text-[var(--text)]">
             {contactedCount}
           </div>
-          <span className="text-[10px] text-emerald-400/70 font-mono mt-1 block">
-            {totalLeads > 0 ? Math.round((contactedCount / totalLeads) * 100) : 0}% coverage
+          <span className="text-[10px] text-[var(--text-subtle)] font-mono mt-1 block">
+            {totalLeads > 0 ? Math.round((contactedCount / totalLeads) * 100) : 0}% contacted
+          </span>
+        </GlassCard>
+
+        <GlassCard className="p-4 relative overflow-hidden border-cyan-500/30 bg-cyan-500/5">
+          <div className="flex items-center justify-between text-cyan-400 text-xs mb-1">
+            <span className="font-bold flex items-center gap-1">
+              <UserCheck className="w-3.5 h-3.5" />
+              Converted Retailers
+            </span>
+            <span className="w-2 h-2 rounded-full bg-cyan-400" />
+          </div>
+          <div className="text-2xl font-black tracking-tight text-cyan-300">
+            {convertedCount}
+          </div>
+          <span className="text-[10px] text-cyan-400/80 font-mono mt-1 block">
+            Active wholesale accounts
           </span>
         </GlassCard>
       </div>
@@ -281,6 +300,7 @@ export function LeadDiscoveryView() {
                 lead={selectedLead}
                 onClose={() => setSelectedLead(null)}
                 onMarkContacted={handleMarkContacted}
+                onOpenConvertModal={(lead) => setConvertModalLead(lead)}
                 isCompact
               />
             </div>
@@ -373,6 +393,16 @@ export function LeadDiscoveryView() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Convert Lead to Retailer Modal */}
+      {convertModalLead && (
+        <ConvertToRetailerModal
+          isOpen={Boolean(convertModalLead)}
+          lead={convertModalLead}
+          onClose={() => setConvertModalLead(null)}
+          onSuccess={handleConvertSuccess}
+        />
       )}
     </div>
   );

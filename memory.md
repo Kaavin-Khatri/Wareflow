@@ -3915,8 +3915,54 @@
 - Navigation: `Lead Discovery Map` (`/admin/leads/map`) under Wholesale Operations in `apps/web/lib/nav.ts`
 - Client Key: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
 
+---
 
+## Step 17.3 — Lead Contact Tracking & Convert-to-Retailer
+**Timestamp:** 2026-08-25T02:05:00Z
+**Status:** COMPLETE
 
+### What was done
+- **Backend API & Repositories (`apps/api/`)**:
+  - `LeadRepositoryInterface`, `SqlAlchemyLeadRepository`, and `InMemoryLeadRepository`:
+    - Updated `mark_lead_contacted(lead_id: str, notes: str | None = None, contacted: bool = True)` to immediately clear `is_new = False` upon being marked contacted.
+    - Added `get_lead_by_id(lead_id: str) -> Lead | None` and `link_converted_retailer(lead_id: str, retailer_id: str) -> Lead | None` which sets `converted_retailer_id`, `contacted = True`, and `is_new = False`.
+  - Pydantic Schemas (`apps/api/app/schemas/leads.py`):
+    - Added `ConvertLeadToRetailerRequest` (name, contact_person, phone, email, address, gstin, pricing_tier, credit_limit) and `ConvertLeadToRetailerResponse` (message, lead, retailer).
+    - Updated `MarkContactedRequest` with optional `contacted: bool = True` and `notes: str | None`.
+  - Router Endpoints (`apps/api/app/api/routers/leads.py`):
+    - `PATCH /leads/{lead_id}` and `PATCH /leads/{lead_id}/contacted`: updates contact status, notes, and clears `is_new` flag.
+    - `POST /leads/{lead_id}/convert-to-retailer`: validates lead is not already converted (HTTP 400 if already converted), invokes `RetailerService.create_retailer` with pre-filled details (reusing Phase 7 wholesale account registration), links `converted_retailer_id` to lead, and marks `contacted = True` and `is_new = False`.
+  - Pytest Suite (`apps/api/tests/test_leads_scanner.py`):
+    - Added 4 new test cases covering clearing `is_new` when contacted, successful conversion to retailer with pre-filled fields, blocking duplicate conversions with 400 error, and 404 handling.
+    - Total 27/27 lead tests passing (296/296 full backend suite passing).
+- **Frontend Lead Management & Conversion UI (`apps/web/components/leads/`)**:
+  - `ConvertToRetailerModal.tsx`: Modern glass modal dialog pre-filling Business Name, Phone, and Address from lead, with configurable fields for Contact Person, Email, GSTIN, Pricing Tier (Standard/Silver/Gold), and Credit Limit (INR), sending `POST /leads/{id}/convert-to-retailer`.
+  - `LeadInfoWindow.tsx`:
+    - Added "Convert to Wholesale Retailer" button triggering convert modal.
+    - Added "Converted Retailer" badge and direct link button "View Retailer Account" (`/admin/retailers/{id}/ledger` or `/admin/retailers`) when already converted.
+    - Added immediate clearing of `is_new` highlight upon contact update.
+  - `LeadFilterSidebar.tsx`:
+    - Added Converted status filter pill (`All • Pending • Contacted • Converted`) with dynamic count.
+    - Rendered Converted Retailer badge on converted lead cards in sidebar list.
+  - `LeadDiscoveryView.tsx`:
+    - Added Converted Retailers KPI metric card to top telemetry strip.
+    - Integrated `ConvertToRetailerModal` and state synchronization on conversion and contact.
+  - Vitest Suite (`apps/web/lib/__tests__/lead-map-ui.test.tsx`):
+    - Added comprehensive tests for Convert button, Converted Retailer badge & ledger link, `ConvertToRetailerModal` form submission, and Converted filter tab.
+    - Total 11/11 lead UI tests passing (202/202 full frontend vitest suite passing).
+- **Production Build**:
+  - `pnpm --filter web build` succeeded across all 52 routes with 0 errors.
+
+### Decisions
+- **Unified Conversion Pipeline**: Reused Phase 7's `RetailerService.create_retailer` within `POST /leads/{id}/convert-to-retailer`, ensuring all validation (pricing tiers, GSTIN format, initial credit limits) and audit logs are consistently applied to converted leads.
+- **Attention Management**: Marking a lead contacted or converted automatically sets `is_new = False`, immediately removing the pulsing radar glow and "New" badge so sales reps focus attention on uncontacted prospects.
+- **Duplicate Conversion Guardrail**: Once converted, a lead cannot be converted again (prevented at both backend router level with 400 error and frontend UI with disabled state and direct link to the resulting retailer account).
+
+### Key values for future steps
+- Lead Converted Retailer Field: `leads.converted_retailer_id`
+- Conversion Endpoint: `POST /leads/{lead_id}/convert-to-retailer`
+- Contact Tracking Endpoint: `PATCH /leads/{lead_id}/contacted` or `PATCH /leads/{lead_id}`
+- Conversion UI: `<ConvertToRetailerModal>` in `apps/web/components/leads/ConvertToRetailerModal.tsx`
 
 
 
