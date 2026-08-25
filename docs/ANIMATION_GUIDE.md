@@ -90,3 +90,18 @@ export function OrderList({ orders }) {
 
 1. **`prefers-reduced-motion`**: All motion components must honor `prefers-reduced-motion: reduce` by replacing spatial translations with instant or subtle opacity fades.
 2. **GPU Layering**: Animate `transform` and `opacity` only. Never animate `width`, `height`, `margin`, or `left`/`top` properties directly to avoid CPU reflows.
+
+---
+
+## 5. Element-to-Interaction Pattern Mapping Registry
+
+| Element Category | Component / Target | Interaction Behavior | Motion Preset / Physics | Reduced-Motion Fallback |
+| :--- | :--- | :--- | :--- | :--- |
+| **Buttons & Action Triggers** | `GlassButton`, icon buttons | Tap scale `0.97`, top specular sheen sweep, active brightness shift | `SPRING_PRESETS.snappy` (450, 30) | Instant opacity shift |
+| **Cards & Containers** | `GlassCard(hoverable=true)` | Translate `-translate-y-0.5`, shadow lift, perimeter gradient boost | `SPRING_PRESETS.glassMorph` (380, 26) | Static border highlight |
+| **Table Rows** | `DataTable` `<tr>` | Surface highlight `hover:bg-[var(--surface-hover)]`, AutoAnimate reorder | `@formkit/auto-animate` | Instant DOM update |
+| **Navigation Gliders** | `Sidebar` & `Topbar` links | Fluid sliding pill background across active tabs | `layoutId="active-nav-pill"` | Immediate active class switch |
+| **Desktop Pointer** | `CustomCursor` | Spring-solved trailing ring, `1.6x` scale on interactive targets | Motion springs (350, 28) | Completely disabled (`null`) |
+| **Page-Load Content** | KPI grids, catalog cards | Staggered entrance reveal (`staggerDelay: 0.04s`, blur->sharp) | `StaggerContainer` + `StaggerItem` | Instant layout render |
+| **Loading Skeletons** | `SkeletonCard`, `SkeletonTable` | Precision shape silhouettes with continuous 1.8s shimmer gradient | CSS keyframe `shimmer` wave | Solid muted placeholder |
+

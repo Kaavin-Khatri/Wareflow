@@ -3,6 +3,8 @@
 import React, { createContext, useContext } from "react";
 import type { Transition } from "motion/react";
 
+import { CustomCursor } from "./CustomCursor";
+
 export interface MotionPresets {
   snappy: Transition;
   gentle: Transition;
@@ -22,7 +24,12 @@ export const SPRING_PRESETS: MotionPresets = {
 const MotionContext = createContext<MotionPresets>(SPRING_PRESETS);
 
 export function MotionProvider({ children }: { children: React.ReactNode }) {
-  return <MotionContext.Provider value={SPRING_PRESETS}>{children}</MotionContext.Provider>;
+  return (
+    <MotionContext.Provider value={SPRING_PRESETS}>
+      <CustomCursor />
+      {children}
+    </MotionContext.Provider>
+  );
 }
 
 export function useMotionPresets(): MotionPresets {

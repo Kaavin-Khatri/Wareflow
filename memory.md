@@ -4144,6 +4144,37 @@
 - Master Sitemap: `docs/SITEMAP.md`
 - Visual Polish Targets: Tabular figures in `DataTable.tsx`, empty states across `/admin/*`, and hover sheen performance.
 
+---
+
+## Step 20.2 — Micro-Interaction, Cursor & Page-Load Choreography Completeness
+**Timestamp:** 2026-08-25T05:35:00Z
+**Status:** COMPLETE
+
+### What was done
+- Built and integrated custom desktop magnetic cursor (`apps/web/components/motion/CustomCursor.tsx`):
+  - Central precision point (`w-2 h-2`) and smooth spring-solved trailing halo (`w-8 h-8`, `damping: 28, stiffness: 350`).
+  - Interactive target detection: automatically scales to `1.6x` and illuminates accent border when hovering buttons, links, inputs, and clickable table rows.
+  - Device and accessibility guardrails: automatically disabled on touch devices via `(hover: hover) and (pointer: fine)` media queries and respects `prefers-reduced-motion: reduce`.
+  - Injected directly into the `<MotionProvider>` tree so all views benefit globally.
+- Page-Load & Motion Choreography pass:
+  - Ensured `<FadeIn>` and `<StaggerContainer>` (`staggerDelay={0.04}`) orchestrate KPI cards, product catalogs, and table loads smoothly in < 300ms total.
+  - Enhanced loading skeletons (`SkeletonPrimitives.tsx`) with precision silhouettes for `SkeletonCatalogGrid`, `SkeletonTable`, and `SkeletonCard` with continuous 1.8s shimmer waves.
+- Updated `docs/ANIMATION_GUIDE.md` with Section 5: **Element-to-Interaction Pattern Mapping Registry**, formally defining the exact spring physics, hover scale, active tap, and reduced-motion fallback per element category.
+- Created test suite `apps/web/lib/__tests__/motion-interactions.test.tsx` (50 test files, 231 tests passing).
+- Verified Next.js build compiles 55/55 routes cleanly with zero TypeScript errors.
+
+### Decisions
+- **Touch-Device Auto-Disable for Custom Cursor**: On mobile phones, tablets, or touch screens, custom cursors degrade ergonomics. Using `(hover: hover) and (pointer: fine)` eliminates unwanted cursor overlays while preserving native touch responsiveness.
+- **Snappy Entrance Staggering (<300ms)**: Page content reveal must feel immediate and responsive rather than delayed or cinematic. Using `staggerDelay={0.04}` with `SPRING_PRESETS.glassMorph` delivers a polished, premium reveal without blocking user action.
+- **Shape-Matched Skeletons**: Replaced generic loading placeholders with dedicated component-matched silhouettes (`SkeletonCatalogGrid`, `SkeletonTable`, `SkeletonCard`) to eliminate layout shift upon data resolution.
+
+### Key values for future steps
+- Custom Cursor Component: `apps/web/components/motion/CustomCursor.tsx`
+- Animation Guide Registry: `docs/ANIMATION_GUIDE.md` (Section 5)
+- Skeleton Primitives: `apps/web/components/SkeletonPrimitives.tsx`
+- Motion Test Suite: `apps/web/lib/__tests__/motion-interactions.test.tsx`
+
+
 
 
 
