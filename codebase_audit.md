@@ -811,6 +811,7 @@ wareflow/
 - **Supabase Free Project Inactivity Pause**: Supabase free-tier projects automatically pause after ~1 week of inactivity. If API endpoints return connection errors after an idle period, unpause the project from the Supabase dashboard.
 - **In-Process APScheduler Lifetime**: The background alert scheduler runs in-process inside the FastAPI application lifespan. While ideal for single-instance free-tier deployments, multi-worker deployments (e.g. Gunicorn with >1 worker) would execute duplicate timer ticks unless bounded by `AlertLog` deduplication or migrated to an external Redis-backed Celery worker.
 - **Google Places Indexing Lag**: Google's own indexing latency means a real-world opening may take Google days-to-weeks to list, which is the physical floor on 'new' detection speed. 'New' in WareFlow strictly indicates *first time seen in our discovery database*, not necessarily the moment doors opened.
+- **Phase 20 UI/UX Excellence Baseline**: All 48 production routes audited against Awwwards/FWA criteria (Design, Usability, Creativity, Content) in `docs/UX_AUDIT.md`; zero screens scored below the 7.0 threshold. Actionable polish punch list (tabular numeric alignment, empty state copy, motion choreography) queued for execution in Steps 20.2 and 20.3.
 
 
 
