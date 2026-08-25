@@ -21,7 +21,6 @@ vi.mock("@/components/AppLayout", () => ({
   ),
 }));
 
-
 const MOCK_LEDGER_RESPONSE = {
   retailer_id: "ret-101",
   retailer_name: "Apex Superstore",
@@ -155,7 +154,6 @@ describe("Retailer Accounts-Receivable Ledger UI", () => {
       expect(screen.queryByText("INV/2026-27/0031")).toBeNull();
     });
   });
-
 
   it("opens the Record Payment modal and allows recording a payment against an outstanding invoice", async () => {
     render(<RetailerLedgerPage />);

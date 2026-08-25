@@ -42,8 +42,8 @@ export function ComparisonBadge({
           size === "xs"
             ? "px-1.5 py-0.5 text-[10px]"
             : size === "md"
-            ? "px-2.5 py-1 text-xs"
-            : "px-2 py-0.5 text-[11px]"
+              ? "px-2.5 py-1 text-xs"
+              : "px-2 py-0.5 text-[11px]"
         } ${className}`}
         title={periodLabel}
       >
@@ -64,8 +64,8 @@ export function ComparisonBadge({
     size === "xs"
       ? "px-1.5 py-0.5 text-[10px]"
       : size === "md"
-      ? "px-2.5 py-1 text-xs"
-      : "px-2 py-0.5 text-[11px]";
+        ? "px-2.5 py-1 text-xs"
+        : "px-2 py-0.5 text-[11px]";
 
   // Badge Color Styles
   let colorClasses = "bg-zinc-500/10 text-zinc-500 dark:text-zinc-400 border-zinc-500/20";
@@ -78,9 +78,7 @@ export function ComparisonBadge({
     }
   }
 
-  const formattedDelta = isFlat
-    ? "0.0%"
-    : `${isPositiveDelta ? "+" : ""}${deltaPct.toFixed(1)}%`;
+  const formattedDelta = isFlat ? "0.0%" : `${isPositiveDelta ? "+" : ""}${deltaPct.toFixed(1)}%`;
   const formattedPrior =
     priorValue !== undefined && priorValue !== null
       ? formatter
@@ -105,9 +103,7 @@ export function ComparisonBadge({
         <TrendingDown className={iconSize} />
       )}
       <span className="font-semibold tabular-nums">{formattedDelta}</span>
-      {showPeriodLabel && (
-        <span className="opacity-75 text-[10px] ml-0.5">{periodLabel}</span>
-      )}
+      {showPeriodLabel && <span className="opacity-75 text-[10px] ml-0.5">{periodLabel}</span>}
       {showPriorValue && formattedPrior && (
         <span className="opacity-60 text-[10px] ml-0.5 font-normal">({formattedPrior})</span>
       )}

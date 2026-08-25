@@ -156,7 +156,13 @@ export default function PortalCatalogPage() {
           <p className="font-medium">{error}</p>
         </div>
       ) : filteredProducts.length === 0 ? (
-        <CatalogEmptyState onReset={() => { setSearchQuery(""); setSelectedCategory("all"); setStockFilter("all"); }} />
+        <CatalogEmptyState
+          onReset={() => {
+            setSearchQuery("");
+            setSelectedCategory("all");
+            setStockFilter("all");
+          }}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {filteredProducts.map((product) => (
@@ -198,7 +204,7 @@ export default function PortalCatalogPage() {
                 imageUrl: orderProduct.image_url,
                 categoryName: orderProduct.category_name,
               },
-              qty
+              qty,
             );
             setOrderProduct(null);
             showToast(`Added ${qty} ${orderProduct.unit}(s) of ${orderProduct.name} to cart!`);
@@ -216,13 +222,16 @@ function CatalogHeader({ activeTier, productCount }: { activeTier: string; produ
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
         <div>
           <div className="flex items-center gap-2.5 mb-1.5">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Wholesale Catalog</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              Wholesale Catalog
+            </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-indigo-500/20 border border-indigo-500/30 text-indigo-300">
               {tierCapitalized} Tier Pricing
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
-            Browse live wholesale inventory with your customized {tierCapitalized} pricing discount automatically applied.
+            Browse live wholesale inventory with your customized {tierCapitalized} pricing discount
+            automatically applied.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -373,9 +382,15 @@ function ProductCard({
         <div className="h-40 w-full rounded-xl bg-gradient-to-br from-slate-800/80 to-slate-900/90 border border-white/5 flex items-center justify-center relative overflow-hidden mb-3.5">
           {product.image_url ? (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+            <img
+              src={product.image_url}
+              alt={product.name}
+              className="h-full w-full object-cover"
+            />
           ) : (
-            <span className="text-4xl select-none group-hover:scale-110 transition-transform">📦</span>
+            <span className="text-4xl select-none group-hover:scale-110 transition-transform">
+              📦
+            </span>
           )}
           {/* Availability Status Badge */}
           <div className="absolute top-2.5 right-2.5">
@@ -481,7 +496,10 @@ function CatalogLoadingSkeleton() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
       {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-        <div key={i} className="rounded-2xl bg-white/[0.02] border border-white/5 p-4 animate-pulse space-y-3">
+        <div
+          key={i}
+          className="rounded-2xl bg-white/[0.02] border border-white/5 p-4 animate-pulse space-y-3"
+        >
           <div className="h-40 rounded-xl bg-white/5 w-full" />
           <div className="h-4 bg-white/5 rounded w-3/4" />
           <div className="h-3 bg-white/5 rounded w-1/2" />
@@ -566,9 +584,17 @@ function InquiryModal({
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-base font-bold text-white">Ask a Question</h3>
-            <p className="text-xs text-slate-400">{product.name} ({product.sku})</p>
+            <p className="text-xs text-slate-400">
+              {product.name} ({product.sku})
+            </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white text-sm" disabled={isSubmitting}>✕</button>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white text-sm"
+            disabled={isSubmitting}
+          >
+            ✕
+          </button>
         </div>
 
         {submitError && (
@@ -640,12 +666,16 @@ function QuickOrderModal({
             <h3 className="text-base font-bold text-white">Add to Order</h3>
             <p className="text-xs text-slate-400">{product.name}</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white text-sm">✕</button>
+          <button onClick={onClose} className="text-slate-400 hover:text-white text-sm">
+            ✕
+          </button>
         </div>
 
         <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-between text-xs">
           <span className="text-slate-400">Unit Price ({product.pricing_tier} tier):</span>
-          <span className="text-white font-bold">₹{product.effective_price.toFixed(2)} / {product.unit}</span>
+          <span className="text-white font-bold">
+            ₹{product.effective_price.toFixed(2)} / {product.unit}
+          </span>
         </div>
 
         <div className="space-y-1.5">
@@ -675,9 +705,7 @@ function QuickOrderModal({
 
         <div className="pt-2 border-t border-white/5 flex items-center justify-between">
           <span className="text-xs text-slate-400">Estimated Total:</span>
-          <span className="text-base font-bold text-indigo-300">
-            ₹{lineTotal.toFixed(2)}
-          </span>
+          <span className="text-base font-bold text-indigo-300">₹{lineTotal.toFixed(2)}</span>
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-2">

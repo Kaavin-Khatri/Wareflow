@@ -8,7 +8,7 @@ Follows SOLID Principles:
 - Dependency Inversion: Depends on repository interfaces.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.models.supplier import POStatusEnum
 from app.repositories.interfaces.purchase_order_repository import PurchaseOrderRepositoryInterface
@@ -38,7 +38,7 @@ class SupplierPerformanceService:
         self, as_of: datetime | None = None
     ) -> SupplierPerformanceResponse:
         """Calculate supplier performance scorecards across all active vendors."""
-        now = as_of or datetime.now(timezone.utc)
+        now = as_of or datetime.now(UTC)
 
         if hasattr(self.supplier_repo, "list_suppliers"):
             suppliers = self.supplier_repo.list_suppliers(limit=1000)

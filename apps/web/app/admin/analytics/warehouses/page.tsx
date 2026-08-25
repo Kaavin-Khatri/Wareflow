@@ -59,9 +59,7 @@ export default function WarehouseBreakdownPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await apiClient.get<WarehouseBreakdownResponse>(
-        "/analytics/warehouse-breakdown"
-      );
+      const res = await apiClient.get<WarehouseBreakdownResponse>("/analytics/warehouse-breakdown");
       setData(res);
     } catch (err: any) {
       console.error("Failed to fetch warehouse breakdown", err);
@@ -98,7 +96,8 @@ export default function WarehouseBreakdownPage() {
                   Warehouse Holdings & Throughput Breakdown
                 </h1>
                 <p className="text-xs text-white/50">
-                  Per-facility inventory valuations, storage concentrations, and 30-day inbound/outbound flow
+                  Per-facility inventory valuations, storage concentrations, and 30-day
+                  inbound/outbound flow
                 </p>
               </div>
             </div>
@@ -268,9 +267,7 @@ export default function WarehouseBreakdownPage() {
 
                   <div className="rounded-xl bg-white/[0.02] p-3 ring-1 ring-white/5">
                     <div className="text-[11px] font-medium text-white/40">Total Units</div>
-                    <div className="mt-1 text-lg font-bold text-white">
-                      {wh.total_stock_units}
-                    </div>
+                    <div className="mt-1 text-lg font-bold text-white">{wh.total_stock_units}</div>
                   </div>
 
                   <div className="rounded-xl bg-white/[0.02] p-3 ring-1 ring-white/5">

@@ -111,7 +111,7 @@ describe("Bulk CSV Product Import & Export UI Suite (Step 18.2)", () => {
     await waitFor(() => {
       expect(apiClient.upload).toHaveBeenCalledWith(
         "/products/import?dry_run=true",
-        expect.any(FormData)
+        expect.any(FormData),
       );
     });
 
@@ -169,7 +169,7 @@ describe("Bulk CSV Product Import & Export UI Suite (Step 18.2)", () => {
     await waitFor(() => {
       expect(apiClient.upload).toHaveBeenCalledWith(
         "/products/import?dry_run=false",
-        expect.any(FormData)
+        expect.any(FormData),
       );
     });
 
@@ -187,13 +187,13 @@ describe("Bulk CSV Product Import & Export UI Suite (Step 18.2)", () => {
     fireEvent.click(screen.getByText("Download CSV Template"));
     expect(apiClient.downloadBlob).toHaveBeenCalledWith(
       "/products/template.csv",
-      "wareflow_product_import_template.csv"
+      "wareflow_product_import_template.csv",
     );
 
     fireEvent.click(screen.getByText("Export Catalog CSV"));
     expect(apiClient.downloadBlob).toHaveBeenCalledWith(
       "/products/export.csv",
-      "wareflow_products_catalog.csv"
+      "wareflow_products_catalog.csv",
     );
   });
 });

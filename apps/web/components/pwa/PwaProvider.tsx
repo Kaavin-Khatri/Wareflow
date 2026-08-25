@@ -48,7 +48,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
         navigator.serviceWorker
           .register("/sw.js")
           .then((reg) => {
-            console.log("[PWA] ServiceWorker registered with scope:", reg.scope);
+            /* ServiceWorker registered — silent in production */
           })
           .catch((err) => {
             console.warn("[PWA] ServiceWorker registration failed:", err);
@@ -59,14 +59,14 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     // 2. Connectivity listeners
     const handleOnline = async () => {
       setIsOffline(false);
-      console.log("[PWA] Connection restored. Flushing offline queue...");
+      /* Connection restored — flushing offline queue */
       await flushOfflineQueue();
       refreshCounts();
     };
 
     const handleOffline = () => {
       setIsOffline(true);
-      console.log("[PWA] Device went offline. Floor operations will be queued.");
+      /* Device went offline — floor operations will be queued */
       refreshCounts();
     };
 

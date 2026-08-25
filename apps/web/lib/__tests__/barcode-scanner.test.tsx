@@ -51,7 +51,7 @@ describe("Barcode Scanner & Label Sheet Components (Step 18.1)", () => {
           onClose={handleClose}
           onScanSuccess={handleScan}
           title="Floor Barcode Scanner"
-        />
+        />,
       );
 
       expect(screen.getByText("Floor Barcode Scanner")).toBeDefined();
@@ -72,7 +72,7 @@ describe("Barcode Scanner & Label Sheet Components (Step 18.1)", () => {
           onClose={handleClose}
           onScanSuccess={handleScan}
           autoLookupProduct={true}
-        />
+        />,
       );
 
       // Switch to manual mode
@@ -98,11 +98,7 @@ describe("Barcode Scanner & Label Sheet Components (Step 18.1)", () => {
       const handleScan = vi.fn();
 
       render(
-        <BarcodeScannerModal
-          isOpen={true}
-          onClose={handleClose}
-          onScanSuccess={handleScan}
-        />
+        <BarcodeScannerModal isOpen={true} onClose={handleClose} onScanSuccess={handleScan} />,
       );
 
       fireEvent.click(screen.getByText("Cancel"));
@@ -115,11 +111,7 @@ describe("Barcode Scanner & Label Sheet Components (Step 18.1)", () => {
       const handleClose = vi.fn();
 
       render(
-        <ProductLabelSheetModal
-          isOpen={true}
-          onClose={handleClose}
-          product={sampleProduct}
-        />
+        <ProductLabelSheetModal isOpen={true} onClose={handleClose} product={sampleProduct} />,
       );
 
       expect(screen.getByText("Print Product Barcode Labels")).toBeDefined();
@@ -131,11 +123,7 @@ describe("Barcode Scanner & Label Sheet Components (Step 18.1)", () => {
       const handleClose = vi.fn();
 
       render(
-        <ProductLabelSheetModal
-          isOpen={true}
-          onClose={handleClose}
-          product={sampleProduct}
-        />
+        <ProductLabelSheetModal isOpen={true} onClose={handleClose} product={sampleProduct} />,
       );
 
       const codeSelect = screen.getByDisplayValue("1D Linear Barcode (EAN-13)");

@@ -184,8 +184,8 @@ export default function SalesReturnsPage() {
         if (ordersRes.status === "fulfilled" && Array.isArray(ordersRes.value)) {
           setOrders(
             ordersRes.value.filter((o) =>
-              ["confirmed", "packed", "shipped", "delivered"].includes(o.status)
-            )
+              ["confirmed", "packed", "shipped", "delivered"].includes(o.status),
+            ),
           );
         }
       } catch {
@@ -254,13 +254,12 @@ export default function SalesReturnsPage() {
           qty: 1,
           condition: "resellable",
           reason: "",
-        }))
+        })),
       );
     } else {
       setFormLines([]);
     }
   };
-
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -492,7 +491,9 @@ export default function SalesReturnsPage() {
           <GlassCard className="p-4 flex items-center justify-between border-emerald-500/20">
             <div>
               <p className="text-xs font-medium text-[var(--text-muted)]">Resellable Restocked</p>
-              <h3 className="text-2xl font-bold text-emerald-400 mt-1">{metrics.resellableUnits}</h3>
+              <h3 className="text-2xl font-bold text-emerald-400 mt-1">
+                {metrics.resellableUnits}
+              </h3>
               <p className="text-[11px] text-emerald-400/80 mt-0.5">Added to stock batches</p>
             </div>
             <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
@@ -555,7 +556,6 @@ export default function SalesReturnsPage() {
             emptyTitle="No retailer return records found."
             emptyDescription="When retail partners submit return requests, they will appear here for inspection."
           />
-
         </ListViewTemplate>
 
         {/* Create RMA Return Modal */}
@@ -573,7 +573,10 @@ export default function SalesReturnsPage() {
             )}
 
             <div className="space-y-1">
-              <label htmlFor="so-select" className="block text-xs font-medium text-[var(--text-muted)]">
+              <label
+                htmlFor="so-select"
+                className="block text-xs font-medium text-[var(--text-muted)]"
+              >
                 Select Sales Order *
               </label>
               <select
@@ -583,7 +586,6 @@ export default function SalesReturnsPage() {
                 required
                 className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
               >
-
                 <option value="">-- Choose Fulfilled Sales Order --</option>
                 {orders.map((o) => (
                   <option key={o.id} value={o.id}>
@@ -594,7 +596,10 @@ export default function SalesReturnsPage() {
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="rma-reason" className="block text-xs font-medium text-[var(--text-muted)]">
+              <label
+                htmlFor="rma-reason"
+                className="block text-xs font-medium text-[var(--text-muted)]"
+              >
                 Reason for Return
               </label>
               <textarea
@@ -611,13 +616,14 @@ export default function SalesReturnsPage() {
             {formLines.length > 0 && (
               <div className="space-y-2 pt-2 border-t border-[var(--glass-border)]">
                 <h4 className="text-xs font-bold text-[var(--text)] flex items-center gap-1.5">
-                  <Package className="w-3.5 h-3.5 text-purple-400" /> Return Items & Condition Assessment
+                  <Package className="w-3.5 h-3.5 text-purple-400" /> Return Items & Condition
+                  Assessment
                 </h4>
 
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                   {formLines.map((line, idx) => {
                     const originalItem = selectedOrderForForm?.items.find(
-                      (it) => it.product_id === line.product_id
+                      (it) => it.product_id === line.product_id,
                     );
 
                     return (
@@ -647,7 +653,7 @@ export default function SalesReturnsPage() {
                               onChange={(e) => {
                                 const val = Number(e.target.value);
                                 setFormLines((prev) =>
-                                  prev.map((l, i) => (i === idx ? { ...l, qty: val } : l))
+                                  prev.map((l, i) => (i === idx ? { ...l, qty: val } : l)),
                                 );
                               }}
                               className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] font-mono"
@@ -663,7 +669,7 @@ export default function SalesReturnsPage() {
                               onChange={(e) => {
                                 const cond = e.target.value as "resellable" | "damaged";
                                 setFormLines((prev) =>
-                                  prev.map((l, i) => (i === idx ? { ...l, condition: cond } : l))
+                                  prev.map((l, i) => (i === idx ? { ...l, condition: cond } : l)),
                                 );
                               }}
                               className="w-full px-2.5 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)]"
@@ -743,7 +749,8 @@ export default function SalesReturnsPage() {
 
                 {selectedReturn.reason && (
                   <p className="text-xs text-[var(--text-muted)] pt-1 border-t border-[var(--glass-border)]">
-                    <span className="font-semibold text-[var(--text)]">Reason:</span> {selectedReturn.reason}
+                    <span className="font-semibold text-[var(--text)]">Reason:</span>{" "}
+                    {selectedReturn.reason}
                   </p>
                 )}
               </div>
@@ -766,9 +773,13 @@ export default function SalesReturnsPage() {
                       {selectedReturn.items.map((it) => (
                         <tr key={it.id} className="hover:bg-[var(--surface-hover)]">
                           <td className="p-2.5">
-                            <div className="font-medium text-[var(--text)]">{it.product_name || it.product_id}</div>
+                            <div className="font-medium text-[var(--text)]">
+                              {it.product_name || it.product_id}
+                            </div>
                             {it.product_sku && (
-                              <div className="text-[10px] text-[var(--text-muted)] font-mono">{it.product_sku}</div>
+                              <div className="text-[10px] text-[var(--text-muted)] font-mono">
+                                {it.product_sku}
+                              </div>
                             )}
                           </td>
                           <td className="p-2.5">
@@ -783,8 +794,12 @@ export default function SalesReturnsPage() {
                             )}
                           </td>
                           <td className="p-2.5 text-right font-mono font-medium">{it.qty}</td>
-                          <td className="p-2.5 text-right font-mono text-[var(--text-muted)]">₹{it.unit_price}</td>
-                          <td className="p-2.5 text-right font-mono font-bold text-purple-300">₹{it.refund_amount}</td>
+                          <td className="p-2.5 text-right font-mono text-[var(--text-muted)]">
+                            ₹{it.unit_price}
+                          </td>
+                          <td className="p-2.5 text-right font-mono font-bold text-purple-300">
+                            ₹{it.refund_amount}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -794,7 +809,9 @@ export default function SalesReturnsPage() {
 
               {/* Total Credit Adjustment Banner */}
               <div className="flex items-center justify-between p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs">
-                <span className="font-semibold text-[var(--text)]">Total Estimated Credit Adjustment:</span>
+                <span className="font-semibold text-[var(--text)]">
+                  Total Estimated Credit Adjustment:
+                </span>
                 <span className="font-mono text-base font-bold text-purple-300">
                   ₹{Number(selectedReturn.credit_adjustment_amount || 0).toLocaleString("en-IN")}
                 </span>
@@ -802,11 +819,7 @@ export default function SalesReturnsPage() {
 
               {/* Action Bar */}
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--glass-border)]">
-                <GlassButton
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setIsDetailOpen(false)}
-                >
+                <GlassButton type="button" variant="ghost" onClick={() => setIsDetailOpen(false)}>
                   Close
                 </GlassButton>
 

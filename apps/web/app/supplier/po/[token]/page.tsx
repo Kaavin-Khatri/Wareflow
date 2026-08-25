@@ -43,11 +43,7 @@ interface SupplierPO {
   items: POItem[];
 }
 
-export default function SupplierPOPage({
-  params,
-}: {
-  params: Promise<{ token: string }>;
-}) {
+export default function SupplierPOPage({ params }: { params: Promise<{ token: string }> }) {
   const resolvedParams = use(params);
   const token = resolvedParams.token;
 
@@ -101,7 +97,8 @@ export default function SupplierPOPage({
         `/supplier-portal/${token}/ready-for-dispatch`,
       );
       setSuccessMessage(
-        res.message || "Order marked ready for dispatch. Warehouse staff has been notified for pickup.",
+        res.message ||
+          "Order marked ready for dispatch. Warehouse staff has been notified for pickup.",
       );
       if (po) {
         setPo({ ...po, status: "ready_for_dispatch" });
@@ -138,7 +135,9 @@ export default function SupplierPOPage({
         {loading && (
           <GlassCard className="p-12 text-center space-y-4">
             <Loader2 className="w-8 h-8 text-indigo-400 animate-spin mx-auto" />
-            <p className="text-sm text-slate-300">Verifying secure magic link and loading order details...</p>
+            <p className="text-sm text-slate-300">
+              Verifying secure magic link and loading order details...
+            </p>
           </GlassCard>
         )}
 
@@ -162,7 +161,9 @@ export default function SupplierPOPage({
             <h2 className="text-xl font-bold text-white">Goods Ready for Dispatch!</h2>
             <p className="text-sm text-emerald-300/90 max-w-md mx-auto">{successMessage}</p>
             <div className="pt-2 text-xs text-slate-400">
-              Purchase Order <span className="font-mono text-slate-200 font-semibold">{po.po_number}</span> is scheduled for warehouse pickup / receiving.
+              Purchase Order{" "}
+              <span className="font-mono text-slate-200 font-semibold">{po.po_number}</span> is
+              scheduled for warehouse pickup / receiving.
             </div>
           </GlassCard>
         )}
@@ -173,18 +174,27 @@ export default function SupplierPOPage({
             {/* Header info */}
             <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-white/10">
               <div>
-                <span className="text-xs text-slate-400 uppercase tracking-wider block">Order Number</span>
+                <span className="text-xs text-slate-400 uppercase tracking-wider block">
+                  Order Number
+                </span>
                 <span className="text-xl font-bold text-white font-mono">{po.po_number}</span>
               </div>
               <div>
-                <span className="text-xs text-slate-400 uppercase tracking-wider block">Supplier</span>
+                <span className="text-xs text-slate-400 uppercase tracking-wider block">
+                  Supplier
+                </span>
                 <span className="text-base font-semibold text-slate-200">{po.supplier_name}</span>
               </div>
               <div>
-                <span className="text-xs text-slate-400 uppercase tracking-wider block">Status</span>
+                <span className="text-xs text-slate-400 uppercase tracking-wider block">
+                  Status
+                </span>
                 <div className="mt-1">
                   {po.status === "ready_for_dispatch" ? (
-                    <GlassBadge variant="accent" className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20">
+                    <GlassBadge
+                      variant="accent"
+                      className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20"
+                    >
                       Ready for Dispatch
                     </GlassBadge>
                   ) : po.status === "ordered" ? (
@@ -262,7 +272,9 @@ export default function SupplierPOPage({
             {po.status === "ordered" && !successMessage && (
               <div className="pt-4 border-t border-white/10 space-y-3">
                 <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-300">
-                  <span className="font-semibold text-white">Action Required:</span> When the consignment is packed and ready at your loading dock, click the button below to notify WareFlow warehouse staff immediately.
+                  <span className="font-semibold text-white">Action Required:</span> When the
+                  consignment is packed and ready at your loading dock, click the button below to
+                  notify WareFlow warehouse staff immediately.
                 </div>
 
                 <GlassButton

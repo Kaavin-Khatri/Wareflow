@@ -191,7 +191,7 @@ export default function BatchRecallsPage() {
       }
       try {
         const res = await apiClient.get<{ batches: BatchOption[] }>(
-          `/products/${selectedProductId}/stock`
+          `/products/${selectedProductId}/stock`,
         );
         if (!isMounted) return;
         const bList = res?.batches || [];
@@ -301,8 +301,8 @@ export default function BatchRecallsPage() {
         err instanceof Error
           ? err.message
           : typeof err === "object" && err !== null && "message" in err
-          ? String((err as { message: unknown }).message)
-          : "Failed to initiate batch recall.";
+            ? String((err as { message: unknown }).message)
+            : "Failed to initiate batch recall.";
       setActionError(errorMsg);
     } finally {
       setSubmitting(false);
@@ -368,7 +368,7 @@ export default function BatchRecallsPage() {
       }>(`/stock/recalls/${recallId}/notify`, {});
 
       setActionSuccess(
-        `Recall notification broadcast sent to ${res.retailers_notified_count} retailers and ${res.customers_notified_count} customers.`
+        `Recall notification broadcast sent to ${res.retailers_notified_count} retailers and ${res.customers_notified_count} customers.`,
       );
 
       // Update state
@@ -395,8 +395,8 @@ export default function BatchRecallsPage() {
                   status: "notifying",
                   notified_count: r.affected_orders_count,
                 }
-              : r
-          )
+              : r,
+          ),
         );
       });
     } catch (err: unknown) {
@@ -404,8 +404,8 @@ export default function BatchRecallsPage() {
         err instanceof Error
           ? err.message
           : typeof err === "object" && err !== null && "message" in err
-          ? String((err as { message: unknown }).message)
-          : "Failed to broadcast recall notifications.";
+            ? String((err as { message: unknown }).message)
+            : "Failed to broadcast recall notifications.";
       setActionError(errorMsg);
     } finally {
       setNotifying(false);
@@ -418,7 +418,10 @@ export default function BatchRecallsPage() {
     setActionError(null);
     setActionSuccess(null);
     try {
-      const res = await apiClient.patch<BatchRecallDetail>(`/stock/recalls/${recallId}/resolve`, {});
+      const res = await apiClient.patch<BatchRecallDetail>(
+        `/stock/recalls/${recallId}/resolve`,
+        {},
+      );
 
       setActionSuccess(`Recall for batch ${res.batch_no} marked as RESOLVED.`);
 
@@ -439,8 +442,8 @@ export default function BatchRecallsPage() {
                   status: "resolved",
                   resolved_at: res.resolved_at || new Date().toISOString(),
                 }
-              : r
-          )
+              : r,
+          ),
         );
       });
     } catch (err: unknown) {
@@ -448,8 +451,8 @@ export default function BatchRecallsPage() {
         err instanceof Error
           ? err.message
           : typeof err === "object" && err !== null && "message" in err
-          ? String((err as { message: unknown }).message)
-          : "Failed to resolve recall.";
+            ? String((err as { message: unknown }).message)
+            : "Failed to resolve recall.";
       setActionError(errorMsg);
     } finally {
       setResolving(false);
@@ -555,11 +558,7 @@ export default function BatchRecallsPage() {
       header: "Action",
       align: "right",
       render: (r) => (
-        <GlassButton
-          variant="secondary"
-          size="sm"
-          onClick={() => handleOpenDetail(r)}
-        >
+        <GlassButton variant="secondary" size="sm" onClick={() => handleOpenDetail(r)}>
           <ShieldAlert className="w-3.5 h-3.5 mr-1 text-purple-400" />
           Trace & Alert
         </GlassButton>
@@ -584,16 +583,13 @@ export default function BatchRecallsPage() {
                 Batch Recall & Traceability
               </h1>
               <p className="text-xs text-[var(--text-muted)]">
-                Trace outbound sales orders, isolate defective inventory, and broadcast emergency alerts to retailers.
+                Trace outbound sales orders, isolate defective inventory, and broadcast emergency
+                alerts to retailers.
               </p>
             </div>
           </div>
 
-          <GlassButton
-            variant="primary"
-            size="md"
-            onClick={() => setIsCreateOpen(true)}
-          >
+          <GlassButton variant="primary" size="md" onClick={() => setIsCreateOpen(true)}>
             <AlertTriangle className="w-4 h-4 mr-1.5 text-amber-300" />
             Initiate Batch Recall
           </GlassButton>
@@ -630,9 +626,7 @@ export default function BatchRecallsPage() {
             <span className="text-xs text-[var(--text-muted)] font-medium flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-purple-400" /> Total Recalls
             </span>
-            <div className="text-2xl font-bold font-mono text-[var(--text)]">
-              {kpis.total}
-            </div>
+            <div className="text-2xl font-bold font-mono text-[var(--text)]">{kpis.total}</div>
             <p className="text-[11px] text-[var(--text-muted)]">Historical defect events</p>
           </GlassCard>
 
@@ -640,9 +634,7 @@ export default function BatchRecallsPage() {
             <span className="text-xs text-amber-400 font-medium flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5" /> Active Quarantines
             </span>
-            <div className="text-2xl font-bold font-mono text-amber-400">
-              {kpis.active}
-            </div>
+            <div className="text-2xl font-bold font-mono text-amber-400">{kpis.active}</div>
             <p className="text-[11px] text-[var(--text-muted)]">Unresolved recall workflows</p>
           </GlassCard>
 
@@ -650,10 +642,10 @@ export default function BatchRecallsPage() {
             <span className="text-xs text-cyan-400 font-medium flex items-center gap-1.5">
               <Package className="w-3.5 h-3.5" /> Affected Orders Traced
             </span>
-            <div className="text-2xl font-bold font-mono text-cyan-400">
-              {kpis.totalAffected}
-            </div>
-            <p className="text-[11px] text-[var(--text-muted)]">Outbound orders containing defect batch</p>
+            <div className="text-2xl font-bold font-mono text-cyan-400">{kpis.totalAffected}</div>
+            <p className="text-[11px] text-[var(--text-muted)]">
+              Outbound orders containing defect batch
+            </p>
           </GlassCard>
 
           <GlassCard className="p-4 space-y-1">
@@ -663,7 +655,9 @@ export default function BatchRecallsPage() {
             <div className="text-2xl font-bold font-mono text-emerald-400">
               {kpis.totalNotified}
             </div>
-            <p className="text-[11px] text-[var(--text-muted)]">WhatsApp / Email notices dispatched</p>
+            <p className="text-[11px] text-[var(--text-muted)]">
+              WhatsApp / Email notices dispatched
+            </p>
           </GlassCard>
         </div>
 
@@ -740,7 +734,10 @@ export default function BatchRecallsPage() {
                 <form onSubmit={handleInitiateRecall} className="space-y-4">
                   {/* Product Picker */}
                   <div className="space-y-1">
-                    <label htmlFor="recall-prod" className="block text-xs font-medium text-[var(--text-muted)]">
+                    <label
+                      htmlFor="recall-prod"
+                      className="block text-xs font-medium text-[var(--text-muted)]"
+                    >
                       Product to Recall *
                     </label>
                     <select
@@ -761,7 +758,10 @@ export default function BatchRecallsPage() {
 
                   {/* Batch Picker */}
                   <div className="space-y-1">
-                    <label htmlFor="recall-batch" className="block text-xs font-medium text-[var(--text-muted)]">
+                    <label
+                      htmlFor="recall-batch"
+                      className="block text-xs font-medium text-[var(--text-muted)]"
+                    >
                       Defective Stock Batch *
                     </label>
                     <select
@@ -788,7 +788,10 @@ export default function BatchRecallsPage() {
 
                   {/* Severity */}
                   <div className="space-y-1">
-                    <label htmlFor="recall-severity" className="block text-xs font-medium text-[var(--text-muted)]">
+                    <label
+                      htmlFor="recall-severity"
+                      className="block text-xs font-medium text-[var(--text-muted)]"
+                    >
                       Recall Severity Classification *
                     </label>
                     <select
@@ -797,7 +800,9 @@ export default function BatchRecallsPage() {
                       onChange={(e) => setSeverity(e.target.value as "low" | "medium" | "critical")}
                       className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
                     >
-                      <option value="critical">Critical — Immediate Safety Hazard / Contamination</option>
+                      <option value="critical">
+                        Critical — Immediate Safety Hazard / Contamination
+                      </option>
                       <option value="medium">Medium — Quality / Packaging Defect</option>
                       <option value="low">Low — Minor Labeling / Spec Deviation</option>
                     </select>
@@ -805,7 +810,10 @@ export default function BatchRecallsPage() {
 
                   {/* Reason Textarea */}
                   <div className="space-y-1">
-                    <label htmlFor="recall-reason" className="block text-xs font-medium text-[var(--text-muted)]">
+                    <label
+                      htmlFor="recall-reason"
+                      className="block text-xs font-medium text-[var(--text-muted)]"
+                    >
                       Root Cause / Recall Reason *
                     </label>
                     <textarea
@@ -822,10 +830,12 @@ export default function BatchRecallsPage() {
                   {/* Quarantine Invariant Alert */}
                   <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-[11px] text-red-300 space-y-1">
                     <span className="font-semibold flex items-center gap-1">
-                      <ShieldAlert className="w-3.5 h-3.5" /> Immediate Quarantine & Traceability Guarantee
+                      <ShieldAlert className="w-3.5 h-3.5" /> Immediate Quarantine & Traceability
+                      Guarantee
                     </span>
                     <p className="text-[var(--text-muted)]">
-                      All remaining stock in this batch will be flagged unsellable immediately. The system will scan the ledger to trace all outbound sales orders.
+                      All remaining stock in this batch will be flagged unsellable immediately. The
+                      system will scan the ledger to trace all outbound sales orders.
                     </p>
                   </div>
 
@@ -881,10 +891,10 @@ export default function BatchRecallsPage() {
                       )}
                     </div>
                     <p className="text-xs text-[var(--text-muted)]">
-                      Product: {selectedRecall.product_name} ({selectedRecall.product_sku}) • Facility: {selectedRecall.warehouse_name}
+                      Product: {selectedRecall.product_name} ({selectedRecall.product_sku}) •
+                      Facility: {selectedRecall.warehouse_name}
                     </p>
                   </div>
-
 
                   <button
                     onClick={() => setSelectedRecall(null)}
@@ -918,10 +928,12 @@ export default function BatchRecallsPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xs font-bold uppercase tracking-wider font-mono text-[var(--text)] flex items-center gap-1.5">
-                      <Building2 className="w-4 h-4 text-purple-400" /> Traced Affected Orders & Retailers ({selectedRecall.affected_orders.length})
+                      <Building2 className="w-4 h-4 text-purple-400" /> Traced Affected Orders &
+                      Retailers ({selectedRecall.affected_orders.length})
                     </h3>
                     <span className="text-xs text-[var(--text-muted)] font-mono">
-                      {selectedRecall.notified_count} of {selectedRecall.affected_orders.length} Notified
+                      {selectedRecall.notified_count} of {selectedRecall.affected_orders.length}{" "}
+                      Notified
                     </span>
                   </div>
 
@@ -994,11 +1006,7 @@ export default function BatchRecallsPage() {
 
                 {/* Drawer Footer Actions */}
                 <div className="flex items-center justify-between pt-4 border-t border-[var(--glass-border)]">
-                  <GlassButton
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedRecall(null)}
-                  >
+                  <GlassButton variant="ghost" size="sm" onClick={() => setSelectedRecall(null)}>
                     Close
                   </GlassButton>
 
@@ -1012,7 +1020,9 @@ export default function BatchRecallsPage() {
                           onClick={() => handleNotifyAffected(selectedRecall.id)}
                         >
                           <Send className="w-3.5 h-3.5 mr-1.5 text-cyan-400" />
-                          {notifying ? "Broadcasting..." : "Broadcast Recall Alerts (WhatsApp + Email)"}
+                          {notifying
+                            ? "Broadcasting..."
+                            : "Broadcast Recall Alerts (WhatsApp + Email)"}
                         </GlassButton>
 
                         <GlassButton

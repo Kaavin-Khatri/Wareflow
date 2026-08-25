@@ -1,5 +1,6 @@
 """Sales Order Domain Service managing orders, credit gates, and FIFO stock deductions."""
 
+import contextlib
 import uuid
 from typing import Any
 
@@ -121,10 +122,8 @@ class SalesOrderService:
         # Inline smart alert trigger for all affected products
         if self.alert_engine:
             for item in order.items:
-                try:
+                with contextlib.suppress(Exception):
                     self.alert_engine.evaluate_product_stock_inline(item.product_id)
-                except Exception:
-                    pass
 
         return self._to_response(saved)
 

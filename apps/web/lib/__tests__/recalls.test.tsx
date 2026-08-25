@@ -188,7 +188,7 @@ describe("Batch Recalls & Traceability UI", () => {
           batch_id: "batch-101",
           reason: "Seal integrity failure in batch testing",
           severity: "critical",
-        })
+        }),
       );
     });
   });

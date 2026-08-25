@@ -195,7 +195,7 @@ class ARAgingService:
         summary = ARAgingSummary()
         retailer_items: list[ARAgingBucketItem] = []
 
-        for r_id, r_info in retailer_data.items():
+        for r_info in retailer_data.values():
             curr = round(r_info["current"], 2)
             b1_30 = round(r_info["bucket_1_30"], 2)
             b31_60 = round(r_info["bucket_31_60"], 2)

@@ -79,7 +79,7 @@ export default function ProfitabilityAnalyticsPage() {
       const p = period === "all" ? "30d" : period;
       const [res, compRes] = await Promise.allSettled([
         apiClient.get<ProfitabilityResponse>(
-          `/analytics/profitability?group_by=${groupBy}&period=${period}`
+          `/analytics/profitability?group_by=${groupBy}&period=${period}`,
         ),
         apiClient.get<any>(`/analytics/period-comparisons?period=${p}`),
       ]);
@@ -100,7 +100,7 @@ export default function ProfitabilityAnalyticsPage() {
   const filteredAndSortedItems = useMemo(() => {
     if (!data?.items) return [];
 
-    let filtered = data.items.filter((item) => {
+    const filtered = data.items.filter((item) => {
       const q = searchQuery.toLowerCase().trim();
       if (!q) return true;
       return (
@@ -110,7 +110,7 @@ export default function ProfitabilityAnalyticsPage() {
       );
     });
 
-    return filtered.sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       let aVal = a[sortField];
       let bVal = b[sortField];
 
@@ -124,7 +124,7 @@ export default function ProfitabilityAnalyticsPage() {
       bVal = Number(bVal) || 0;
       return sortAsc ? aVal - bVal : bVal - aVal;
     });
-  }, [data?.items, searchQuery, sortField, sortAsc]);
+  }, [data, searchQuery, sortField, sortAsc]);
 
   const handleSort = (field: keyof ProfitabilityItem) => {
     if (sortField === field) {
@@ -528,7 +528,8 @@ export default function ProfitabilityAnalyticsPage() {
 
                         {/* Revenue */}
                         <td className="p-3.5 font-mono font-semibold text-[var(--text)]">
-                          ₹{item.total_revenue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          ₹
+                          {item.total_revenue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </td>
 
                         {/* Cost */}
@@ -539,7 +540,10 @@ export default function ProfitabilityAnalyticsPage() {
                         {/* Gross Profit INR */}
                         <td className="p-3.5 font-mono font-bold">
                           <span className={isPositive ? "text-emerald-400" : "text-rose-400"}>
-                            ₹{item.gross_margin_inr.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                            ₹
+                            {item.gross_margin_inr.toLocaleString("en-IN", {
+                              minimumFractionDigits: 2,
+                            })}
                           </span>
                         </td>
 

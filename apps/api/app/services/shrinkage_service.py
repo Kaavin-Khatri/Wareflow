@@ -8,7 +8,7 @@ Follows SOLID Principles:
 - Dependency Inversion: Injected with repository interfaces.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.models.inventory import StockMovementTypeEnum
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
@@ -42,7 +42,7 @@ class ShrinkageService:
             period: Time window ('7d', '30d', '90d', '12m', 'all').
             as_of: Reference timestamp (defaults to current UTC).
         """
-        now = as_of or datetime.now(timezone.utc)
+        now = as_of or datetime.now(UTC)
         cutoff_date = self._get_cutoff_date(now, period)
 
         products = self.product_repo.list_products(limit=1000)

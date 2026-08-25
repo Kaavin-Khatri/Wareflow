@@ -4,8 +4,7 @@ Provides unified comparison logic across all business KPIs (Revenue, Margin,
 Turnover, Stock Value, Shrinkage, Units Sold), avoiding ad-hoc calculations.
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Any
+from datetime import UTC, datetime, timedelta
 
 from app.repositories.interfaces.product_repository import (
     ProductRepositoryInterface,
@@ -54,10 +53,7 @@ class ComparisonService:
 
         # Period-over-period percentage calculation with zero-guard
         if prior_val == 0.0:
-            if current_val == 0.0:
-                delta_pct = 0.0
-            else:
-                delta_pct = 100.0 if current_val > 0.0 else -100.0
+            delta_pct = 0.0 if current_val == 0.0 else (100.0 if current_val > 0.0 else -100.0)
         else:
             delta_pct = round(((current_val - prior_val) / abs(prior_val)) * 100.0, 2)
 
@@ -126,7 +122,7 @@ class ComparisonService:
         self, period: str = "30d", as_of: datetime | None = None
     ) -> PeriodComparisonsResponse:
         """Compute full scorecard of comparative metrics across current and prior windows."""
-        now = as_of or datetime.now(timezone.utc)
+        now = as_of or datetime.now(UTC)
 
         # 1. Resolve date windows
         days_map = {"7d": 7, "30d": 30, "90d": 90, "12m": 365}
@@ -189,7 +185,7 @@ class ComparisonService:
                     except ValueError:
                         continue
                 if created.tzinfo is None:
-                    created = created.replace(tzinfo=timezone.utc)
+                    created = created.replace(tzinfo=UTC)
 
                 if start_dt <= created <= end_dt:
                     items = o.items if hasattr(o, "items") else o.get("items", [])
@@ -275,7 +271,7 @@ class ComparisonService:
                     except ValueError:
                         continue
                 if created.tzinfo is None:
-                    created = created.replace(tzinfo=timezone.utc)
+                    created = created.replace(tzinfo=UTC)
 
                 if start_dt <= created <= end_dt and m_type == "adjustment" and qty < 0:
                     p_id = (

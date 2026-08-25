@@ -33,9 +33,6 @@ import {
   FileDown,
 } from "lucide-react";
 
-
-
-
 export interface SalesOrderItem {
   id: string;
   so_id: string;
@@ -126,14 +123,11 @@ export default function SalesOrdersAdminPage() {
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const router = useRouter();
 
-
   // New order form state
   const [buyerType, setBuyerType] = useState<"retailer" | "customer">("retailer");
   const [selectedRetailerId, setSelectedRetailerId] = useState<string>("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
-  const [orderLines, setOrderLines] = useState<NewOrderLine[]>([
-    { product_id: "", qty: 1 },
-  ]);
+  const [orderLines, setOrderLines] = useState<NewOrderLine[]>([{ product_id: "", qty: 1 }]);
 
   async function loadData() {
     try {
@@ -153,7 +147,6 @@ export default function SalesOrdersAdminPage() {
       setLoading(false);
     }
   }
-
 
   useEffect(() => {
     let ignore = false;
@@ -175,8 +168,7 @@ export default function SalesOrdersAdminPage() {
   // Calculate pricing for current create order form
   const computedLines = useMemo(() => {
     const tier = selectedRetailer?.pricing_tier || "standard";
-    const discountMultiplier =
-      tier === "gold" ? 0.9 : tier === "silver" ? 0.95 : 1.0;
+    const discountMultiplier = tier === "gold" ? 0.9 : tier === "silver" ? 0.95 : 1.0;
 
     return orderLines.map((line) => {
       const prod = products.find((p) => p.id === line.product_id);
@@ -208,7 +200,7 @@ export default function SalesOrdersAdminPage() {
   const totalOrdersCount = orders.length;
   const draftOrdersCount = orders.filter((o) => o.status === "draft").length;
   const inFulfillmentCount = orders.filter((o) =>
-    ["confirmed", "packed", "shipped"].includes(o.status)
+    ["confirmed", "packed", "shipped"].includes(o.status),
   ).length;
   const deliveredCount = orders.filter((o) => o.status === "delivered").length;
   const totalRevenue = orders
@@ -241,7 +233,7 @@ export default function SalesOrdersAdminPage() {
   function handleLineChange(
     index: number,
     field: keyof NewOrderLine,
-    value: string | number | undefined
+    value: string | number | undefined,
   ) {
     const updated = [...orderLines];
     updated[index] = { ...updated[index], [field]: value };
@@ -283,7 +275,6 @@ export default function SalesOrdersAdminPage() {
       setSelectedRetailerId("");
       setSelectedCustomerId("");
     } catch (err: unknown) {
-
       const message = err instanceof Error ? err.message : String(err);
       setActionError(message || "Failed to create sales order.");
     } finally {
@@ -338,17 +329,21 @@ export default function SalesOrdersAdminPage() {
   }
 
   function handlePrintPickList(orderId: string) {
-    apiClient.downloadBlob(`/sales-orders/${orderId}/pick-list.pdf`, `pick-list-${orderId}.pdf`).catch(() => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      window.open(`${apiUrl}/sales-orders/${orderId}/pick-list.pdf`, "_blank");
-    });
+    apiClient
+      .downloadBlob(`/sales-orders/${orderId}/pick-list.pdf`, `pick-list-${orderId}.pdf`)
+      .catch(() => {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        window.open(`${apiUrl}/sales-orders/${orderId}/pick-list.pdf`, "_blank");
+      });
   }
 
   function handlePrintPackingSlip(orderId: string) {
-    apiClient.downloadBlob(`/sales-orders/${orderId}/packing-slip.pdf`, `packing-slip-${orderId}.pdf`).catch(() => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      window.open(`${apiUrl}/sales-orders/${orderId}/packing-slip.pdf`, "_blank");
-    });
+    apiClient
+      .downloadBlob(`/sales-orders/${orderId}/packing-slip.pdf`, `packing-slip-${orderId}.pdf`)
+      .catch(() => {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        window.open(`${apiUrl}/sales-orders/${orderId}/packing-slip.pdf`, "_blank");
+      });
   }
 
   function handlePrintSalesOrderPdf(orderId: string, soNumber: string) {
@@ -423,9 +418,7 @@ export default function SalesOrdersAdminPage() {
                   <Sparkles className="w-3 h-3" /> Silver (5% off)
                 </span>
               ) : (
-                <span className="text-[10px] text-[var(--text-muted)] font-mono">
-                  Standard
-                </span>
+                <span className="text-[10px] text-[var(--text-muted)] font-mono">Standard</span>
               )}
             </div>
           )}
@@ -507,7 +500,6 @@ export default function SalesOrdersAdminPage() {
           default:
             return <GlassBadge variant="neutral">{order.status}</GlassBadge>;
         }
-
       },
     },
     {
@@ -537,7 +529,6 @@ export default function SalesOrdersAdminPage() {
       ),
     },
   ];
-
 
   return (
     <AppLayout>
@@ -696,7 +687,10 @@ export default function SalesOrdersAdminPage() {
 
               {buyerType === "retailer" && (
                 <div>
-                  <label htmlFor="retailer-select" className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+                  <label
+                    htmlFor="retailer-select"
+                    className="block text-xs font-medium text-[var(--text-muted)] mb-1"
+                  >
                     Select Retailer *
                   </label>
                   <select
@@ -718,7 +712,10 @@ export default function SalesOrdersAdminPage() {
 
               {buyerType === "customer" && (
                 <div>
-                  <label htmlFor="customer-select" className="block text-xs font-medium text-[var(--text-muted)] mb-1">
+                  <label
+                    htmlFor="customer-select"
+                    className="block text-xs font-medium text-[var(--text-muted)] mb-1"
+                  >
                     Select Walk-In Customer
                   </label>
                   <select
@@ -743,12 +740,14 @@ export default function SalesOrdersAdminPage() {
               <div className="p-3 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] text-xs space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-[var(--text)]">
-                    {customers.find((c) => c.id === selectedCustomerId)?.name || "Direct Walk-In Buyer"}
+                    {customers.find((c) => c.id === selectedCustomerId)?.name ||
+                      "Direct Walk-In Buyer"}
                   </span>
                   <GlassBadge variant="success">STANDARD PRICING</GlassBadge>
                 </div>
                 <p className="text-[11px] text-[var(--text-muted)] pt-0.5">
-                  Direct cash/UPI sale — skips credit limit verification, applies standard wholesale pricing, and deducts FIFO inventory immediately on confirmation.
+                  Direct cash/UPI sale — skips credit limit verification, applies standard wholesale
+                  pricing, and deducts FIFO inventory immediately on confirmation.
                 </p>
               </div>
             )}
@@ -757,16 +756,14 @@ export default function SalesOrdersAdminPage() {
             {buyerType === "retailer" && selectedRetailer && (
               <div className="p-3 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] text-xs space-y-1">
                 <div className="flex items-center justify-between">
-                  <span className="font-semibold text-[var(--text)]">
-                    {selectedRetailer.name}
-                  </span>
+                  <span className="font-semibold text-[var(--text)]">{selectedRetailer.name}</span>
                   <GlassBadge
                     variant={
                       selectedRetailer.pricing_tier === "gold"
                         ? "warning"
                         : selectedRetailer.pricing_tier === "silver"
-                        ? "neutral"
-                        : "neutral"
+                          ? "neutral"
+                          : "neutral"
                     }
                   >
                     {selectedRetailer.pricing_tier.toUpperCase()} TIER
@@ -789,13 +786,12 @@ export default function SalesOrdersAdminPage() {
                     Available: ₹
                     {Math.max(
                       0,
-                      selectedRetailer.credit_limit - selectedRetailer.credit_balance
+                      selectedRetailer.credit_limit - selectedRetailer.credit_balance,
                     ).toLocaleString("en-IN")}
                   </span>
                 </div>
               </div>
             )}
-
 
             {/* Line Items Builder */}
             <div className="space-y-2 pt-2">
@@ -871,9 +867,7 @@ export default function SalesOrdersAdminPage() {
 
             {/* Total Summary & Credit Warning */}
             <div className="p-3 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] flex items-center justify-between">
-              <span className="text-xs font-medium text-[var(--text-muted)]">
-                Estimated Total:
-              </span>
+              <span className="text-xs font-medium text-[var(--text-muted)]">Estimated Total:</span>
               <span className="text-base font-bold font-mono text-emerald-400">
                 ₹{estimatedOrderTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </span>
@@ -883,7 +877,9 @@ export default function SalesOrdersAdminPage() {
               <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-400 flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>
-                  Warning: This order total (₹{estimatedOrderTotal.toFixed(2)}) exceeds retailer available credit. Order will be created as Draft and confirmation will be blocked until credit is settled.
+                  Warning: This order total (₹{estimatedOrderTotal.toFixed(2)}) exceeds retailer
+                  available credit. Order will be created as Draft and confirmation will be blocked
+                  until credit is settled.
                 </span>
               </div>
             )}
@@ -941,7 +937,10 @@ export default function SalesOrdersAdminPage() {
                 <div>
                   <span className="text-[var(--text-muted)] block">Total Amount</span>
                   <span className="font-bold text-emerald-400 font-mono text-sm">
-                    ₹{Number(selectedOrder.total_amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    ₹
+                    {Number(selectedOrder.total_amount).toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                    })}
                   </span>
                 </div>
               </div>
@@ -959,27 +958,51 @@ export default function SalesOrdersAdminPage() {
                         selectedOrderDelivery.status === "delivered"
                           ? "success"
                           : selectedOrderDelivery.status === "out_for_delivery"
-                          ? "warning"
-                          : selectedOrderDelivery.status === "failed"
-                          ? "error"
-                          : "accent"
+                            ? "warning"
+                            : selectedOrderDelivery.status === "failed"
+                              ? "error"
+                              : "accent"
                       }
                     >
                       {String(selectedOrderDelivery.status).replace(/_/g, " ").toUpperCase()}
                     </GlassBadge>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-slate-300 font-mono">
-                    <div>Driver: <span className="text-white">{selectedOrderDelivery.driver_name || "—"}</span></div>
-                    <div>Vehicle: <span className="text-white">{selectedOrderDelivery.vehicle_no || "—"}</span></div>
+                    <div>
+                      Driver:{" "}
+                      <span className="text-white">{selectedOrderDelivery.driver_name || "—"}</span>
+                    </div>
+                    <div>
+                      Vehicle:{" "}
+                      <span className="text-white">{selectedOrderDelivery.vehicle_no || "—"}</span>
+                    </div>
                     {selectedOrderDelivery.dispatched_at && (
-                      <div>Dispatched: <span className="text-white">{new Date(selectedOrderDelivery.dispatched_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
+                      <div>
+                        Dispatched:{" "}
+                        <span className="text-white">
+                          {new Date(selectedOrderDelivery.dispatched_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
                     )}
                     {selectedOrderDelivery.delivered_at && (
-                      <div>Delivered: <span className="text-white">{new Date(selectedOrderDelivery.delivered_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>
+                      <div>
+                        Delivered:{" "}
+                        <span className="text-white">
+                          {new Date(selectedOrderDelivery.delivered_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
                     )}
                   </div>
                   {selectedOrderDelivery.notes && (
-                    <p className={`text-[11px] p-2 rounded-lg ${selectedOrderDelivery.status === "failed" ? "bg-rose-500/10 text-rose-300 border border-rose-500/20" : "bg-black/20 text-slate-300"}`}>
+                    <p
+                      className={`text-[11px] p-2 rounded-lg ${selectedOrderDelivery.status === "failed" ? "bg-rose-500/10 text-rose-300 border border-rose-500/20" : "bg-black/20 text-slate-300"}`}
+                    >
                       {selectedOrderDelivery.notes}
                     </p>
                   )}
@@ -995,16 +1018,22 @@ export default function SalesOrdersAdminPage() {
                       <span>Statistical Anomaly Advisory (3σ Threshold)</span>
                     </div>
                     <GlassBadge variant="warning">
-                      {selectedOrder.unusual_items_count} UNUSUAL ITEM{selectedOrder.unusual_items_count === 1 ? "" : "S"}
+                      {selectedOrder.unusual_items_count} UNUSUAL ITEM
+                      {selectedOrder.unusual_items_count === 1 ? "" : "S"}
                     </GlassBadge>
                   </div>
                   <p className="text-[11px] text-amber-200/80 leading-relaxed">
-                    This order contains line items significantly exceeding historical buyer purchase volumes (&gt; 3σ standard deviation). This is an advisory alert for warehouse staff and does not block confirmation.
+                    This order contains line items significantly exceeding historical buyer purchase
+                    volumes (&gt; 3σ standard deviation). This is an advisory alert for warehouse
+                    staff and does not block confirmation.
                   </p>
                   {selectedOrder.anomaly_warnings && selectedOrder.anomaly_warnings.length > 0 && (
                     <div className="pt-1 space-y-1">
                       {selectedOrder.anomaly_warnings.map((warn, i) => (
-                        <div key={i} className="text-[11px] font-mono text-amber-400 flex items-center gap-1.5">
+                        <div
+                          key={i}
+                          className="text-[11px] font-mono text-amber-400 flex items-center gap-1.5"
+                        >
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
                           <span>{warn}</span>
                         </div>
@@ -1050,7 +1079,9 @@ export default function SalesOrdersAdminPage() {
                             {it.product_sku || "—"}
                           </td>
                           <td className="p-2.5 text-center font-mono font-semibold">{it.qty}</td>
-                          <td className="p-2.5 text-right font-mono">₹{it.unit_price.toFixed(2)}</td>
+                          <td className="p-2.5 text-right font-mono">
+                            ₹{it.unit_price.toFixed(2)}
+                          </td>
                           <td className="p-2.5 text-right font-mono font-bold text-emerald-400">
                             ₹{(it.qty * it.unit_price).toFixed(2)}
                           </td>
@@ -1124,7 +1155,6 @@ export default function SalesOrdersAdminPage() {
                     </>
                   )}
 
-
                   {selectedOrder.status === "packed" && (
                     <GlassButton
                       type="button"
@@ -1153,7 +1183,9 @@ export default function SalesOrdersAdminPage() {
                         type="button"
                         variant="secondary"
                         size="sm"
-                        onClick={() => handlePrintSalesOrderPdf(selectedOrder.id, selectedOrder.so_number)}
+                        onClick={() =>
+                          handlePrintSalesOrderPdf(selectedOrder.id, selectedOrder.so_number)
+                        }
                       >
                         <FileDown className="w-3.5 h-3.5 mr-1 text-sky-400" /> Export PDF
                       </GlassButton>
@@ -1173,7 +1205,8 @@ export default function SalesOrdersAdminPage() {
                         size="sm"
                         onClick={() => handlePrintPackingSlip(selectedOrder.id)}
                       >
-                        <FileSpreadsheet className="w-3.5 h-3.5 mr-1 text-emerald-400" /> Print Packing Slip
+                        <FileSpreadsheet className="w-3.5 h-3.5 mr-1 text-emerald-400" /> Print
+                        Packing Slip
                       </GlassButton>
                     </>
                   )}
@@ -1191,14 +1224,11 @@ export default function SalesOrdersAdminPage() {
                     </GlassButton>
                   )}
                 </div>
-
               </div>
             </div>
           )}
         </GlassModal>
-
       </div>
     </AppLayout>
   );
 }
-

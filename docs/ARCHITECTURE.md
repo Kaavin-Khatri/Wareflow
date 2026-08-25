@@ -3,7 +3,7 @@
 > **System**: WareFlow FMCG & Agro Wholesale ERP  
 > **Backend Architecture**: Layered Hexagonal / Clean Architecture (FastAPI + SQLAlchemy + Supabase Postgres)  
 > **Frontend Architecture**: Server/Client Component Split (Next.js 16 App Router + Tailwind 4 + Motion Layer)  
-> **Adherence**: 100% Strict SOLID Principles Compliance across all 9 core wholesale domains  
+> **Adherence**: 100% Strict SOLID Principles Compliance across all 9 core wholesale domains
 
 ---
 
@@ -48,20 +48,25 @@ flowchart TD
 ## 2. SOLID Principles in Practice
 
 ### S — Single Responsibility Principle (SRP)
+
 - **Routers (`app/api/routers/`)**: Pure HTTP adapters responsible solely for request deserialization (Pydantic), permission checking (`Depends(require_permission)`), and response serialization. **Zero database queries, zero business arithmetic.**
 - **Services (`app/services/`)**: Encapsulate end-to-end business workflows (FIFO batch stock depletion, GST tax calculations, payment overpay checks, anomaly detection).
 - **Repositories (`app/repositories/`)**: Encapsulate SQL queries, joins, and database mutations.
 
 ### O — Open/Closed Principle (OCP)
+
 Core domains are open for extension without editing existing source files. Verified by the permanent CI test suite [`apps/api/tests/test_solid_ocp_proofs.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_solid_ocp_proofs.py).
 
 ### L — Liskov Substitution Principle (LSP)
+
 Every repository implementation (`SQLAlchemyProductRepository`, `SQLAlchemyInvoiceRepository`, `MockInvoiceRepo`) fully satisfies its parent abstract interface without throwing `NotImplementedError` or altering contract semantics.
 
 ### I — Interface Segregation Principle (ISP)
+
 Interfaces are small, focused, and role-specific. For example, `ProfileRepository`, `RetailerUserRepository`, and `PaymentRepositoryInterface` define only the specific queries needed by their respective domains.
 
 ### D — Dependency Inversion Principle (DIP)
+
 Services code strictly against abstract interfaces defined in `app/repositories/interfaces/`. Concrete implementations are instantiated and wired via the centralized dependency injection registry in `app/core/di.py`. **Zero API routers import a database repository directly.**
 
 ---
@@ -71,6 +76,7 @@ Services code strictly against abstract interfaces defined in `app/repositories/
 The permanent test suite [`apps/api/tests/test_solid_ocp_proofs.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_solid_ocp_proofs.py) proves that key subsystems are genuinely swappable:
 
 ### Proof 1: Swappable Pricing Strategy (Wholesale Volume Discount Plugin)
+
 ```python
 class PricingStrategy(ABC):
     @abstractmethod
@@ -87,6 +93,7 @@ class VolumeDiscountPricingPlugin(PricingStrategy):
 ```
 
 ### Proof 2: Swappable Notification Channel (Webhook / Slack Plugin)
+
 ```python
 class NotificationChannel(ABC):
     @abstractmethod
@@ -100,6 +107,7 @@ class WebhookNotificationChannel(NotificationChannel):
 ```
 
 ### Proof 3: Swappable Statistical Demand Forecasting Engine
+
 ```python
 class ForecastAlgorithm(ABC):
     @abstractmethod
@@ -113,6 +121,7 @@ class ExponentialSmoothingForecastPlugin(ForecastAlgorithm):
 ```
 
 ### Proof 4: Dynamic RBAC Role & Permission Extension
+
 ```python
 # Custom business roles registered at runtime without editing auth middleware:
 rbac_engine.register_custom_role(
@@ -125,11 +134,11 @@ rbac_engine.register_custom_role(
 
 ## 4. Architectural Quality Assurance Matrix
 
-| Layer | Responsibility | DIP / SRP Verification |
-| :--- | :--- | :---: |
-| `apps/web/app/*` | Next.js App Router UI & Liquid Glass Design | ✅ Separated Server / Client Components |
-| `apps/api/app/api/routers/*` | FastAPI Transport & RBAC Guards | ✅ **0 direct repository imports** (Verified by grep) |
-| `apps/api/app/services/*` | Pure Business Domain Logic | ✅ Injected interfaces only |
-| `apps/api/app/repositories/interfaces/*` | Abstract Repository Specifications | ✅ Segregated ISP interfaces |
-| `apps/api/app/repositories/*` | SQLAlchemy 2.0 DB Implementation | ✅ Swappable for mock repos in tests |
-| `apps/api/tests/test_solid_ocp_proofs.py` | Permanent CI Strategy Proofs | ✅ **100% Green (4/4 passed)** |
+| Layer                                     | Responsibility                              |                DIP / SRP Verification                 |
+| :---------------------------------------- | :------------------------------------------ | :---------------------------------------------------: |
+| `apps/web/app/*`                          | Next.js App Router UI & Liquid Glass Design |        ✅ Separated Server / Client Components        |
+| `apps/api/app/api/routers/*`              | FastAPI Transport & RBAC Guards             | ✅ **0 direct repository imports** (Verified by grep) |
+| `apps/api/app/services/*`                 | Pure Business Domain Logic                  |              ✅ Injected interfaces only              |
+| `apps/api/app/repositories/interfaces/*`  | Abstract Repository Specifications          |             ✅ Segregated ISP interfaces              |
+| `apps/api/app/repositories/*`             | SQLAlchemy 2.0 DB Implementation            |         ✅ Swappable for mock repos in tests          |
+| `apps/api/tests/test_solid_ocp_proofs.py` | Permanent CI Strategy Proofs                |            ✅ **100% Green (4/4 passed)**             |

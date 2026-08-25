@@ -24,7 +24,8 @@ export default function OfflinePage() {
         <div className="space-y-2">
           <h1 className="text-xl font-bold text-[var(--text)]">You are currently offline</h1>
           <p className="text-xs text-[var(--text-muted)] leading-relaxed">
-            Warehouse connectivity is unavailable. You can continue browsing cached inventory and queuing floor operations.
+            Warehouse connectivity is unavailable. You can continue browsing cached inventory and
+            queuing floor operations.
           </p>
         </div>
 

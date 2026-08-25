@@ -19,7 +19,7 @@ self.addEventListener("install", (event) => {
       return cache.addAll(STATIC_ASSETS).catch((err) => {
         console.warn("[SW] Pre-caching partial failure:", err);
       });
-    })
+    }),
   );
   self.skipWaiting();
 });
@@ -29,11 +29,9 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
+        cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)),
       );
-    })
+    }),
   );
   self.clients.claim();
 });
@@ -65,8 +63,11 @@ self.addEventListener("fetch", (event) => {
             return cachedResponse;
           }
           const offlinePage = await caches.match("/offline");
-          return offlinePage || new Response("Offline", { status: 503, headers: { "Content-Type": "text/html" } });
-        })
+          return (
+            offlinePage ||
+            new Response("Offline", { status: 503, headers: { "Content-Type": "text/html" } })
+          );
+        }),
     );
     return;
   }
@@ -88,7 +89,7 @@ self.addEventListener("fetch", (event) => {
           }
           return networkResponse;
         });
-      })
+      }),
     );
     return;
   }
@@ -112,13 +113,11 @@ self.addEventListener("fetch", (event) => {
           .catch(() => cachedResponse); // Return cached on network error
 
         return cachedResponse || fetchPromise;
-      })
+      }),
     );
     return;
   }
 
   // Default: Network with cache fallback
-  event.respondWith(
-    fetch(request).catch(() => caches.match(request))
-  );
+  event.respondWith(fetch(request).catch(() => caches.match(request)));
 });

@@ -136,7 +136,7 @@ describe("Step 13.4 Retailer Restock Subscriptions & Alerts UI Suite", () => {
             {c.label}
           </button>
         ))}
-      </div>
+      </div>,
     );
 
     expect(screen.getByTestId("channel-whatsapp").textContent).toBe("WhatsApp");

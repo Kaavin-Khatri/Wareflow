@@ -59,7 +59,7 @@ export function SyncQueueModal({ isOpen, onClose }: SyncQueueModalProps) {
       const res = await flushOfflineQueue();
       if (res.conflicts > 0) {
         setSyncResult(
-          `Sync complete: ${res.synced} succeeded, ${res.conflicts} conflict(s) require review.`
+          `Sync complete: ${res.synced} succeeded, ${res.conflicts} conflict(s) require review.`,
         );
       } else if (res.failed > 0) {
         setSyncResult(`Sync complete: ${res.synced} succeeded, ${res.failed} network errors.`);
@@ -105,7 +105,9 @@ export function SyncQueueModal({ isOpen, onClose }: SyncQueueModalProps) {
             </div>
             <div className="h-6 w-px bg-[var(--border)]" />
             <div>
-              <span className="text-[var(--text-muted)] text-[10px] uppercase block">Conflicts</span>
+              <span className="text-[var(--text-muted)] text-[10px] uppercase block">
+                Conflicts
+              </span>
               <span className="text-rose-400 font-bold text-sm">{conflictCount}</span>
             </div>
             <div className="h-6 w-px bg-[var(--border)]" />
@@ -171,8 +173,8 @@ export function SyncQueueModal({ isOpen, onClose }: SyncQueueModalProps) {
                   item.status === "conflict"
                     ? "bg-rose-950/20 border-rose-500/40 shadow-sm"
                     : item.status === "completed"
-                    ? "bg-emerald-950/10 border-emerald-500/20 opacity-80"
-                    : "bg-[var(--glass-bg)] border-[var(--border)]"
+                      ? "bg-emerald-950/10 border-emerald-500/20 opacity-80"
+                      : "bg-[var(--glass-bg)] border-[var(--border)]"
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -182,13 +184,17 @@ export function SyncQueueModal({ isOpen, onClose }: SyncQueueModalProps) {
                         item.action_type === "stock_adjustment"
                           ? "bg-purple-500/20 text-purple-400"
                           : item.action_type === "stock_transfer"
-                          ? "bg-cyan-500/20 text-cyan-400"
-                          : "bg-amber-500/20 text-amber-400"
+                            ? "bg-cyan-500/20 text-cyan-400"
+                            : "bg-amber-500/20 text-amber-400"
                       }`}
                     >
                       {item.action_type === "stock_adjustment" && <Layers className="w-4 h-4" />}
-                      {item.action_type === "stock_transfer" && <ArrowRightLeft className="w-4 h-4" />}
-                      {item.action_type === "barcode_scan_lookup" && <Barcode className="w-4 h-4" />}
+                      {item.action_type === "stock_transfer" && (
+                        <ArrowRightLeft className="w-4 h-4" />
+                      )}
+                      {item.action_type === "barcode_scan_lookup" && (
+                        <Barcode className="w-4 h-4" />
+                      )}
                     </div>
 
                     <div className="space-y-1">

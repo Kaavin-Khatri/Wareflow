@@ -1,3 +1,4 @@
+import contextlib
 from datetime import datetime
 from typing import Any
 
@@ -321,13 +322,11 @@ class PurchaseOrderService:
         updated = self.po_repo.update_status(po_id, POStatusEnum.ORDERED)
 
         if self.supplier_portal_service and updated:
-            try:
+            with contextlib.suppress(Exception):
                 self.supplier_portal_service.generate_access_token(
                     supplier_id=updated.supplier_id,
                     purchase_order_id=updated.id,
                 )
-            except Exception:
-                pass
 
         if self.audit_service and actor_id and updated:
             self.audit_service.log_action(

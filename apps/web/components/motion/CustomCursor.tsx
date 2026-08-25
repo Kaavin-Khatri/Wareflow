@@ -105,12 +105,8 @@ export function CustomCursor() {
           y: smoothY,
           opacity: isVisible ? 1 : 0,
           scale: isHovered ? 1.6 : isClicked ? 0.85 : 1,
-          borderColor: isHovered
-            ? "var(--accent)"
-            : "rgba(255, 255, 255, 0.25)",
-          backgroundColor: isHovered
-            ? "var(--accent-subtle)"
-            : "transparent",
+          borderColor: isHovered ? "var(--accent)" : "rgba(255, 255, 255, 0.25)",
+          backgroundColor: isHovered ? "var(--accent-subtle)" : "transparent",
         }}
       />
     </div>

@@ -164,13 +164,15 @@ describe("Step 17.2 & 17.3: Retail Lead Discovery Map UI & Contact/Convert", () 
           lead={lead}
           onClose={onClose}
           onSuccess={onSuccess}
-        />
+        />,
       );
 
       // Verify pre-filled values
       expect(screen.getByDisplayValue("Ganesh Gruh Udyog")).toBeDefined();
       expect(screen.getByDisplayValue("+91 98250 12345")).toBeDefined();
-      expect(screen.getByDisplayValue("Paldi Cross Roads, Ahmedabad, Gujarat 380007")).toBeDefined();
+      expect(
+        screen.getByDisplayValue("Paldi Cross Roads, Ahmedabad, Gujarat 380007"),
+      ).toBeDefined();
 
       // Type in contact person and GSTIN
       const contactPersonInput = screen.getByPlaceholderText(/Ramesh-bhai Patel/i);
@@ -203,13 +205,7 @@ describe("Step 17.2 & 17.3: Retail Lead Discovery Map UI & Contact/Convert", () 
   describe("LeadMap Component", () => {
     it("renders pins for all leads and highlights new ones", () => {
       const onSelectLead = vi.fn();
-      render(
-        <LeadMap
-          leads={MOCK_LEADS}
-          selectedLeadId={null}
-          onSelectLead={onSelectLead}
-        />
-      );
+      render(<LeadMap leads={MOCK_LEADS} selectedLeadId={null} onSelectLead={onSelectLead} />);
 
       // In fallback test environment, schematic map renders pins with testids
       const pin1 = screen.getByTestId("map-pin-lead-1");
@@ -247,7 +243,7 @@ describe("Step 17.2 & 17.3: Retail Lead Discovery Map UI & Contact/Convert", () 
           onSelectCategory={onSelectCategory}
           contactedFilter="all"
           onSelectContactedFilter={onSelectContactedFilter}
-        />
+        />,
       );
 
       // Only Ganesh matches search query "Ganesh"
@@ -271,7 +267,7 @@ describe("Step 17.2 & 17.3: Retail Lead Discovery Map UI & Contact/Convert", () 
           onSelectCategory={vi.fn()}
           contactedFilter="all"
           onSelectContactedFilter={vi.fn()}
-        />
+        />,
       );
 
       // Only lead-1 is is_new=true and uncontacted
@@ -296,7 +292,7 @@ describe("Step 17.2 & 17.3: Retail Lead Discovery Map UI & Contact/Convert", () 
           onSelectCategory={vi.fn()}
           contactedFilter="converted"
           onSelectContactedFilter={vi.fn()}
-        />
+        />,
       );
 
       // Only lead-3 is converted
@@ -374,4 +370,3 @@ describe("Step 17.2 & 17.3: Retail Lead Discovery Map UI & Contact/Convert", () 
     });
   });
 });
-

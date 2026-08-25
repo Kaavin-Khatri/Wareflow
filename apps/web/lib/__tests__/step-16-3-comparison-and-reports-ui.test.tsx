@@ -223,7 +223,7 @@ describe("Step 16.3: ComparisonBadge Component Tests", () => {
         priorValue={1000}
         higherIsBetter={true}
         periodLabel="vs prior month"
-      />
+      />,
     );
 
     expect(screen.getByText("+15.5%")).toBeDefined();
@@ -238,7 +238,7 @@ describe("Step 16.3: ComparisonBadge Component Tests", () => {
         currentValue={916}
         priorValue={1000}
         higherIsBetter={true}
-      />
+      />,
     );
 
     expect(screen.getByText("-8.4%")).toBeDefined();
@@ -254,7 +254,7 @@ describe("Step 16.3: ComparisonBadge Component Tests", () => {
         currentValue={750}
         priorValue={1000}
         higherIsBetter={false}
-      />
+      />,
     );
     expect(screen.getByText("-25.0%")).toBeDefined();
     const badgeDec = containerDecrease.querySelector("span");
@@ -267,7 +267,7 @@ describe("Step 16.3: ComparisonBadge Component Tests", () => {
         currentValue={1300}
         priorValue={1000}
         higherIsBetter={false}
-      />
+      />,
     );
     expect(screen.getByText("+30.0%")).toBeDefined();
     const badgeInc = containerIncrease.querySelector("span");
@@ -298,7 +298,7 @@ describe("Step 16.3: ComparisonBadge Component Tests", () => {
         showPriorValue={true}
         periodLabel="vs last quarter"
         formatter={(v) => `₹${v.toLocaleString()}`}
-      />
+      />,
     );
 
     expect(screen.getByText("vs last quarter")).toBeDefined();
@@ -324,9 +324,7 @@ describe("Step 16.3: Central Analytics Landing Hub Tests", () => {
     render(<AnalyticsLandingPage />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Analytics & Business Intelligence")
-      ).toBeDefined();
+      expect(screen.getByText("Analytics & Business Intelligence")).toBeDefined();
     });
 
     // Check all 8 module titles
@@ -364,15 +362,11 @@ describe("Step 16.3: Central Analytics Landing Hub Tests", () => {
     render(<AnalyticsLandingPage />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Weekly Executive Summary (17 Aug – 24 Aug 2026)")
-      ).toBeDefined();
+      expect(screen.getByText("Weekly Executive Summary (17 Aug – 24 Aug 2026)")).toBeDefined();
     });
 
     // Narrative text
-    expect(
-      screen.getByText(/During the week of 17 Aug – 24 Aug 2026/i)
-    ).toBeDefined();
+    expect(screen.getByText(/During the week of 17 Aug – 24 Aug 2026/i)).toBeDefined();
 
     // Alerts
     expect(screen.getByText("Top Revenue Driver")).toBeDefined();
@@ -399,7 +393,7 @@ describe("Step 16.3: Central Analytics Landing Hub Tests", () => {
     await waitFor(() => {
       expect(apiClient.downloadBlob).toHaveBeenCalledWith(
         "/analytics/weekly-report/pdf",
-        "WareFlow_Weekly_Executive_Report_2026-08-17.pdf"
+        "WareFlow_Weekly_Executive_Report_2026-08-17.pdf",
       );
     });
   });
@@ -422,15 +416,10 @@ describe("Step 16.3: Central Analytics Landing Hub Tests", () => {
     fireEvent.click(sendBtn);
 
     await waitFor(() => {
-      expect(apiClient.post).toHaveBeenCalledWith(
-        "/analytics/weekly-report/send-now",
-        {
-          channels: ["email", "whatsapp", "in_app"],
-        }
-      );
-      expect(
-        screen.getByText(/Report dispatched successfully to 2 recipient\(s\)/i)
-      ).toBeDefined();
+      expect(apiClient.post).toHaveBeenCalledWith("/analytics/weekly-report/send-now", {
+        channels: ["email", "whatsapp", "in_app"],
+      });
+      expect(screen.getByText(/Report dispatched successfully to 2 recipient\(s\)/i)).toBeDefined();
     });
   });
 });

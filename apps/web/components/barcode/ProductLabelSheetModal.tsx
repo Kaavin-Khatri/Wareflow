@@ -20,11 +20,7 @@ export interface ProductLabelSheetModalProps {
   product: PrintableProduct;
 }
 
-export function ProductLabelSheetModal({
-  isOpen,
-  onClose,
-  product,
-}: ProductLabelSheetModalProps) {
+export function ProductLabelSheetModal({ isOpen, onClose, product }: ProductLabelSheetModalProps) {
   const [copies, setCopies] = useState<number>(24);
   const [sheetLayout, setSheetLayout] = useState<"a4-24" | "a4-14" | "single">("a4-24");
   const [showPrice, setShowPrice] = useState<boolean>(true);
@@ -131,8 +127,8 @@ export function ProductLabelSheetModal({
               sheetLayout === "a4-24"
                 ? "grid-cols-2 sm:grid-cols-3 print:grid-cols-3"
                 : sheetLayout === "a4-14"
-                ? "grid-cols-1 sm:grid-cols-2 print:grid-cols-2"
-                : "grid-cols-1 max-w-xs mx-auto"
+                  ? "grid-cols-1 sm:grid-cols-2 print:grid-cols-2"
+                  : "grid-cols-1 max-w-xs mx-auto"
             }`}
           >
             {Array.from({ length: activeCount }).map((_, idx) => (
@@ -163,9 +159,7 @@ export function ProductLabelSheetModal({
                 <div className="flex items-center justify-between text-[9px] font-mono text-slate-600 px-1 border-t border-slate-200 pt-0.5">
                   {showSku ? <span>SKU: {product.sku}</span> : <span />}
                   {showPrice && product.wholesale_price !== undefined ? (
-                    <span className="font-bold text-slate-900">
-                      ₹{product.wholesale_price}
-                    </span>
+                    <span className="font-bold text-slate-900">₹{product.wholesale_price}</span>
                   ) : (
                     <span />
                   )}

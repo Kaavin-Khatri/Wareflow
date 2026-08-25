@@ -42,7 +42,7 @@ interface OrderPlacementResult {
 export default function PortalCartPage() {
   const router = useRouter();
   const [items, setItems] = useState<PortalCartItem[]>(() =>
-    typeof window !== "undefined" ? getCartItems() : []
+    typeof window !== "undefined" ? getCartItems() : [],
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderResult, setOrderResult] = useState<OrderPlacementResult | null>(null);

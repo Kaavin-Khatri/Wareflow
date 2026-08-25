@@ -66,7 +66,10 @@ export default function ProductImportPage() {
 
   const handleDownloadTemplate = async () => {
     try {
-      await apiClient.downloadBlob("/products/template.csv", "wareflow_product_import_template.csv");
+      await apiClient.downloadBlob(
+        "/products/template.csv",
+        "wareflow_product_import_template.csv",
+      );
     } catch (err: any) {
       setError(err?.message || "Failed to download CSV template.");
     }
@@ -127,7 +130,7 @@ export default function ProductImportPage() {
 
     if (
       !confirm(
-        `Are you sure you want to commit this import? This will create ${previewData.summary.create_count} new product(s) and update ${previewData.summary.update_count} existing product(s).`
+        `Are you sure you want to commit this import? This will create ${previewData.summary.create_count} new product(s) and update ${previewData.summary.update_count} existing product(s).`,
       )
     ) {
       return;
@@ -140,7 +143,10 @@ export default function ProductImportPage() {
     formData.append("file", selectedFile);
 
     try {
-      const res = await apiClient.upload<ImportResponse>("/products/import?dry_run=false", formData);
+      const res = await apiClient.upload<ImportResponse>(
+        "/products/import?dry_run=false",
+        formData,
+      );
       setCommittedData(res);
       setPreviewData(null);
     } catch (err: any) {
@@ -173,7 +179,8 @@ export default function ProductImportPage() {
                 Bulk Product Import & Export
               </h1>
               <p className="text-xs text-[var(--text-muted)]">
-                Onboard supplier price lists, update wholesale catalog prices, and export SKUs via CSV.
+                Onboard supplier price lists, update wholesale catalog prices, and export SKUs via
+                CSV.
               </p>
             </div>
           </div>
@@ -215,12 +222,23 @@ export default function ProductImportPage() {
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <div className="space-y-1">
-              <h2 className="text-lg font-bold text-[var(--text)]">Product Catalog Import Successful</h2>
+              <h2 className="text-lg font-bold text-[var(--text)]">
+                Product Catalog Import Successful
+              </h2>
               <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto">
                 Processed {committedData.summary.total_rows} line items:{" "}
-                <span className="font-bold text-emerald-400">{committedData.summary.create_count} created</span>,{" "}
-                <span className="font-bold text-cyan-400">{committedData.summary.update_count} updated</span>,{" "}
-                <span className="font-mono text-rose-400">{committedData.summary.reject_count} rejected</span>.
+                <span className="font-bold text-emerald-400">
+                  {committedData.summary.create_count} created
+                </span>
+                ,{" "}
+                <span className="font-bold text-cyan-400">
+                  {committedData.summary.update_count} updated
+                </span>
+                ,{" "}
+                <span className="font-mono text-rose-400">
+                  {committedData.summary.reject_count} rejected
+                </span>
+                .
               </p>
             </div>
             <div className="flex items-center justify-center gap-3 pt-2">
@@ -236,7 +254,11 @@ export default function ProductImportPage() {
                 Import Another CSV
               </button>
               <Link href="/admin/products">
-                <GlassButton variant="primary" size="md" className="font-bold flex items-center gap-1.5 shadow-lg">
+                <GlassButton
+                  variant="primary"
+                  size="md"
+                  className="font-bold flex items-center gap-1.5 shadow-lg"
+                >
                   <span>View Product Catalog</span>
                   <ArrowRight className="w-4 h-4" />
                 </GlassButton>
@@ -458,7 +480,10 @@ export default function ProductImportPage() {
                   <tbody className="divide-y divide-[var(--border)]">
                     {filteredRows.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="py-8 text-center text-xs text-[var(--text-muted)]">
+                        <td
+                          colSpan={10}
+                          className="py-8 text-center text-xs text-[var(--text-muted)]"
+                        >
                           No rows matching the current filter.
                         </td>
                       </tr>
@@ -470,8 +495,8 @@ export default function ProductImportPage() {
                             row.action === "reject"
                               ? "bg-rose-500/5"
                               : row.action === "create"
-                              ? "bg-emerald-500/5"
-                              : "bg-cyan-500/5"
+                                ? "bg-emerald-500/5"
+                                : "bg-cyan-500/5"
                           }`}
                         >
                           <td className="py-2 px-3 text-center font-mono text-[11px] text-[var(--text-muted)]">
@@ -512,7 +537,9 @@ export default function ProductImportPage() {
                               ? `₹${row.cost_price.toFixed(2)}`
                               : "—"}
                           </td>
-                          <td className="py-2 px-3 text-[var(--text-muted)]">{row.category_name || "—"}</td>
+                          <td className="py-2 px-3 text-[var(--text-muted)]">
+                            {row.category_name || "—"}
+                          </td>
                           <td className="py-2 px-3 font-mono text-[11px] text-[var(--text-muted)]">
                             {row.unit || "Piece"}
                           </td>
@@ -523,7 +550,10 @@ export default function ProductImportPage() {
                             {row.errors.length > 0 ? (
                               <div className="space-y-0.5">
                                 {row.errors.map((err, i) => (
-                                  <div key={i} className="text-[11px] text-rose-400 flex items-center gap-1 font-medium">
+                                  <div
+                                    key={i}
+                                    className="text-[11px] text-rose-400 flex items-center gap-1 font-medium"
+                                  >
                                     <AlertTriangle className="w-3 h-3 shrink-0" />
                                     <span>{err}</span>
                                   </div>

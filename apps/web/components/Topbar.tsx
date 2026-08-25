@@ -4,7 +4,13 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
-import { collection, onSnapshot, query, orderBy, limit as firestoreLimit } from "firebase/firestore";
+import {
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
+  limit as firestoreLimit,
+} from "firebase/firestore";
 import ThemeToggle from "./ThemeToggle";
 import { GlassBadge } from "./glass";
 import { apiClient } from "@/lib/api-client";
@@ -72,7 +78,11 @@ function mapNotificationType(rawType?: string): NotificationItem["type"] {
   if (rawType.includes("warning") || rawType.includes("expiry") || rawType.includes("low_stock")) {
     return "warning";
   }
-  if (rawType.includes("success") || rawType.includes("delivered") || rawType.includes("received")) {
+  if (
+    rawType.includes("success") ||
+    rawType.includes("delivered") ||
+    rawType.includes("received")
+  ) {
     return "success";
   }
   if (rawType.includes("failed") || rawType.includes("cancel") || rawType.includes("recall")) {
@@ -176,7 +186,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
       const q = query(
         collection(db, "notifications", profile.id, "items"),
         orderBy("created_at", "desc"),
-        firestoreLimit(20)
+        firestoreLimit(20),
       );
 
       const unsubscribe = onSnapshot(
@@ -216,7 +226,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
         },
         (err) => {
           console.debug("Firestore onSnapshot subscription notice:", err);
-        }
+        },
       );
 
       return () => unsubscribe();
@@ -250,7 +260,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   const dismissNotification = async (id: string) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)).filter((n) => n.id !== id)
+      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)).filter((n) => n.id !== id),
     );
     setUnreadCount((prev) => Math.max(0, prev - 1));
     try {
@@ -342,17 +352,17 @@ export function Topbar({ onMenuClick }: TopbarProps) {
               hasConflicts
                 ? "text-rose-400 bg-rose-500/10 hover:bg-rose-500/20"
                 : isOffline
-                ? "text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
-                : pendingCount > 0
-                ? "text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20"
-                : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
+                  ? "text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
+                  : pendingCount > 0
+                    ? "text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20"
+                    : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
             }`}
             title={
               hasConflicts
                 ? "Sync Conflicts Require Attention"
                 : isOffline
-                ? "Offline Mode — Click to View Sync Queue"
-                : `${pendingCount} item(s) in Sync Queue`
+                  ? "Offline Mode — Click to View Sync Queue"
+                  : `${pendingCount} item(s) in Sync Queue`
             }
           >
             {isOffline ? <WifiOff className="w-4 h-4" /> : <Layers className="w-4 h-4" />}
@@ -584,10 +594,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
       )}
 
       {/* Global Admin Search Command Palette (Cmd+K) */}
-      <SearchCommandPalette
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
-      />
+      <SearchCommandPalette isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </>
   );
 }

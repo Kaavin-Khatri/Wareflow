@@ -31,7 +31,8 @@ export default function NotFoundPage() {
               Warehouse Bin Not Found
             </h1>
             <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">
-              The catalog SKU, document route, or warehouse bin you requested does not exist or has been relocated in the system of record.
+              The catalog SKU, document route, or warehouse bin you requested does not exist or has
+              been relocated in the system of record.
             </p>
           </div>
 

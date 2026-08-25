@@ -4,6 +4,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.retailers import PricingTierEnum, RetailerResponse
+
 
 class LeadResponse(BaseModel):
     """Public representation of a discovered lead."""
@@ -80,7 +82,6 @@ class ScanNowResponse(BaseModel):
     message: str
 
 
-from app.schemas.retailers import PricingTierEnum, RetailerResponse
 
 
 class MarkContactedRequest(BaseModel):

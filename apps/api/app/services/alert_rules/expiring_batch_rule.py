@@ -51,10 +51,11 @@ class ExpiringBatchRule(BaseAlertRule):
         if not expiry_date:
             return None
 
-        if isinstance(expiry_date, datetime):
-            exp_date = expiry_date.date()
-        else:
-            exp_date = expiry_date
+        exp_date = (
+            expiry_date.date()
+            if isinstance(expiry_date, datetime)
+            else expiry_date
+        )
 
         days_remaining = (exp_date - today).days
         if days_remaining > self.threshold_days:

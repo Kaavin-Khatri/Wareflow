@@ -72,7 +72,7 @@ export default function RetailerPerformancePage() {
       setLoading(true);
       setError(null);
       const res = await apiClient.get<RetailerPerformanceResponse>(
-        "/analytics/retailer-performance"
+        "/analytics/retailer-performance",
       );
       setData(res);
     } catch (err: any) {
@@ -98,35 +98,37 @@ export default function RetailerPerformancePage() {
 
   const filteredItems = useMemo(() => {
     if (!data?.items) return [];
-    return data.items.filter((item) => {
-      if (filter === "churn_risk" && !item.is_churn_risk) return false;
-      if (filter === "active" && (item.is_churn_risk || item.total_orders === 0)) return false;
-      if (filter === "increasing" && item.frequency_trend !== "increasing") return false;
+    return data.items
+      .filter((item) => {
+        if (filter === "churn_risk" && !item.is_churn_risk) return false;
+        if (filter === "active" && (item.is_churn_risk || item.total_orders === 0)) return false;
+        if (filter === "increasing" && item.frequency_trend !== "increasing") return false;
 
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const nameMatch = item.retailer_name.toLowerCase().includes(q);
-        const contactMatch = item.contact_person?.toLowerCase().includes(q) ?? false;
-        const tierMatch = item.pricing_tier.toLowerCase().includes(q);
-        if (!nameMatch && !contactMatch && !tierMatch) return false;
-      }
-      return true;
-    }).sort((a, b) => {
-      const valA = a[sortField];
-      const valB = b[sortField];
-      if (valA === null || valA === undefined) return sortAsc ? -1 : 1;
-      if (valB === null || valB === undefined) return sortAsc ? 1 : -1;
-      if (typeof valA === "number" && typeof valB === "number") {
-        return sortAsc ? valA - valB : valB - valA;
-      }
-      if (typeof valA === "boolean" && typeof valB === "boolean") {
-        return sortAsc ? (valA === valB ? 0 : valA ? 1 : -1) : valA === valB ? 0 : valA ? -1 : 1;
-      }
-      return sortAsc
-        ? String(valA).localeCompare(String(valB))
-        : String(valB).localeCompare(String(valA));
-    });
-  }, [data?.items, filter, searchQuery, sortField, sortAsc]);
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const nameMatch = item.retailer_name.toLowerCase().includes(q);
+          const contactMatch = item.contact_person?.toLowerCase().includes(q) ?? false;
+          const tierMatch = item.pricing_tier.toLowerCase().includes(q);
+          if (!nameMatch && !contactMatch && !tierMatch) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const valA = a[sortField];
+        const valB = b[sortField];
+        if (valA === null || valA === undefined) return sortAsc ? -1 : 1;
+        if (valB === null || valB === undefined) return sortAsc ? 1 : -1;
+        if (typeof valA === "number" && typeof valB === "number") {
+          return sortAsc ? valA - valB : valB - valA;
+        }
+        if (typeof valA === "boolean" && typeof valB === "boolean") {
+          return sortAsc ? (valA === valB ? 0 : valA ? 1 : -1) : valA === valB ? 0 : valA ? -1 : 1;
+        }
+        return sortAsc
+          ? String(valA).localeCompare(String(valB))
+          : String(valB).localeCompare(String(valA));
+      });
+  }, [data, filter, searchQuery, sortField, sortAsc]);
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -242,9 +244,7 @@ export default function RetailerPerformancePage() {
               <span className="text-3xl font-bold tracking-tight text-white">
                 <AnimatedNumber value={data?.summary?.active_retailers_count ?? 0} />
               </span>
-              <span className="text-xs text-white/50">
-                / {data?.summary?.total_retailers ?? 0}
-              </span>
+              <span className="text-xs text-white/50">/ {data?.summary?.total_retailers ?? 0}</span>
             </div>
             <p className="mt-1 text-xs text-white/40">Purchased within trailing 90 days</p>
           </GlassCard>

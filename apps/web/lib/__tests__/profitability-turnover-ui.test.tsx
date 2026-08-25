@@ -14,9 +14,7 @@ import React from "react";
 import ProfitabilityAnalyticsPage, {
   ProfitabilityResponse,
 } from "@/app/admin/analytics/profitability/page";
-import InventoryTurnoverPage, {
-  TurnoverResponse,
-} from "@/app/admin/analytics/turnover/page";
+import InventoryTurnoverPage, { TurnoverResponse } from "@/app/admin/analytics/turnover/page";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 // Mock next/navigation
@@ -201,7 +199,7 @@ describe("Profitability & Inventory Turnover Analytics UI (Step 16.1)", () => {
     render(
       <ThemeProvider>
         <ProfitabilityAnalyticsPage />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     expect(screen.getByText("Profitability & Margin Analytics")).toBeDefined();
@@ -219,7 +217,7 @@ describe("Profitability & Inventory Turnover Analytics UI (Step 16.1)", () => {
     render(
       <ThemeProvider>
         <ProfitabilityAnalyticsPage />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     await waitFor(() => {
@@ -241,7 +239,7 @@ describe("Profitability & Inventory Turnover Analytics UI (Step 16.1)", () => {
     render(
       <ThemeProvider>
         <InventoryTurnoverPage />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     expect(screen.getByText("Inventory Turnover & Velocity")).toBeDefined();
@@ -259,7 +257,7 @@ describe("Profitability & Inventory Turnover Analytics UI (Step 16.1)", () => {
     render(
       <ThemeProvider>
         <InventoryTurnoverPage />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     await waitFor(() => {

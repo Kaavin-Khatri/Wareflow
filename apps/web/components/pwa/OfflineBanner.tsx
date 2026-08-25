@@ -57,8 +57,8 @@ export function OfflineBanner({ onOpenSyncQueue }: OfflineBannerProps) {
           hasConflicts
             ? "bg-rose-950/90 border-rose-500/40 text-rose-200"
             : isOffline
-            ? "bg-amber-950/90 border-amber-500/40 text-amber-200"
-            : "bg-purple-950/90 border-purple-500/40 text-purple-200"
+              ? "bg-amber-950/90 border-amber-500/40 text-amber-200"
+              : "bg-purple-950/90 border-purple-500/40 text-purple-200"
         }`}
       >
         <div className="flex items-center gap-2.5 min-w-0">
@@ -67,8 +67,8 @@ export function OfflineBanner({ onOpenSyncQueue }: OfflineBannerProps) {
               hasConflicts
                 ? "bg-rose-500/20 text-rose-400"
                 : isOffline
-                ? "bg-amber-500/20 text-amber-400"
-                : "bg-purple-500/20 text-purple-400"
+                  ? "bg-amber-500/20 text-amber-400"
+                  : "bg-purple-500/20 text-purple-400"
             }`}
           >
             {hasConflicts ? (
@@ -85,15 +85,15 @@ export function OfflineBanner({ onOpenSyncQueue }: OfflineBannerProps) {
               {hasConflicts
                 ? "Sync Conflict Requires Review"
                 : isOffline
-                ? "Offline Mode Active"
-                : "Offline Changes Pending"}
+                  ? "Offline Mode Active"
+                  : "Offline Changes Pending"}
             </span>
             <p className="text-[11px] opacity-90 truncate">
               {hasConflicts
                 ? "Server batch balances changed during offline disconnect."
                 : isOffline
-                ? `WiFi unavailable. ${pendingCount} floor action(s) safely queued.`
-                : `${pendingCount} action(s) ready to sync to server.`}
+                  ? `WiFi unavailable. ${pendingCount} floor action(s) safely queued.`
+                  : `${pendingCount} action(s) ready to sync to server.`}
             </p>
           </div>
         </div>
@@ -106,8 +106,8 @@ export function OfflineBanner({ onOpenSyncQueue }: OfflineBannerProps) {
               hasConflicts
                 ? "bg-rose-600 hover:bg-rose-500 text-white border-rose-400"
                 : isOffline
-                ? "bg-amber-600 hover:bg-amber-500 text-white border-amber-400"
-                : "bg-purple-600 hover:bg-purple-500 text-white border-purple-400"
+                  ? "bg-amber-600 hover:bg-amber-500 text-white border-amber-400"
+                  : "bg-purple-600 hover:bg-purple-500 text-white border-purple-400"
             }`}
           >
             Sync Queue ({pendingCount})

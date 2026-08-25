@@ -68,7 +68,8 @@ export interface ARAgingReportResponse {
 }
 
 type BucketFilter = "all" | "overdue_only" | "critical_90" | "current_only" | "zero_balance";
-type SortField = "total_overdue" | "total_outstanding" | "bucket_90_plus" | "retailer_name" | "current";
+type SortField =
+  "total_overdue" | "total_outstanding" | "bucket_90_plus" | "retailer_name" | "current";
 
 export default function ARAgingReportPage() {
   const [report, setReport] = useState<ARAgingReportResponse | null>(null);
@@ -84,7 +85,9 @@ export default function ARAgingReportPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiClient.get<ARAgingReportResponse>("/analytics/ar-aging?include_zero_balance=true");
+      const data = await apiClient.get<ARAgingReportResponse>(
+        "/analytics/ar-aging?include_zero_balance=true",
+      );
       setReport(data);
     } catch (err: any) {
       console.error("Failed to load AR aging report:", err);
@@ -124,7 +127,7 @@ export default function ARAgingReportPage() {
         (r) =>
           r.retailer_name.toLowerCase().includes(q) ||
           (r.contact_person && r.contact_person.toLowerCase().includes(q)) ||
-          (r.phone && r.phone.toLowerCase().includes(q))
+          (r.phone && r.phone.toLowerCase().includes(q)),
       );
     }
 
@@ -141,8 +144,8 @@ export default function ARAgingReportPage() {
 
     // 4. Sort
     list.sort((a, b) => {
-      let valA: any = a[sortField];
-      let valB: any = b[sortField];
+      const valA: any = a[sortField];
+      const valB: any = b[sortField];
 
       if (typeof valA === "string") {
         return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
@@ -213,7 +216,9 @@ export default function ARAgingReportPage() {
       r.invoice_count,
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -227,7 +232,7 @@ export default function ARAgingReportPage() {
     try {
       await apiClient.downloadBlob(
         "/analytics/ar-aging.xlsx",
-        `Wareflow_AR_Aging_Report_${report?.as_of_date || "today"}.xlsx`
+        `Wareflow_AR_Aging_Report_${report?.as_of_date || "today"}.xlsx`,
       );
     } catch (err) {
       console.error("Excel export failed:", err);
@@ -250,7 +255,8 @@ export default function ARAgingReportPage() {
               </GlassBadge>
             </div>
             <p className="text-xs sm:text-sm text-[var(--text-muted)] mt-1">
-              Real-time portfolio debt aging across wholesale retailers grouped into 30, 60, and 90+ day risk cutoffs.
+              Real-time portfolio debt aging across wholesale retailers grouped into 30, 60, and 90+
+              day risk cutoffs.
             </p>
           </div>
 
@@ -274,12 +280,7 @@ export default function ARAgingReportPage() {
               <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" />
               <span>Export CSV</span>
             </GlassButton>
-            <GlassButton
-              variant="ghost"
-              size="sm"
-              onClick={fetchReport}
-              disabled={loading}
-            >
+            <GlassButton variant="ghost" size="sm" onClick={fetchReport} disabled={loading}>
               <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
               <span>Refresh</span>
             </GlassButton>
@@ -304,7 +305,11 @@ export default function ARAgingReportPage() {
             </div>
             <div className="mt-3">
               <div className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--text)]">
-                {loading ? "..." : <AnimatedNumber value={report?.summary?.total_outstanding || 0} prefix="₹" />}
+                {loading ? (
+                  "..."
+                ) : (
+                  <AnimatedNumber value={report?.summary?.total_outstanding || 0} prefix="₹" />
+                )}
               </div>
               <div className="text-[11px] text-[var(--text-muted)] mt-1">
                 {report?.summary?.total_retailers || 0} Active Retailers
@@ -320,7 +325,11 @@ export default function ARAgingReportPage() {
             </div>
             <div className="mt-3">
               <div className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-400">
-                {loading ? "..." : <AnimatedNumber value={report?.summary?.total_current || 0} prefix="₹" />}
+                {loading ? (
+                  "..."
+                ) : (
+                  <AnimatedNumber value={report?.summary?.total_current || 0} prefix="₹" />
+                )}
               </div>
               <div className="text-[11px] text-emerald-500/80 mt-1">
                 {distributionPercentages.current}% of Receivables
@@ -336,7 +345,11 @@ export default function ARAgingReportPage() {
             </div>
             <div className="mt-3">
               <div className="text-xl sm:text-2xl font-bold tracking-tight text-amber-400">
-                {loading ? "..." : <AnimatedNumber value={report?.summary?.total_bucket_1_30 || 0} prefix="₹" />}
+                {loading ? (
+                  "..."
+                ) : (
+                  <AnimatedNumber value={report?.summary?.total_bucket_1_30 || 0} prefix="₹" />
+                )}
               </div>
               <div className="text-[11px] text-amber-500/80 mt-1">
                 {distributionPercentages.b1_30}% of Portfolio
@@ -352,7 +365,11 @@ export default function ARAgingReportPage() {
             </div>
             <div className="mt-3">
               <div className="text-xl sm:text-2xl font-bold tracking-tight text-orange-400">
-                {loading ? "..." : <AnimatedNumber value={report?.summary?.total_bucket_31_60 || 0} prefix="₹" />}
+                {loading ? (
+                  "..."
+                ) : (
+                  <AnimatedNumber value={report?.summary?.total_bucket_31_60 || 0} prefix="₹" />
+                )}
               </div>
               <div className="text-[11px] text-orange-500/80 mt-1">
                 {distributionPercentages.b31_60}% of Portfolio
@@ -368,7 +385,11 @@ export default function ARAgingReportPage() {
             </div>
             <div className="mt-3">
               <div className="text-xl sm:text-2xl font-bold tracking-tight text-rose-400">
-                {loading ? "..." : <AnimatedNumber value={report?.summary?.total_bucket_61_90 || 0} prefix="₹" />}
+                {loading ? (
+                  "..."
+                ) : (
+                  <AnimatedNumber value={report?.summary?.total_bucket_61_90 || 0} prefix="₹" />
+                )}
               </div>
               <div className="text-[11px] text-rose-500/80 mt-1">
                 {distributionPercentages.b61_90}% of Portfolio
@@ -384,7 +405,11 @@ export default function ARAgingReportPage() {
             </div>
             <div className="mt-3">
               <div className="text-xl sm:text-2xl font-bold tracking-tight text-red-400">
-                {loading ? "..." : <AnimatedNumber value={report?.summary?.total_bucket_90_plus || 0} prefix="₹" />}
+                {loading ? (
+                  "..."
+                ) : (
+                  <AnimatedNumber value={report?.summary?.total_bucket_90_plus || 0} prefix="₹" />
+                )}
               </div>
               <div className="text-[11px] text-red-500/80 mt-1">
                 {report?.summary?.overdue_retailers_count || 0} Delinquent Accounts
@@ -397,7 +422,9 @@ export default function ARAgingReportPage() {
         <GlassCard className="p-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
             <div>
-              <h3 className="text-sm font-bold text-[var(--text)]">Portfolio Debt Aging Distribution</h3>
+              <h3 className="text-sm font-bold text-[var(--text)]">
+                Portfolio Debt Aging Distribution
+              </h3>
               <p className="text-xs text-[var(--text-muted)]">
                 Proportional capital exposure across current and overdue aging horizons.
               </p>
@@ -458,7 +485,9 @@ export default function ARAgingReportPage() {
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-sm bg-red-600 inline-block" />
-              <span>90+d Critical ({formatCurrency(report?.summary?.total_bucket_90_plus || 0)})</span>
+              <span>
+                90+d Critical ({formatCurrency(report?.summary?.total_bucket_90_plus || 0)})
+              </span>
             </div>
           </div>
         </GlassCard>
@@ -693,7 +722,11 @@ export default function ARAgingReportPage() {
                         {/* Ledger Actions */}
                         <td className="p-3.5 text-center">
                           <Link href={`/admin/retailers/${r.retailer_id}/ledger`}>
-                            <GlassButton variant="outline" size="sm" className="text-[11px] h-7 px-2.5">
+                            <GlassButton
+                              variant="outline"
+                              size="sm"
+                              className="text-[11px] h-7 px-2.5"
+                            >
                               <span>Ledger</span>
                               <ChevronRight className="w-3 h-3 ml-1" />
                             </GlassButton>
@@ -714,42 +747,42 @@ export default function ARAgingReportPage() {
                     </td>
                     <td className="p-3.5 text-right font-mono text-[var(--text-muted)]">
                       {formatCurrency(
-                        filteredRetailers.reduce((acc, curr) => acc + curr.credit_limit, 0)
+                        filteredRetailers.reduce((acc, curr) => acc + curr.credit_limit, 0),
                       )}
                     </td>
                     <td className="p-3.5 text-right font-mono text-emerald-400">
                       {formatCurrency(
-                        filteredRetailers.reduce((acc, curr) => acc + curr.current, 0)
+                        filteredRetailers.reduce((acc, curr) => acc + curr.current, 0),
                       )}
                     </td>
                     <td className="p-3.5 text-right font-mono text-amber-400">
                       {formatCurrency(
-                        filteredRetailers.reduce((acc, curr) => acc + curr.bucket_1_30, 0)
+                        filteredRetailers.reduce((acc, curr) => acc + curr.bucket_1_30, 0),
                       )}
                     </td>
                     <td className="p-3.5 text-right font-mono text-orange-400">
                       {formatCurrency(
-                        filteredRetailers.reduce((acc, curr) => acc + curr.bucket_31_60, 0)
+                        filteredRetailers.reduce((acc, curr) => acc + curr.bucket_31_60, 0),
                       )}
                     </td>
                     <td className="p-3.5 text-right font-mono text-rose-400">
                       {formatCurrency(
-                        filteredRetailers.reduce((acc, curr) => acc + curr.bucket_61_90, 0)
+                        filteredRetailers.reduce((acc, curr) => acc + curr.bucket_61_90, 0),
                       )}
                     </td>
                     <td className="p-3.5 text-right font-mono text-red-400">
                       {formatCurrency(
-                        filteredRetailers.reduce((acc, curr) => acc + curr.bucket_90_plus, 0)
+                        filteredRetailers.reduce((acc, curr) => acc + curr.bucket_90_plus, 0),
                       )}
                     </td>
                     <td className="p-3.5 text-right font-mono text-rose-300">
                       {formatCurrency(
-                        filteredRetailers.reduce((acc, curr) => acc + curr.total_overdue, 0)
+                        filteredRetailers.reduce((acc, curr) => acc + curr.total_overdue, 0),
                       )}
                     </td>
                     <td className="p-3.5 text-right font-mono text-[var(--text)]">
                       {formatCurrency(
-                        filteredRetailers.reduce((acc, curr) => acc + curr.total_outstanding, 0)
+                        filteredRetailers.reduce((acc, curr) => acc + curr.total_outstanding, 0),
                       )}
                     </td>
                     <td className="p-3.5" />

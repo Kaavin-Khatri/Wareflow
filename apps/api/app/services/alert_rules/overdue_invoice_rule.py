@@ -61,10 +61,11 @@ class OverdueInvoiceRule(BaseAlertRule):
             else:
                 return None
 
-        if isinstance(due_date_raw, datetime):
-            due_date = due_date_raw.date()
-        else:
-            due_date = due_date_raw
+        due_date = (
+            due_date_raw.date()
+            if isinstance(due_date_raw, datetime)
+            else due_date_raw
+        )
 
         if due_date >= today:
             return None

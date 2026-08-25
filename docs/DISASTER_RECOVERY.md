@@ -4,13 +4,14 @@
 > **Database Host**: Supabase PostgreSQL (`ap-northeast-2` Seoul)  
 > **Backup Storage**: Supabase Storage (`backups` private bucket) & GitHub Actions Artifacts  
 > **Retention Policy**: 14 Days Rolling Window  
-> **Schedule**: Daily at 02:00 UTC (07:30 AM IST) via GitHub Actions  
+> **Schedule**: Daily at 02:00 UTC (07:30 AM IST) via GitHub Actions
 
 ---
 
 ## 🎯 1. Purpose & Risk Mitigation
 
 Supabase's free tier has specific operational limitations:
+
 1. **No Automated Point-In-Time Recovery (PITR)** on the free tier.
 2. **Inactivity Project Pauses** if no requests occur for ~7 days.
 
@@ -36,6 +37,7 @@ flowchart TD
 ## 🛠️ 3. Backup Execution
 
 ### Automated Backup (GitHub Actions)
+
 - **Workflow File**: [`.github/workflows/database-backup.yml`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/.github/workflows/database-backup.yml)
 - **Trigger**: Runs every morning at 02:00 UTC (07:30 AM IST) and on manual `workflow_dispatch`.
 - **Action**:
@@ -45,7 +47,9 @@ flowchart TD
   4. Deletes backups older than 14 days to preserve free storage quotas.
 
 ### Manual / On-Demand Backup
+
 To trigger an immediate backup from your local terminal:
+
 ```bash
 # Run backup and upload to cloud storage
 python scripts/backup.py
@@ -61,11 +65,14 @@ python scripts/backup.py --local-only --output-dir ./backups
 If a catastrophic event occurs (e.g. accidental table drop, corrupted data, or new instance provisioning):
 
 ### Step 1: Obtain the Latest Backup File
+
 - **From Supabase Storage**: Download the latest `wareflow_backup_YYYYMMDD_HHMMSS.sql.gz` from the `backups` bucket.
 - **From GitHub Actions**: Go to the **Actions** tab in GitHub → select the latest **Automated Database Backup** run → download the `database-backup` artifact.
 
 ### Step 2: Ensure Target Schema is Initialized (Alembic)
+
 If restoring into a completely fresh PostgreSQL database:
+
 ```bash
 # In apps/api directory
 cd apps/api
@@ -73,13 +80,17 @@ alembic upgrade head
 ```
 
 ### Step 3: Execute Restore Tool
+
 Run the WareFlow disaster recovery restore utility:
+
 ```bash
 python scripts/restore.py backups/wareflow_backup_20260825_091947.sql.gz --target-url "$DIRECT_DATABASE_URL"
 ```
 
 ### Alternative: Native PostgreSQL CLI Restore
+
 If using standard PostgreSQL command-line tools:
+
 ```bash
 # Decompress and stream directly into psql over session pooler
 gunzip -c backups/wareflow_backup_20260825_091947.sql.gz | psql "$DIRECT_DATABASE_URL"
@@ -109,8 +120,8 @@ Output:
 
 ## ⏱️ 6. Recovery Objectives (SLA)
 
-| Metric | Target | Actual |
-| :--- | :--- | :---: |
+| Metric                             | Target           |                           Actual                           |
+| :--------------------------------- | :--------------- | :--------------------------------------------------------: |
 | **Recovery Point Objective (RPO)** | 24 Hours (Daily) | **< 24 Hours** (Automated daily cron + on-demand dispatch) |
-| **Recovery Time Objective (RTO)** | < 15 Minutes | **< 2 Minutes** (Tested restore takes ~35 seconds) |
-| **Retention Window** | 14 Days | **14 Days** (Automated rolling pruning) |
+| **Recovery Time Objective (RTO)**  | < 15 Minutes     |     **< 2 Minutes** (Tested restore takes ~35 seconds)     |
+| **Retention Window**               | 14 Days          |          **14 Days** (Automated rolling pruning)           |

@@ -71,7 +71,8 @@ function getFssaiBannerConfig(status: string, daysRemaining: number | null) {
     bgClass: "bg-zinc-500/10 border-zinc-500/30",
     textClass: "text-zinc-400",
     title: "No FSSAI License Registered",
-    message: "Register your FSSAI food safety license number and expiry date to enable compliance monitoring.",
+    message:
+      "Register your FSSAI food safety license number and expiry date to enable compliance monitoring.",
   };
 }
 
@@ -96,7 +97,6 @@ export default function BusinessSettingsPage() {
   const [daysRemaining, setDaysRemaining] = useState<number | null>(null);
 
   useEffect(() => {
-
     let ignore = false;
     async function loadData() {
       try {
@@ -129,8 +129,6 @@ export default function BusinessSettingsPage() {
       ignore = true;
     };
   }, []);
-
-
 
   const updateField = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -350,8 +348,8 @@ export default function BusinessSettingsPage() {
             <div className="text-xs text-[var(--text-muted)] bg-[var(--surface)] p-3 rounded-lg border border-[var(--border)]">
               <strong>Compliance Note:</strong> WareFlow will send WhatsApp + email alerts to
               Owner-role users starting <strong>30 days</strong> before expiry, escalating in the
-              final <strong>7 days</strong>. License renewal is your legal responsibility —
-              WareFlow monitors and alerts but does not file renewals.
+              final <strong>7 days</strong>. License renewal is your legal responsibility — WareFlow
+              monitors and alerts but does not file renewals.
             </div>
           </GlassCard>
 

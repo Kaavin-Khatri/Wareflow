@@ -10,7 +10,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 
-
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
@@ -20,7 +19,6 @@ vi.mock("next/navigation", () => ({
     toString: () => "",
   }),
 }));
-
 
 // Mock next/link
 vi.mock("next/link", () => ({
@@ -139,7 +137,6 @@ function getFssaiBannerConfig(status: string) {
   };
 }
 
-
 describe("getFssaiBannerConfig", () => {
   it("should return error variant for expired status", () => {
     const config = getFssaiBannerConfig("expired");
@@ -165,7 +162,6 @@ describe("getFssaiBannerConfig", () => {
     expect(config.title).toBe("No FSSAI License Registered");
   });
 });
-
 
 // ────────────────────────────────────────────────────────────
 // 3. Business Settings Page Rendering
@@ -218,9 +214,7 @@ describe("Business Settings Page", () => {
     expect(config.variant).toBe("error");
     expect(config.title).toBe("FSSAI License Expired");
   });
-
 });
-
 
 // ────────────────────────────────────────────────────────────
 // 4. PO Expired Supplier Compliance Gate

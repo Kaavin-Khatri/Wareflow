@@ -78,7 +78,7 @@ describe("apiClient.downloadBlob (Excel / PDF Document Export)", () => {
     } as Response);
 
     await expect(
-      apiClient.downloadBlob("/purchase-orders/non-existent/pdf", "fail.pdf")
+      apiClient.downloadBlob("/purchase-orders/non-existent/pdf", "fail.pdf"),
     ).rejects.toThrow("Download failed with status 404");
   });
 });

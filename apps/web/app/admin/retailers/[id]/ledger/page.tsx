@@ -26,7 +26,6 @@ import {
   Calendar,
 } from "lucide-react";
 
-
 export interface LedgerEntry {
   id: string;
   date: string;
@@ -65,7 +64,6 @@ export default function RetailerLedgerPage() {
   const params = useParams();
   const retailerId = params?.id as string;
 
-
   const [ledger, setLedger] = useState<RetailerLedgerResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +91,9 @@ export default function RetailerLedgerPage() {
       setError(null);
       const [ledgerData, invoicesData] = await Promise.all([
         apiClient.get<RetailerLedgerResponse>(`/retailers/${retailerId}/ledger`),
-        apiClient.get<{ items: InvoiceItem[] }>(`/invoices?retailer_id=${retailerId}&page_size=100`),
+        apiClient.get<{ items: InvoiceItem[] }>(
+          `/invoices?retailer_id=${retailerId}&page_size=100`,
+        ),
       ]);
       setLedger(ledgerData);
       setInvoices(invoicesData.items || []);
@@ -113,7 +113,9 @@ export default function RetailerLedgerPage() {
         setError(null);
         const [ledgerData, invoicesData] = await Promise.all([
           apiClient.get<RetailerLedgerResponse>(`/retailers/${retailerId}/ledger`),
-          apiClient.get<{ items: InvoiceItem[] }>(`/invoices?retailer_id=${retailerId}&page_size=100`),
+          apiClient.get<{ items: InvoiceItem[] }>(
+            `/invoices?retailer_id=${retailerId}&page_size=100`,
+          ),
         ]);
         if (!ignore) {
           setLedger(ledgerData);
@@ -134,7 +136,6 @@ export default function RetailerLedgerPage() {
       ignore = true;
     };
   }, [retailerId]);
-
 
   const handleOpenRecordPayment = () => {
     setPayFormError(null);
@@ -157,7 +158,9 @@ export default function RetailerLedgerPage() {
     setSelectedInvoiceId(invId);
     const chosen = invoices.find((i) => i.id === invId);
     if (chosen) {
-      setPayAmount(chosen.outstanding_balance > 0 ? chosen.outstanding_balance : chosen.total_amount);
+      setPayAmount(
+        chosen.outstanding_balance > 0 ? chosen.outstanding_balance : chosen.total_amount,
+      );
     }
   };
 
@@ -173,9 +176,13 @@ export default function RetailerLedgerPage() {
     }
 
     const chosenInv = invoices.find((i) => i.id === selectedInvoiceId);
-    if (chosenInv && chosenInv.outstanding_balance > 0 && payAmount > chosenInv.outstanding_balance + 0.01) {
+    if (
+      chosenInv &&
+      chosenInv.outstanding_balance > 0 &&
+      payAmount > chosenInv.outstanding_balance + 0.01
+    ) {
       setPayFormError(
-        `Payment amount (₹${payAmount.toLocaleString("en-IN")}) exceeds invoice outstanding balance (₹${chosenInv.outstanding_balance.toLocaleString("en-IN")}).`
+        `Payment amount (₹${payAmount.toLocaleString("en-IN")}) exceeds invoice outstanding balance (₹${chosenInv.outstanding_balance.toLocaleString("en-IN")}).`,
       );
       return;
     }
@@ -195,7 +202,6 @@ export default function RetailerLedgerPage() {
       await loadData();
       setTimeout(() => setSuccess(null), 5000);
     } catch (err: unknown) {
-
       setPayFormError(err instanceof Error ? err.message : "Failed to record payment.");
     } finally {
       setSubmittingPayment(false);
@@ -204,7 +210,16 @@ export default function RetailerLedgerPage() {
 
   const exportCSV = () => {
     if (!ledger || !ledger.entries.length) return;
-    const headers = ["Date", "Type", "Reference", "Description", "Debit (INR)", "Credit (INR)", "Running Balance (INR)", "Status"];
+    const headers = [
+      "Date",
+      "Type",
+      "Reference",
+      "Description",
+      "Debit (INR)",
+      "Credit (INR)",
+      "Running Balance (INR)",
+      "Status",
+    ];
     const rows = ledger.entries.map((e) => [
       new Date(e.date).toLocaleString("en-IN"),
       e.entry_type.toUpperCase(),
@@ -216,11 +231,16 @@ export default function RetailerLedgerPage() {
       e.status,
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `statement_${ledger.retailer_name.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute(
+      "download",
+      `statement_${ledger.retailer_name.replace(/\s+/g, "_")}_${new Date().toISOString().slice(0, 10)}.csv`,
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -284,9 +304,7 @@ export default function RetailerLedgerPage() {
       header: "Reference #",
       sortable: true,
       render: (row) => (
-        <span className="text-xs font-mono font-bold text-cyan-400">
-          {row.reference_no}
-        </span>
+        <span className="text-xs font-mono font-bold text-cyan-400">{row.reference_no}</span>
       ),
     },
     {
@@ -304,8 +322,12 @@ export default function RetailerLedgerPage() {
       align: "right",
       sortable: true,
       render: (row) => (
-        <span className={`text-xs font-mono font-semibold ${row.debit_amount > 0 ? "text-rose-400" : "text-[var(--text-muted)]"}`}>
-          {row.debit_amount > 0 ? `+ ₹${row.debit_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "—"}
+        <span
+          className={`text-xs font-mono font-semibold ${row.debit_amount > 0 ? "text-rose-400" : "text-[var(--text-muted)]"}`}
+        >
+          {row.debit_amount > 0
+            ? `+ ₹${row.debit_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+            : "—"}
         </span>
       ),
     },
@@ -315,8 +337,12 @@ export default function RetailerLedgerPage() {
       align: "right",
       sortable: true,
       render: (row) => (
-        <span className={`text-xs font-mono font-semibold ${row.credit_amount > 0 ? "text-emerald-400" : "text-[var(--text-muted)]"}`}>
-          {row.credit_amount > 0 ? `- ₹${row.credit_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "—"}
+        <span
+          className={`text-xs font-mono font-semibold ${row.credit_amount > 0 ? "text-emerald-400" : "text-[var(--text-muted)]"}`}
+        >
+          {row.credit_amount > 0
+            ? `- ₹${row.credit_amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+            : "—"}
         </span>
       ),
     },
@@ -336,8 +362,12 @@ export default function RetailerLedgerPage() {
   const creditLimit = ledger?.credit_limit || 0;
   const currentBalance = ledger?.current_credit_balance || 0;
   const availableCredit = ledger?.available_credit || 0;
-  const creditUtilizationPct = creditLimit > 0 ? Math.min(100, Math.round((currentBalance / creditLimit) * 100)) : 0;
-  const settlementRate = ledger && ledger.total_invoiced > 0 ? Math.round((ledger.total_paid / ledger.total_invoiced) * 100) : 100;
+  const creditUtilizationPct =
+    creditLimit > 0 ? Math.min(100, Math.round((currentBalance / creditLimit) * 100)) : 0;
+  const settlementRate =
+    ledger && ledger.total_invoiced > 0
+      ? Math.round((ledger.total_paid / ledger.total_invoiced) * 100)
+      : 100;
 
   return (
     <AppLayout>
@@ -346,7 +376,11 @@ export default function RetailerLedgerPage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link href="/admin/retailers">
-              <GlassButton variant="ghost" size="sm" className="h-9 w-9 p-0 text-[var(--text-muted)] hover:text-[var(--text)]">
+              <GlassButton
+                variant="ghost"
+                size="sm"
+                className="h-9 w-9 p-0 text-[var(--text-muted)] hover:text-[var(--text)]"
+              >
                 <ArrowLeft className="w-4 h-4" />
               </GlassButton>
             </Link>
@@ -418,7 +452,9 @@ export default function RetailerLedgerPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <GlassCard className="p-4 relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-[var(--text-muted)]">Current Balance Owed</span>
+              <span className="text-xs font-medium text-[var(--text-muted)]">
+                Current Balance Owed
+              </span>
               <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center">
                 <IndianRupee className="w-4 h-4" />
               </div>
@@ -434,7 +470,9 @@ export default function RetailerLedgerPage() {
 
           <GlassCard className="p-4 relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-[var(--text-muted)]">Credit Line & Limit</span>
+              <span className="text-xs font-medium text-[var(--text-muted)]">
+                Credit Line & Limit
+              </span>
               <div className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
                 <CreditCard className="w-4 h-4" />
               </div>
@@ -444,12 +482,18 @@ export default function RetailerLedgerPage() {
             </div>
             <div className="mt-2 flex items-center justify-between text-[11px] text-[var(--text-muted)]">
               <span>{creditUtilizationPct}% Utilized</span>
-              <span className="text-emerald-400 font-medium">₹{availableCredit.toLocaleString("en-IN")} Available</span>
+              <span className="text-emerald-400 font-medium">
+                ₹{availableCredit.toLocaleString("en-IN")} Available
+              </span>
             </div>
             <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden mt-1.5">
               <div
                 className={`h-full transition-all rounded-full ${
-                  creditUtilizationPct >= 90 ? "bg-rose-500" : creditUtilizationPct >= 70 ? "bg-amber-500" : "bg-emerald-500"
+                  creditUtilizationPct >= 90
+                    ? "bg-rose-500"
+                    : creditUtilizationPct >= 70
+                      ? "bg-amber-500"
+                      : "bg-emerald-500"
                 }`}
                 style={{ width: `${creditUtilizationPct}%` }}
               />
@@ -458,7 +502,9 @@ export default function RetailerLedgerPage() {
 
           <GlassCard className="p-4 relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-[var(--text-muted)]">Total Invoiced (Debit)</span>
+              <span className="text-xs font-medium text-[var(--text-muted)]">
+                Total Invoiced (Debit)
+              </span>
               <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center">
                 <TrendingUp className="w-4 h-4" />
               </div>
@@ -473,7 +519,9 @@ export default function RetailerLedgerPage() {
 
           <GlassCard className="p-4 relative overflow-hidden">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-[var(--text-muted)]">Total Settled (Credit)</span>
+              <span className="text-xs font-medium text-[var(--text-muted)]">
+                Total Settled (Credit)
+              </span>
               <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
                 <CheckCircle2 className="w-4 h-4" />
               </div>
@@ -507,7 +555,9 @@ export default function RetailerLedgerPage() {
                   type="button"
                   onClick={() => setTypeFilter("all")}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                    typeFilter === "all" ? "bg-purple-600 text-white shadow" : "text-[var(--text-muted)] hover:text-white"
+                    typeFilter === "all"
+                      ? "bg-purple-600 text-white shadow"
+                      : "text-[var(--text-muted)] hover:text-white"
                   }`}
                 >
                   All ({ledger?.entries.length || 0})
@@ -516,7 +566,9 @@ export default function RetailerLedgerPage() {
                   type="button"
                   onClick={() => setTypeFilter("invoice")}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                    typeFilter === "invoice" ? "bg-rose-600 text-white shadow" : "text-[var(--text-muted)] hover:text-white"
+                    typeFilter === "invoice"
+                      ? "bg-rose-600 text-white shadow"
+                      : "text-[var(--text-muted)] hover:text-white"
                   }`}
                 >
                   Invoices ({ledger?.entries.filter((e) => e.entry_type === "invoice").length || 0})
@@ -525,7 +577,9 @@ export default function RetailerLedgerPage() {
                   type="button"
                   onClick={() => setTypeFilter("payment")}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                    typeFilter === "payment" ? "bg-emerald-600 text-white shadow" : "text-[var(--text-muted)] hover:text-white"
+                    typeFilter === "payment"
+                      ? "bg-emerald-600 text-white shadow"
+                      : "text-[var(--text-muted)] hover:text-white"
                   }`}
                 >
                   Payments ({ledger?.entries.filter((e) => e.entry_type === "payment").length || 0})
@@ -554,7 +608,6 @@ export default function RetailerLedgerPage() {
           />
         </GlassCard>
 
-
         {/* Record Payment Modal */}
         <GlassModal
           isOpen={paymentModalOpen}
@@ -562,7 +615,6 @@ export default function RetailerLedgerPage() {
           title={`Record Payment for ${ledger?.retailer_name || "Retailer"}`}
           maxWidth="md"
         >
-
           <form onSubmit={handleRecordPaymentSubmit} className="space-y-4">
             {payFormError && (
               <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
@@ -581,10 +633,14 @@ export default function RetailerLedgerPage() {
                 className="w-full px-3 py-2 text-xs rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
                 required
               >
-                <option value="" disabled>Select an invoice...</option>
+                <option value="" disabled>
+                  Select an invoice...
+                </option>
                 {invoices.map((inv) => (
                   <option key={inv.id} value={inv.id}>
-                    {inv.invoice_no} — ₹{inv.total_amount.toLocaleString("en-IN")} (Outstanding: ₹{(inv.outstanding_balance || inv.total_amount).toLocaleString("en-IN")}) [{inv.status.toUpperCase()}]
+                    {inv.invoice_no} — ₹{inv.total_amount.toLocaleString("en-IN")} (Outstanding: ₹
+                    {(inv.outstanding_balance || inv.total_amount).toLocaleString("en-IN")}) [
+                    {inv.status.toUpperCase()}]
                   </option>
                 ))}
               </select>

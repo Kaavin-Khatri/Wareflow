@@ -148,26 +148,26 @@ export default function DeliveriesPage() {
   // Status columns
   const assignedList = useMemo(
     () => filteredDeliveries.filter((d) => d.status === "assigned"),
-    [filteredDeliveries]
+    [filteredDeliveries],
   );
   const outForDeliveryList = useMemo(
     () => filteredDeliveries.filter((d) => d.status === "out_for_delivery"),
-    [filteredDeliveries]
+    [filteredDeliveries],
   );
   const deliveredList = useMemo(
     () => filteredDeliveries.filter((d) => d.status === "delivered"),
-    [filteredDeliveries]
+    [filteredDeliveries],
   );
   const failedList = useMemo(
     () => filteredDeliveries.filter((d) => d.status === "failed"),
-    [filteredDeliveries]
+    [filteredDeliveries],
   );
 
   // Status Transition Action
   const handleUpdateStatus = async (
     deliveryId: string,
     newStatus: "assigned" | "out_for_delivery" | "delivered" | "failed",
-    notes?: string
+    notes?: string,
   ) => {
     try {
       await apiClient.patch<DeliveryItem>(`/deliveries/${deliveryId}/status`, {
@@ -270,7 +270,8 @@ export default function DeliveriesPage() {
               <GlassBadge variant="accent">Phase 12</GlassBadge>
             </div>
             <p className="text-sm text-slate-400 mt-1">
-              Assign drivers and vehicles to packed orders, track live transit across fulfillment stages, and monitor delivery completions.
+              Assign drivers and vehicles to packed orders, track live transit across fulfillment
+              stages, and monitor delivery completions.
             </p>
           </div>
 
@@ -514,7 +515,10 @@ export default function DeliveriesPage() {
             )}
 
             <div>
-              <label htmlFor="so-select" className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label
+                htmlFor="so-select"
+                className="block text-xs font-semibold text-slate-300 mb-1.5"
+              >
                 Select Packed Sales Order *
               </label>
               <select
@@ -534,14 +538,18 @@ export default function DeliveriesPage() {
               </select>
               {packedOrders.length === 0 && (
                 <p className="text-[11px] text-amber-400 mt-1">
-                  No orders currently in &quot;packed&quot; status. Pack an order in Orders & Dispatch first.
+                  No orders currently in &quot;packed&quot; status. Pack an order in Orders &
+                  Dispatch first.
                 </p>
               )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label htmlFor="driver-input" className="block text-xs font-semibold text-slate-300 mb-1.5">
+                <label
+                  htmlFor="driver-input"
+                  className="block text-xs font-semibold text-slate-300 mb-1.5"
+                >
                   Driver Name *
                 </label>
                 <input
@@ -556,7 +564,10 @@ export default function DeliveriesPage() {
               </div>
 
               <div>
-                <label htmlFor="vehicle-input" className="block text-xs font-semibold text-slate-300 mb-1.5">
+                <label
+                  htmlFor="vehicle-input"
+                  className="block text-xs font-semibold text-slate-300 mb-1.5"
+                >
                   Vehicle Registration No. *
                 </label>
                 <input
@@ -572,7 +583,10 @@ export default function DeliveriesPage() {
             </div>
 
             <div>
-              <label htmlFor="notes-input" className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label
+                htmlFor="notes-input"
+                className="block text-xs font-semibold text-slate-300 mb-1.5"
+              >
                 Dispatch Instructions / Special Notes
               </label>
               <textarea
@@ -594,12 +608,7 @@ export default function DeliveriesPage() {
               >
                 Cancel
               </GlassButton>
-              <GlassButton
-                type="submit"
-                variant="primary"
-                size="sm"
-                disabled={submittingAssign}
-              >
+              <GlassButton type="submit" variant="primary" size="sm" disabled={submittingAssign}>
                 {submittingAssign ? "Dispatching..." : "Confirm & Dispatch"}
               </GlassButton>
             </div>
@@ -623,12 +632,16 @@ export default function DeliveriesPage() {
             <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>
-                Failing this delivery attempt keeps the sales order in <strong>shipped</strong> status without marking it completed. A clear reason is required for warehouse ops.
+                Failing this delivery attempt keeps the sales order in <strong>shipped</strong>{" "}
+                status without marking it completed. A clear reason is required for warehouse ops.
               </span>
             </div>
 
             <div>
-              <label htmlFor="fail-reason" className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label
+                htmlFor="fail-reason"
+                className="block text-xs font-semibold text-slate-300 mb-1.5"
+              >
                 Reason for Delivery Failure *
               </label>
               <textarea
@@ -651,12 +664,7 @@ export default function DeliveriesPage() {
               >
                 Cancel
               </GlassButton>
-              <GlassButton
-                type="submit"
-                variant="destructive"
-                size="sm"
-                disabled={submittingFail}
-              >
+              <GlassButton type="submit" variant="destructive" size="sm" disabled={submittingFail}>
                 {submittingFail ? "Recording..." : "Record Failure"}
               </GlassButton>
             </div>
@@ -724,17 +732,37 @@ function DeliveryCard({
       {/* Timestamps */}
       <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
         {item.delivered_at ? (
-          <span>Delivered: {new Date(item.delivered_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+          <span>
+            Delivered:{" "}
+            {new Date(item.delivered_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
         ) : item.dispatched_at ? (
-          <span>Dispatched: {new Date(item.dispatched_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+          <span>
+            Dispatched:{" "}
+            {new Date(item.dispatched_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
         ) : (
-          <span>Assigned: {new Date(item.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+          <span>
+            Assigned:{" "}
+            {new Date(item.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
         )}
       </div>
 
       {/* Notes / Failure reason */}
       {item.notes && (
-        <p className={`text-[11px] p-2 rounded-lg ${item.status === "failed" ? "bg-rose-500/10 text-rose-300 border border-rose-500/20" : "bg-white/5 text-slate-400"}`}>
+        <p
+          className={`text-[11px] p-2 rounded-lg ${item.status === "failed" ? "bg-rose-500/10 text-rose-300 border border-rose-500/20" : "bg-white/5 text-slate-400"}`}
+        >
           {item.notes}
         </p>
       )}

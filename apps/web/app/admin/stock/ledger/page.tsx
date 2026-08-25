@@ -21,7 +21,6 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 
-
 export interface StockMovementItem {
   id: string;
   product_id: string;
@@ -147,7 +146,9 @@ export default function StockMovementLedgerPage() {
     const fetchMovements = async () => {
       try {
         setLoading(true);
-        const res = await apiClient.get<StockMovementListResponse>("/stock/movements?page_size=200");
+        const res = await apiClient.get<StockMovementListResponse>(
+          "/stock/movements?page_size=200",
+        );
         if (!isMounted) return;
         if (res && res.items && Array.isArray(res.items)) {
           setMovements(res.items);
@@ -369,7 +370,9 @@ export default function StockMovementLedgerPage() {
               <SlidersHorizontal className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs text-[var(--text-muted)] font-medium">Net Adjustments Variance</p>
+              <p className="text-xs text-[var(--text-muted)] font-medium">
+                Net Adjustments Variance
+              </p>
               <h3 className="text-2xl font-bold font-mono text-amber-400">
                 {metrics.totalAdjustments >= 0
                   ? `+${metrics.totalAdjustments.toLocaleString("en-IN")}`
@@ -383,11 +386,31 @@ export default function StockMovementLedgerPage() {
         <div className="flex flex-wrap items-center gap-2">
           {[
             { id: "ALL", label: "All Movements", icon: <Layers className="w-3.5 h-3.5" /> },
-            { id: "in", label: "Inbound Receipts", icon: <ArrowDownLeft className="w-3.5 h-3.5" /> },
-            { id: "out", label: "Outbound Dispatches", icon: <ArrowUpRight className="w-3.5 h-3.5" /> },
-            { id: "adjustment", label: "Adjustments", icon: <SlidersHorizontal className="w-3.5 h-3.5" /> },
-            { id: "return_in", label: "Returns (RMA In)", icon: <RotateCcw className="w-3.5 h-3.5" /> },
-            { id: "return_out", label: "Supplier Returns", icon: <RotateCw className="w-3.5 h-3.5" /> },
+            {
+              id: "in",
+              label: "Inbound Receipts",
+              icon: <ArrowDownLeft className="w-3.5 h-3.5" />,
+            },
+            {
+              id: "out",
+              label: "Outbound Dispatches",
+              icon: <ArrowUpRight className="w-3.5 h-3.5" />,
+            },
+            {
+              id: "adjustment",
+              label: "Adjustments",
+              icon: <SlidersHorizontal className="w-3.5 h-3.5" />,
+            },
+            {
+              id: "return_in",
+              label: "Returns (RMA In)",
+              icon: <RotateCcw className="w-3.5 h-3.5" />,
+            },
+            {
+              id: "return_out",
+              label: "Supplier Returns",
+              icon: <RotateCw className="w-3.5 h-3.5" />,
+            },
           ].map((tab) => {
             const isActive = typeFilter === tab.id;
             return (
@@ -421,7 +444,10 @@ export default function StockMovementLedgerPage() {
                 size="md"
                 onClick={async () => {
                   try {
-                    await apiClient.downloadBlob("/stock/movements.xlsx", "Stock_Movements_Ledger.xlsx");
+                    await apiClient.downloadBlob(
+                      "/stock/movements.xlsx",
+                      "Stock_Movements_Ledger.xlsx",
+                    );
                   } catch (err) {
                     console.error("Stock movements export failed:", err);
                   }

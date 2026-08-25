@@ -11,8 +11,8 @@ import re
 from typing import Any
 
 import barcode
-from barcode.writer import ImageWriter
 import qrcode
+from barcode.writer import ImageWriter
 
 
 def calculate_ean13_checksum(digits12: str) -> int:

@@ -129,7 +129,9 @@ export default function PortalInvoicesPage() {
               🧾
             </div>
             <h3 className="text-base font-semibold text-slate-200">No Invoices</h3>
-            <p className="text-xs text-slate-400 mt-1">No GST invoices have been issued to your account yet.</p>
+            <p className="text-xs text-slate-400 mt-1">
+              No GST invoices have been issued to your account yet.
+            </p>
           </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 backdrop-blur-xl">
@@ -157,7 +159,9 @@ export default function PortalInvoicesPage() {
                         {inv.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 font-mono">₹{inv.total_amount.toLocaleString("en-IN")}</td>
+                    <td className="px-6 py-4 font-mono">
+                      ₹{inv.total_amount.toLocaleString("en-IN")}
+                    </td>
                     <td className="px-6 py-4 font-mono font-semibold text-rose-400">
                       ₹{inv.outstanding_balance.toLocaleString("en-IN")}
                     </td>

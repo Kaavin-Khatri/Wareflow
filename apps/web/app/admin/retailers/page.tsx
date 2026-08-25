@@ -26,9 +26,6 @@ import {
   Bell,
 } from "lucide-react";
 
-
-
-
 export interface RetailerItem {
   id: string;
   name: string;
@@ -94,7 +91,9 @@ export default function RetailersAdminPage() {
       try {
         const [data, counts] = await Promise.all([
           apiClient.get<RetailerItem[]>("/retailers"),
-          apiClient.get<Record<string, number>>("/retailers/subscriptions/counts").catch(() => ({})),
+          apiClient
+            .get<Record<string, number>>("/retailers/subscriptions/counts")
+            .catch(() => ({})),
         ]);
         if (!ignore) {
           setRetailers(data);
@@ -215,10 +214,7 @@ export default function RetailersAdminPage() {
   const activeCount = retailers.filter((r) => r.is_active).length;
   const goldCount = retailers.filter((r) => r.pricing_tier === "gold").length;
   const silverCount = retailers.filter((r) => r.pricing_tier === "silver").length;
-  const totalCreditExtended = retailers.reduce(
-    (sum, r) => sum + (Number(r.credit_limit) || 0),
-    0,
-  );
+  const totalCreditExtended = retailers.reduce((sum, r) => sum + (Number(r.credit_limit) || 0), 0);
 
   const renderTierBadge = (tier: string) => {
     switch (tier.toLowerCase()) {
@@ -307,16 +303,20 @@ export default function RetailersAdminPage() {
         return (
           <div className="space-y-1.5 min-w-[170px]">
             <div className="flex items-center justify-between gap-1 text-xs font-mono font-semibold">
-              <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
-                isCritical
-                  ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
-                  : isWarning
-                  ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
-                  : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-              }`}>
+              <span
+                className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
+                  isCritical
+                    ? "bg-rose-500/10 text-rose-400 border-rose-500/30"
+                    : isWarning
+                      ? "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                      : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                }`}
+              >
                 ₹{balance.toLocaleString("en-IN")} / ₹{limit.toLocaleString("en-IN")}
               </span>
-              <span className="text-[10px] text-[var(--text-muted)] font-normal">{utilizationPct}%</span>
+              <span className="text-[10px] text-[var(--text-muted)] font-normal">
+                {utilizationPct}%
+              </span>
             </div>
             <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
               <div
@@ -405,7 +405,6 @@ export default function RetailersAdminPage() {
         </div>
       ),
     },
-
   ];
 
   return (
@@ -445,7 +444,10 @@ export default function RetailersAdminPage() {
               <IndianRupee className="w-4 h-4 text-cyan-400" />
             </div>
             <div className="text-2xl font-bold tracking-tight text-cyan-400">
-              ₹{totalCreditExtended >= 100000 ? `${(totalCreditExtended / 100000).toFixed(1)}L` : totalCreditExtended.toLocaleString("en-IN")}
+              ₹
+              {totalCreditExtended >= 100000
+                ? `${(totalCreditExtended / 100000).toFixed(1)}L`
+                : totalCreditExtended.toLocaleString("en-IN")}
             </div>
           </GlassCard>
         </div>
@@ -583,7 +585,9 @@ export default function RetailersAdminPage() {
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           title={
-            editingRetailer ? `Edit Retailer — ${editingRetailer.name}` : "Register Wholesale Retailer"
+            editingRetailer
+              ? `Edit Retailer — ${editingRetailer.name}`
+              : "Register Wholesale Retailer"
           }
           description="Enter business details, pricing tier for automated sales order discounts, and credit limits."
         >
@@ -701,7 +705,10 @@ export default function RetailersAdminPage() {
                   placeholder="e.g. 50000"
                   value={formData.credit_limit}
                   onChange={(e) =>
-                    setFormData({ ...formData, credit_limit: Math.max(0, Number(e.target.value) || 0) })
+                    setFormData({
+                      ...formData,
+                      credit_limit: Math.max(0, Number(e.target.value) || 0),
+                    })
                   }
                 />
               </div>
@@ -729,9 +736,12 @@ export default function RetailersAdminPage() {
                 Cancel
               </GlassButton>
               <GlassButton type="submit" variant="primary" disabled={submitting}>
-                {submitting ? "Saving..." : editingRetailer ? "Save Changes" : "Submit Registration"}
+                {submitting
+                  ? "Saving..."
+                  : editingRetailer
+                    ? "Save Changes"
+                    : "Submit Registration"}
               </GlassButton>
-
             </div>
           </form>
         </GlassModal>

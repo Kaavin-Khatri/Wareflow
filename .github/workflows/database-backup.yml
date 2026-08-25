@@ -3,7 +3,7 @@ name: Automated Database Backup & 14-Day Retention
 on:
   schedule:
     # Daily at 02:00 UTC (07:30 AM IST)
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
   workflow_dispatch:
 
 jobs:
@@ -18,8 +18,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
 
       - name: Install Dependencies & PostgreSQL Client
         run: |
@@ -29,10 +29,10 @@ jobs:
 
       - name: Execute Backup & Upload to Supabase Storage
         env:
-          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DIRECT_DATABASE_URL: ${{ secrets['DIRECT_DATABASE_URL'] }}
+          DATABASE_URL: ${{ secrets['DATABASE_URL'] }}
+          SUPABASE_URL: ${{ secrets['SUPABASE_URL'] }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets['SUPABASE_SERVICE_ROLE_KEY'] }}
         run: |
           python scripts/backup.py --output-dir ./backups
 

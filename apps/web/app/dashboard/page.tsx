@@ -180,8 +180,14 @@ function CustomMovementTooltip({ active, payload, label }: CustomTooltipProps) {
       </div>
       {payload.map((entry, idx) => (
         <div key={`tip-${idx}`} className="flex items-center justify-between gap-4">
-          <span className="flex items-center gap-1.5" style={{ color: entry.stroke || entry.color }}>
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.stroke || entry.color }} />
+          <span
+            className="flex items-center gap-1.5"
+            style={{ color: entry.stroke || entry.color }}
+          >
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: entry.stroke || entry.color }}
+            />
             {entry.name}:
           </span>
           <span className="font-mono font-bold text-white">
@@ -373,9 +379,7 @@ export default function DashboardPage() {
           {
             id: "kpi-receivables",
             title: "Outstanding Receivables",
-            value: (
-              <AnimatedNumber value={kpis.total_outstanding_receivables} prefix="₹" />
-            ),
+            value: <AnimatedNumber value={kpis.total_outstanding_receivables} prefix="₹" />,
             change: `${kpis.overdue_invoices_count} overdue invoices`,
             trend: kpis.overdue_invoices_count > 0 ? "down" : "neutral",
             icon: <IndianRupee className="w-4 h-4 text-rose-400" />,
@@ -436,7 +440,8 @@ export default function DashboardPage() {
                         )}
                       </div>
                       <GlassCardDescription className="text-xs text-purple-200/70">
-                        Synthesized 7-day executive pulse across dispatches, top velocity products, and inventory risks.
+                        Synthesized 7-day executive pulse across dispatches, top velocity products,
+                        and inventory risks.
                       </GlassCardDescription>
                     </div>
                   </div>
@@ -472,7 +477,10 @@ export default function DashboardPage() {
                         7D Sales Revenue
                       </span>
                       <span className="text-xs font-mono font-bold text-emerald-400">
-                        ₹{Number(insight.metrics_summary.weekly_revenue).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        ₹
+                        {Number(insight.metrics_summary.weekly_revenue).toLocaleString("en-IN", {
+                          minimumFractionDigits: 2,
+                        })}
                       </span>
                     </div>
 
@@ -481,7 +489,8 @@ export default function DashboardPage() {
                         Orders / Confirmed
                       </span>
                       <span className="text-xs font-mono font-bold text-white">
-                        {insight.metrics_summary.weekly_orders_count} orders ({insight.metrics_summary.confirmed_orders_count} conf)
+                        {insight.metrics_summary.weekly_orders_count} orders (
+                        {insight.metrics_summary.confirmed_orders_count} conf)
                       </span>
                     </div>
 
@@ -489,8 +498,12 @@ export default function DashboardPage() {
                       <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-mono">
                         Velocity Leader
                       </span>
-                      <span className="text-xs font-semibold text-[var(--accent)] truncate block" title={insight.metrics_summary.top_mover_product_name || "None"}>
-                        {insight.metrics_summary.top_mover_product_name || "—"} ({insight.metrics_summary.top_mover_units_sold} units)
+                      <span
+                        className="text-xs font-semibold text-[var(--accent)] truncate block"
+                        title={insight.metrics_summary.top_mover_product_name || "None"}
+                      >
+                        {insight.metrics_summary.top_mover_product_name || "—"} (
+                        {insight.metrics_summary.top_mover_units_sold} units)
                       </span>
                     </div>
 
@@ -499,7 +512,12 @@ export default function DashboardPage() {
                         Dead Capital Risk
                       </span>
                       <span className="text-xs font-mono font-bold text-amber-400">
-                        ₹{Number(insight.metrics_summary.dead_stock_capital).toLocaleString("en-IN", { minimumFractionDigits: 2 })} ({insight.metrics_summary.dead_stock_count} SKUs)
+                        ₹
+                        {Number(insight.metrics_summary.dead_stock_capital).toLocaleString(
+                          "en-IN",
+                          { minimumFractionDigits: 2 },
+                        )}{" "}
+                        ({insight.metrics_summary.dead_stock_count} SKUs)
                       </span>
                     </div>
                   </div>
@@ -866,7 +884,8 @@ export default function DashboardPage() {
 
                       <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] font-mono">
                         <span>
-                          On-Hand: <strong className="text-white">{item.current_stock}</strong> / Reorder: {item.reorder_point}
+                          On-Hand: <strong className="text-white">{item.current_stock}</strong> /
+                          Reorder: {item.reorder_point}
                         </span>
                         <span className="text-rose-400 font-bold">-{item.deficit} Deficit</span>
                       </div>
@@ -906,9 +925,7 @@ export default function DashboardPage() {
                 </div>
                 <GlassBadge
                   variant={
-                    (dashboard?.overdue_invoices_quick_list?.length || 0) > 0
-                      ? "error"
-                      : "neutral"
+                    (dashboard?.overdue_invoices_quick_list?.length || 0) > 0 ? "error" : "neutral"
                   }
                   className="text-[10px] py-0"
                 >

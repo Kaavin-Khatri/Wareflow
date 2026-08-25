@@ -80,15 +80,17 @@ describe("Step 13.5 Supplier Ready-for-Dispatch Portal & UI Suite", () => {
           <GlassButton
             size="sm"
             variant="outline"
-            onClick={() => navigator.clipboard.writeText(`http://localhost:3000/supplier/po/${mockPO.magic_link_token}`)}
+            onClick={() =>
+              navigator.clipboard.writeText(
+                `http://localhost:3000/supplier/po/${mockPO.magic_link_token}`,
+              )
+            }
           >
             Copy Link
           </GlassButton>
         </div>
-        <p className="text-xs text-slate-300">
-          Send this link to {mockPO.supplier_name}
-        </p>
-      </GlassCard>
+        <p className="text-xs text-slate-300">Send this link to {mockPO.supplier_name}</p>
+      </GlassCard>,
     );
 
     expect(screen.getByText("Supplier Magic Link")).toBeDefined();
@@ -113,7 +115,7 @@ describe("Step 13.5 Supplier Ready-for-Dispatch Portal & UI Suite", () => {
           <Truck className="w-4 h-4" />
           Mark Consignment Ready for Dispatch
         </GlassButton>
-      </div>
+      </div>,
     );
 
     const actionBtn = screen.getByRole("button", {

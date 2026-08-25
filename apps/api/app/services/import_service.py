@@ -1,9 +1,9 @@
 """Bulk CSV Product Catalog Import & Export Service."""
 
 import csv
-from decimal import Decimal, InvalidOperation
 import io
 import re
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -89,7 +89,7 @@ class ProductImportService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Uploaded CSV file is empty.",
-            )
+            ) from None
 
         # Normalize headers
         header_map = [normalize_header(h) for h in raw_headers]

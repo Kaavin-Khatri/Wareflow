@@ -142,7 +142,9 @@ describe("Delivery & Logistics Status Board (/admin/deliveries)", () => {
     expect(await screen.findByText("SO-2026-0101")).toBeDefined();
     expect(screen.getByText("SO-2026-0102")).toBeDefined();
 
-    const searchInput = screen.getByPlaceholderText(/Search by SO number, buyer, driver, or vehicle/i);
+    const searchInput = screen.getByPlaceholderText(
+      /Search by SO number, buyer, driver, or vehicle/i,
+    );
     fireEvent.change(searchInput, { target: { value: "Alpha" } });
 
     expect(screen.getByText("SO-2026-0101")).toBeDefined();

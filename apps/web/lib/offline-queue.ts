@@ -85,7 +85,7 @@ export async function enqueueOfflineAction(
   title: string,
   endpoint: string,
   payload: Record<string, any>,
-  method: "POST" | "PATCH" | "PUT" = "POST"
+  method: "POST" | "PATCH" | "PUT" = "POST",
 ): Promise<OfflineQueueItem> {
   const item: OfflineQueueItem = {
     id: `queue-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -113,12 +113,10 @@ export async function getAllQueueItems(): Promise<OfflineQueueItem[]> {
   const db = await getDB();
   if (db) {
     const items = await db.getAll(STORE_NAME);
-    return items.sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
+    return items.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   }
   return [...memoryQueue].sort(
-    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
   );
 }
 
@@ -152,7 +150,7 @@ export async function updateQueueItem(item: OfflineQueueItem): Promise<void> {
 export async function resolveConflict(
   id: string,
   resolution: "reapply" | "discard",
-  overridePayload?: Record<string, any>
+  overridePayload?: Record<string, any>,
 ): Promise<void> {
   if (resolution === "discard") {
     await removeQueueItem(id);
@@ -186,9 +184,7 @@ export async function clearCompletedItems(): Promise<void> {
  * Catches server conflicts (e.g. 409 / 422 negative balance or batch unavailable)
  * and marks them as 'conflict' with details for user review.
  */
-export async function flushOfflineQueue(
-  baseUrl: string = "http://localhost:8000"
-): Promise<{
+export async function flushOfflineQueue(baseUrl: string = "http://localhost:8000"): Promise<{
   synced: number;
   conflicts: number;
   failed: number;
@@ -228,13 +224,19 @@ export async function flushOfflineQueue(
         synced++;
       } else {
         const errorData = await res.json().catch(() => ({ detail: "Server error" }));
-        const detailMessage = typeof errorData.detail === "string"
-          ? errorData.detail
-          : JSON.stringify(errorData.detail || "Server rejected transaction");
+        const detailMessage =
+          typeof errorData.detail === "string"
+            ? errorData.detail
+            : JSON.stringify(errorData.detail || "Server rejected transaction");
 
         // Detect Conflict vs General Network Failure
         // 409 (Conflict), 422 (Unprocessable Content / Insufficient balance / batch closed)
-        if (res.status === 409 || res.status === 422 || detailMessage.toLowerCase().includes("balance") || detailMessage.toLowerCase().includes("stock")) {
+        if (
+          res.status === 409 ||
+          res.status === 422 ||
+          detailMessage.toLowerCase().includes("balance") ||
+          detailMessage.toLowerCase().includes("stock")
+        ) {
           item.status = "conflict";
           item.error_message = detailMessage;
           item.conflict_details = {

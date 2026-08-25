@@ -13,12 +13,12 @@
 
 ## 🌐 Live Production Deployment
 
-| Component | Production URL | Provider & Region | Hosting Tier | Status |
-| :--- | :--- | :--- | :--- | :---: |
-| **Web Frontend** | **[https://wareflow-web-seven.vercel.app](https://wareflow-web-seven.vercel.app)** | Vercel (Global Edge) | Hobby ($0) | ✅ **100% Live** |
-| **FastAPI Backend** | **[https://wareflow-api-kg2c.onrender.com](https://wareflow-api-kg2c.onrender.com)** | Render (`ap-southeast-1` Singapore) | Free 512MB ($0) | ✅ **100% Live** |
-| **Database** | Supabase PostgreSQL 16 | Supabase (`ap-northeast-2` Seoul) | Free t3a.nano ($0) | ✅ **Connected** |
-| **Auth System** | Firebase Authentication | Google Cloud Identity Platform | Free Spark ($0) | ✅ **Configured** |
+| Component           | Production URL                                                                       | Provider & Region                   | Hosting Tier       |      Status       |
+| :------------------ | :----------------------------------------------------------------------------------- | :---------------------------------- | :----------------- | :---------------: |
+| **Web Frontend**    | **[https://wareflow-web-seven.vercel.app](https://wareflow-web-seven.vercel.app)**   | Vercel (Global Edge)                | Hobby ($0)         | ✅ **100% Live**  |
+| **FastAPI Backend** | **[https://wareflow-api-kg2c.onrender.com](https://wareflow-api-kg2c.onrender.com)** | Render (`ap-southeast-1` Singapore) | Free 512MB ($0)    | ✅ **100% Live**  |
+| **Database**        | Supabase PostgreSQL 16                                                               | Supabase (`ap-northeast-2` Seoul)   | Free t3a.nano ($0) | ✅ **Connected**  |
+| **Auth System**     | Firebase Authentication                                                              | Google Cloud Identity Platform      | Free Spark ($0)    | ✅ **Configured** |
 
 ---
 
@@ -58,6 +58,7 @@ flowchart TD
 ```
 
 ### Why Layered SOLID Design?
+
 1. **S — Single Responsibility Principle (SRP)**: Routers handle HTTP status codes and serialization; Services manage business logic; Repositories handle database interactions.
 2. **O — Open/Closed Principle (OCP)**: Subsystems are extensible without editing core code. Verified by [`apps/api/tests/test_solid_ocp_proofs.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_solid_ocp_proofs.py):
    - **Pricing Plugin**: Extend wholesale volume discounts without modifying base `Product` models.
@@ -74,31 +75,33 @@ flowchart TD
 
 Every component runs entirely within generous free-tier allowances:
 
-| Service | Role | Provider | Free Tier Limit | Production Usage | Cost |
-| :--- | :--- | :--- | :--- | :--- | :---: |
-| **Vercel** | Next.js Frontend & Edge Hosting | Vercel | 100 GB bandwidth, Unlimited builds | ~1.2 GB/mo | **$0** |
-| **Render** | FastAPI Backend Application | Render | 750 free instance hours/month | 1 instance (Singapore) | **$0** |
-| **Supabase** | PostgreSQL System of Record | Supabase | 500 MB DB storage, 1 GB file storage | ~42 MB DB, ~15 MB backups | **$0** |
-| **Firebase** | Identity, Phone OTP, & Firestore Realtime | Google Cloud | 50k monthly active users, 10k phone auth | < 100 users | **$0** |
-| **Resend** | Transactional & Alert Emails | Resend | 3,000 emails/month (100/day) | ~150 emails/mo | **$0** |
-| **Meta WhatsApp**| B2B Dispatch & Alert Notifications | Meta Cloud API | 1,000 service conversations/month | ~200 convs/mo | **$0** |
-| **Twilio / SMS** | Critical Fallback SMS | Twilio | Free trial credit | Emergency fallback only | **$0** |
-| **Google Places**| Retail Lead Discovery Scanner | Google Cloud | $200 recurring monthly credit | ~150 requests/mo (~$3) | **$0** |
-| **Groq Cloud** | LLaMA-3.3 70B AI Insights & Forecasts | Groq | 30 requests/minute free | ~50 requests/day | **$0** |
-| **GitHub Actions**| CI/CD & Automated Daily DB Backups | GitHub | 2,000 free runner minutes/month | ~180 minutes/mo | **$0** |
-| **TOTAL** | | | | | **$0.00 / mo** |
+| Service            | Role                                      | Provider       | Free Tier Limit                          | Production Usage          |      Cost      |
+| :----------------- | :---------------------------------------- | :------------- | :--------------------------------------- | :------------------------ | :------------: |
+| **Vercel**         | Next.js Frontend & Edge Hosting           | Vercel         | 100 GB bandwidth, Unlimited builds       | ~1.2 GB/mo                |     **$0**     |
+| **Render**         | FastAPI Backend Application               | Render         | 750 free instance hours/month            | 1 instance (Singapore)    |     **$0**     |
+| **Supabase**       | PostgreSQL System of Record               | Supabase       | 500 MB DB storage, 1 GB file storage     | ~42 MB DB, ~15 MB backups |     **$0**     |
+| **Firebase**       | Identity, Phone OTP, & Firestore Realtime | Google Cloud   | 50k monthly active users, 10k phone auth | < 100 users               |     **$0**     |
+| **Resend**         | Transactional & Alert Emails              | Resend         | 3,000 emails/month (100/day)             | ~150 emails/mo            |     **$0**     |
+| **Meta WhatsApp**  | B2B Dispatch & Alert Notifications        | Meta Cloud API | 1,000 service conversations/month        | ~200 convs/mo             |     **$0**     |
+| **Twilio / SMS**   | Critical Fallback SMS                     | Twilio         | Free trial credit                        | Emergency fallback only   |     **$0**     |
+| **Google Places**  | Retail Lead Discovery Scanner             | Google Cloud   | $200 recurring monthly credit            | ~~150 requests/mo (~~$3)  |     **$0**     |
+| **Groq Cloud**     | LLaMA-3.3 70B AI Insights & Forecasts     | Groq           | 30 requests/minute free                  | ~50 requests/day          |     **$0**     |
+| **GitHub Actions** | CI/CD & Automated Daily DB Backups        | GitHub         | 2,000 free runner minutes/month          | ~180 minutes/mo           |     **$0**     |
+| **TOTAL**          |                                           |                |                                          |                           | **$0.00 / mo** |
 
 ---
 
 ## ⚡ Quick Start & Local Development
 
 ### Prerequisites
+
 - **Node.js**: `>= 20.0.0`
 - **pnpm**: `>= 9.0.0`
 - **Python**: `>= 3.11.0` (Python 3.12 recommended)
 - **Git**
 
 ### 1. Clone Repository & Install Dependencies
+
 ```bash
 git clone https://github.com/Kaavin-Khatri/Wareflow.git
 cd Wareflow
@@ -121,6 +124,7 @@ cd ../..
 ```
 
 ### 2. Configure Environment Variables
+
 ```bash
 # Frontend Environment
 cp apps/web/.env.example apps/web/.env.local
@@ -130,6 +134,7 @@ cp apps/api/.env.example apps/api/.env
 ```
 
 ### 3. Seed Demo Data & Run Services
+
 ```bash
 # Seed wholesale catalog, warehouses, suppliers, retailers, and stock batches
 python scripts/seed.py
@@ -180,4 +185,5 @@ pnpm build:web
 ---
 
 ## 📄 License
+
 Private Commercial ERP — All Rights Reserved.

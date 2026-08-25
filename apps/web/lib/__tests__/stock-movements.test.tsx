@@ -121,8 +121,12 @@ describe("Stock Movements Ledger & Adjustments", () => {
 
     await waitFor(() => {
       expect(screen.getAllByText("Stock Movement Ledger").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText("PO #PO-202608-0001 (Goods Receipt)").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText("Adjustment: Damage (Forklift puncture in pallet)").length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText("PO #PO-202608-0001 (Goods Receipt)").length,
+      ).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText("Adjustment: Damage (Forklift puncture in pallet)").length,
+      ).toBeGreaterThanOrEqual(1);
     });
 
     expect(screen.getAllByText("Movement Records").length).toBeGreaterThanOrEqual(1);
@@ -183,7 +187,7 @@ describe("Stock Movements Ledger & Adjustments", () => {
           delta: -5,
           reason: "damage",
           notes: "Broken seals during audit",
-        })
+        }),
       );
       expect(screen.getAllByText("Stock Adjustment Recorded").length).toBeGreaterThanOrEqual(1);
     });

@@ -9,11 +9,10 @@ from collections import defaultdict
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from fastapi import HTTPException, status
 import openpyxl
+from fastapi import HTTPException, status
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
-
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 from reportlab.lib.pagesizes import A4
@@ -28,9 +27,7 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-from app.models.billing import Invoice
 from app.models.retailer import SalesOrder
-from app.models.supplier import PurchaseOrder
 from app.repositories.interfaces.business_settings_repository import (
     BusinessSettingsRepositoryInterface,
 )
@@ -960,10 +957,10 @@ class ExportService:
                         normal_text,
                     ),
                     Paragraph(
-                        f"<b>FULFILLMENT TERMS:</b><br/>"
-                        f"Dispatch Hub: Bhiwandi Central Facility<br/>"
-                        f"Payment Terms: Standard Wholesale Credit<br/>"
-                        f"Delivery Mode: Dedicated Wholesale Freight",
+                        "<b>FULFILLMENT TERMS:</b><br/>"
+                        "Dispatch Hub: Bhiwandi Central Facility<br/>"
+                        "Payment Terms: Standard Wholesale Credit<br/>"
+                        "Delivery Mode: Dedicated Wholesale Freight",
                         normal_text,
                     ),
                 ]

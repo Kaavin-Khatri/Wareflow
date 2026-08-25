@@ -3,7 +3,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { CustomCursor } from "@/components/motion/CustomCursor";
 import { SkeletonCatalogGrid, SkeletonTable, SkeletonCard } from "@/components/SkeletonPrimitives";
-import { StaggerContainer, StaggerItem, FadeIn, ScaleOnHover } from "@/components/motion/GlassMotion";
+import {
+  StaggerContainer,
+  StaggerItem,
+  FadeIn,
+  ScaleOnHover,
+} from "@/components/motion/GlassMotion";
 
 describe("Motion Layer & Interaction Choreography", () => {
   beforeEach(() => {

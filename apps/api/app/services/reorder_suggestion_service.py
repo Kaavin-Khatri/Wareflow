@@ -4,6 +4,7 @@ Calculates actionable purchase replenishment recommendations based on on-hand in
 configured reorder points, supplier lead times, and AI demand forecasting.
 """
 
+import contextlib
 import logging
 import math
 from datetime import UTC, datetime
@@ -258,10 +259,8 @@ class ReorderSuggestionService:
 
         parsed_expected_date = None
         if request.expected_date:
-            try:
+            with contextlib.suppress(ValueError):
                 parsed_expected_date = datetime.strptime(request.expected_date, "%Y-%m-%d").date()
-            except ValueError:
-                pass
 
         po_create = POCreateRequest(
             supplier_id=request.supplier_id,

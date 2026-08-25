@@ -153,9 +153,7 @@ describe("Sales Orders Anomaly Detection UI (Step 14.3)", () => {
       ).toBeGreaterThanOrEqual(1);
     });
 
-    expect(
-      screen.getAllByText(/exceeds normal 3σ threshold/i).length,
-    ).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/exceeds normal 3σ threshold/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/3σ Anomaly/i).length).toBeGreaterThanOrEqual(1);
   });
 });

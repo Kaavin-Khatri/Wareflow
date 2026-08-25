@@ -112,7 +112,9 @@ export function SearchCommandPalette({ isOpen, onClose }: SearchCommandPalettePr
     setIsLoading(true);
     const timeoutId = setTimeout(async () => {
       try {
-        const data = await apiClient.get<SearchResponse>(`/search?q=${encodeURIComponent(cleanQ)}&limit=25`);
+        const data = await apiClient.get<SearchResponse>(
+          `/search?q=${encodeURIComponent(cleanQ)}&limit=25`,
+        );
         setResults(data?.results || []);
         setSelectedIndex(0);
       } catch (err) {
@@ -132,7 +134,7 @@ export function SearchCommandPalette({ isOpen, onClose }: SearchCommandPalettePr
       onClose();
       router.push(item.url);
     },
-    [onClose, router]
+    [onClose, router],
   );
 
   // Keyboard navigation
@@ -220,7 +222,13 @@ export function SearchCommandPalette({ isOpen, onClose }: SearchCommandPalettePr
           {query.trim() === "" ? (
             <div className="py-12 px-6 text-center text-xs text-[var(--text-muted)] space-y-2">
               <p className="font-medium text-[var(--text)]">Global ERP Search</p>
-              <p>Type an SKU (e.g. <span className="font-mono text-[var(--accent)]">RIC-BAS-001</span>), Order Number (<span className="font-mono text-[var(--accent)]">SO-2026-0001</span>), Invoice Number (<span className="font-mono text-[var(--accent)]">INV/2026-27/...</span>), or Retailer/Supplier name.</p>
+              <p>
+                Type an SKU (e.g.{" "}
+                <span className="font-mono text-[var(--accent)]">RIC-BAS-001</span>), Order Number (
+                <span className="font-mono text-[var(--accent)]">SO-2026-0001</span>), Invoice
+                Number (<span className="font-mono text-[var(--accent)]">INV/2026-27/...</span>), or
+                Retailer/Supplier name.
+              </p>
             </div>
           ) : results.length === 0 && !isLoading ? (
             <div className="py-12 px-6 text-center text-xs text-[var(--text-muted)] space-y-1">
@@ -293,17 +301,25 @@ export function SearchCommandPalette({ isOpen, onClose }: SearchCommandPalettePr
         <div className="px-4 py-2 bg-[var(--surface)]/80 border-t border-[var(--border)] flex items-center justify-between text-[11px] text-[var(--text-muted)] font-mono">
           <div className="flex items-center gap-3">
             <span className="inline-flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--surface)]">↑</kbd>
-              <kbd className="px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--surface)]">↓</kbd>
+              <kbd className="px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--surface)]">
+                ↑
+              </kbd>
+              <kbd className="px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--surface)]">
+                ↓
+              </kbd>
               <span>Navigate</span>
             </span>
             <span className="inline-flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--surface)]">↵</kbd>
+              <kbd className="px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--surface)]">
+                ↵
+              </kbd>
               <span>Select</span>
             </span>
           </div>
           <span className="inline-flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--surface)]">ESC</kbd>
+            <kbd className="px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--surface)]">
+              ESC
+            </kbd>
             <span>Close</span>
           </span>
         </div>

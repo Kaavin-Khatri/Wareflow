@@ -613,7 +613,6 @@ class WeeklyReportData(BaseModel):
     end_date: str = Field(..., description="End date of the 7-day period (YYYY-MM-DD)")
     period_label: str = Field(..., description="Human friendly date range label")
     generated_at: datetime = Field(..., description="Timestamp of report generation")
-    
     # Executive Scorecard
     revenue_inr: float = Field(0.0, description="Gross sales revenue in the week")
     revenue_delta_pct: float = Field(0.0, description="Revenue % change vs prior week")
@@ -621,17 +620,14 @@ class WeeklyReportData(BaseModel):
     gross_margin_delta_pct: float = Field(0.0, description="Margin % change vs prior week")
     total_stock_valuation_inr: float = Field(0.0, description="Current total inventory valuation")
     turnover_ratio_30d: float = Field(0.0, description="Trailing 30-day inventory turnover ratio")
-    
     # Operational Alerts
     low_stock_count: int = Field(0, description="Count of products below reorder point")
     overdue_invoices_count: int = Field(0, description="Count of unpaid invoices past due")
     overdue_amount_inr: float = Field(0.0, description="Total outstanding overdue AR in INR")
     shrinkage_inr: float = Field(0.0, description="Weekly damage & loss write-off value")
-    
     # Fast & Slow Movers
     top_fast_movers: list[dict] = Field(default_factory=list, description="Top 3 revenue generating products")
     top_slow_movers: list[dict] = Field(default_factory=list, description="Top 3 stagnant SKUs by tied-up capital")
-    
     # Key Highlights
     highlights: list[WeeklyReportHighlightItem] = Field(default_factory=list, description="AI & business insights")
     narrative_summary: str = Field("", description="Concise executive paragraph summarizing the week")

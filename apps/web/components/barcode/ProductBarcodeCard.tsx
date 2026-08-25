@@ -99,9 +99,7 @@ export function ProductBarcodeCard({ product, className }: ProductBarcodeCardPro
                 alt={`QR code for ${product.name}`}
                 className="w-24 h-24 object-contain mx-auto"
               />
-              <div className="text-[11px] font-mono text-slate-600">
-                SKU: {product.sku}
-              </div>
+              <div className="text-[11px] font-mono text-slate-600">SKU: {product.sku}</div>
             </div>
           )}
         </div>

@@ -9,7 +9,7 @@ Follows SOLID Principles:
 - Dependency Inversion: Injected with repository interfaces.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.models.retailer import SOStatusEnum
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
@@ -45,7 +45,7 @@ class TurnoverService:
             period: Time window ('7d', '30d', '90d', '12m', 'all').
             as_of: Reference timestamp (defaults to current UTC).
         """
-        now = as_of or datetime.now(timezone.utc)
+        now = as_of or datetime.now(UTC)
         days_in_period, cutoff_date = self._parse_period(now, period)
 
         # 1. Fetch active products
@@ -65,7 +65,7 @@ class TurnoverService:
             order_dt = o.order_date or o.created_at
             if order_dt:
                 if order_dt.tzinfo is None:
-                    order_dt = order_dt.replace(tzinfo=timezone.utc)
+                    order_dt = order_dt.replace(tzinfo=UTC)
                 if cutoff_date and order_dt < cutoff_date:
                     continue
 

@@ -1,3 +1,4 @@
+import contextlib
 import math
 from datetime import date
 from typing import TYPE_CHECKING, Any, Literal
@@ -327,10 +328,8 @@ class StockService:
 
         # Inline smart alert trigger (restock notification to subscribers & stock health)
         if self.alert_engine:
-            try:
+            with contextlib.suppress(Exception):
                 self.alert_engine.evaluate_product_stock_inline(product_id)
-            except Exception:
-                pass
 
         return batch, movement
 
@@ -409,10 +408,8 @@ class StockService:
 
         # Inline smart alert trigger
         if self.alert_engine:
-            try:
+            with contextlib.suppress(Exception):
                 self.alert_engine.evaluate_product_stock_inline(payload.product_id)
-            except Exception:
-                pass
 
         return StockAdjustmentResponse(
             movement_id=movement.id,

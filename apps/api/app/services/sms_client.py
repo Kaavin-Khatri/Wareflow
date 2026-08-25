@@ -13,10 +13,7 @@ def normalize_phone_number(phone: str) -> str:
     """Normalize phone number to international E.164 format (defaults to +91 if 10 digits)."""
     cleaned = "".join(c for c in phone if c.isdigit() or c == "+")
     if not cleaned.startswith("+"):
-        if len(cleaned) == 10:
-            cleaned = f"+91{cleaned}"
-        else:
-            cleaned = f"+{cleaned}"
+        cleaned = f"+91{cleaned}" if len(cleaned) == 10 else f"+{cleaned}"
     return cleaned
 
 

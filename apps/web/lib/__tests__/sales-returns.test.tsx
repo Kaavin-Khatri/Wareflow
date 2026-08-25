@@ -194,7 +194,9 @@ describe("SalesReturnsPage (Step 8.3)", () => {
     const createBtn = screen.getByRole("button", { name: /Request RMA Return/i });
     fireEvent.click(createBtn);
 
-    expect(screen.getAllByText("Request Inbound Retailer Return (RMA In)").length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText("Request Inbound Retailer Return (RMA In)").length,
+    ).toBeGreaterThanOrEqual(1);
 
     // Select sales order
     const orderSelect = screen.getByLabelText(/Select Sales Order \*/i);
@@ -214,7 +216,7 @@ describe("SalesReturnsPage (Step 8.3)", () => {
         expect.objectContaining({
           sales_order_id: "so-1",
           reason: "Overstock return",
-        })
+        }),
       );
     });
   });
@@ -231,9 +233,13 @@ describe("SalesReturnsPage (Step 8.3)", () => {
     const detailButtons = screen.getAllByRole("button", { name: /Details/i });
     fireEvent.click(detailButtons[0]);
 
-    expect(screen.getAllByText("Sales Return Inspection (RMA In)").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Sales Return Inspection (RMA In)").length).toBeGreaterThanOrEqual(
+      1,
+    );
     expect(screen.getAllByText("Returned Items Breakdown").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Total Estimated Credit Adjustment:").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Total Estimated Credit Adjustment:").length).toBeGreaterThanOrEqual(
+      1,
+    );
 
     // Click Approve
     const approveBtn = screen.getByRole("button", { name: /Approve \(Restock Resellable\)/i });
@@ -263,7 +269,7 @@ describe("SalesReturnsPage (Step 8.3)", () => {
         "/sales-returns/ret-1/reject",
         expect.objectContaining({
           status: "rejected",
-        })
+        }),
       );
     });
   });

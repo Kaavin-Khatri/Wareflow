@@ -64,7 +64,7 @@ export function ConvertToRetailerModal({
     } catch (err: any) {
       console.error("Failed to convert lead:", err);
       setErrorMessage(
-        err?.detail || err?.message || "Failed to convert lead to retailer. Please try again."
+        err?.detail || err?.message || "Failed to convert lead to retailer. Please try again.",
       );
     } finally {
       setIsSubmitting(false);

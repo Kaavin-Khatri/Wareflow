@@ -1,7 +1,16 @@
 """Product catalog router."""
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
-from app.core.limiter import limiter
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
 
 from app.core.di import (
     get_forecasting_service,
@@ -9,6 +18,7 @@ from app.core.di import (
     get_product_service,
     get_stock_subscription_service,
 )
+from app.core.limiter import limiter
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.forecast import ProductForecastResponse
 from app.schemas.imports import ProductImportResponse

@@ -5,7 +5,13 @@ import { onAuthStateChanged } from "firebase/auth";
 
 // Mock firebase auth
 vi.mock("@/lib/firebase-client", () => ({
-  auth: { currentUser: { uid: "uid_ret_alice", email: "alice@alphamart.com", getIdToken: async () => "mock_token" } },
+  auth: {
+    currentUser: {
+      uid: "uid_ret_alice",
+      email: "alice@alphamart.com",
+      getIdToken: async () => "mock_token",
+    },
+  },
 }));
 
 vi.mock("firebase/auth", () => ({
@@ -109,7 +115,9 @@ describe("Retailer Portal — Tier-Priced Wholesale Catalog View", () => {
 
     expect(await screen.findByText("Wholesale Catalog")).toBeDefined();
     expect(screen.getByText(/Silver Tier Pricing/i)).toBeDefined();
-    expect(screen.getByPlaceholderText(/Search products by SKU, name, or description/i)).toBeDefined();
+    expect(
+      screen.getByPlaceholderText(/Search products by SKU, name, or description/i),
+    ).toBeDefined();
     expect(screen.getByText("Royal Basmati Rice 25kg")).toBeDefined();
     expect(screen.getByText("Assam CTC Black Tea 5kg")).toBeDefined();
     expect(screen.getByText("Refined White Sugar 50kg")).toBeDefined();
@@ -149,7 +157,9 @@ describe("Retailer Portal — Tier-Priced Wholesale Catalog View", () => {
 
     expect(await screen.findByText("Royal Basmati Rice 25kg")).toBeDefined();
 
-    const searchInput = screen.getByPlaceholderText(/Search products by SKU, name, or description/i);
+    const searchInput = screen.getByPlaceholderText(
+      /Search products by SKU, name, or description/i,
+    );
     fireEvent.change(searchInput, { target: { value: "tea" } });
 
     expect(screen.getByText("Assam CTC Black Tea 5kg")).toBeDefined();
@@ -187,7 +197,9 @@ describe("Retailer Portal — Tier-Priced Wholesale Catalog View", () => {
     const submitBtn = screen.getByRole("button", { name: "Send Inquiry" });
     fireEvent.click(submitBtn);
 
-    expect(await screen.findByText(/Inquiry for Assam CTC Black Tea 5kg submitted successfully!/i)).toBeDefined();
+    expect(
+      await screen.findByText(/Inquiry for Assam CTC Black Tea 5kg submitted successfully!/i),
+    ).toBeDefined();
   });
 
   it("opens Quick Order modal and calculates quantity total", async () => {
@@ -213,6 +225,8 @@ describe("Retailer Portal — Tier-Priced Wholesale Catalog View", () => {
     const confirmBtn = screen.getByRole("button", { name: "Confirm & Add" });
     fireEvent.click(confirmBtn);
 
-    expect(await screen.findByText(/Added 2 Box\(s\) of Assam CTC Black Tea 5kg to (order|cart)!/i)).toBeDefined();
+    expect(
+      await screen.findByText(/Added 2 Box\(s\) of Assam CTC Black Tea 5kg to (order|cart)!/i),
+    ).toBeDefined();
   });
 });

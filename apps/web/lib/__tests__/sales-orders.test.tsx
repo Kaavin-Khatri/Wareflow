@@ -152,15 +152,16 @@ vi.mock("@/lib/api-client", () => ({
     patch: vi.fn().mockImplementation(
       (
         url: string,
-        body: { status: "draft" | "confirmed" | "packed" | "shipped" | "delivered" | "cancelled" }
+        body: {
+          status: "draft" | "confirmed" | "packed" | "shipped" | "delivered" | "cancelled";
+        },
       ) => {
         return Promise.resolve({
           ...mockSalesOrders[0],
           status: body.status,
         });
-      }
+      },
     ),
-
   },
 }));
 
@@ -300,13 +301,19 @@ describe("SalesOrdersAdminPage", () => {
     const pickListBtn = screen.getByRole("button", { name: /Print Pick List/i });
     expect(pickListBtn).toBeDefined();
     fireEvent.click(pickListBtn);
-    expect(mockOpen).toHaveBeenCalledWith(expect.stringContaining("/sales-orders/so-2/pick-list.pdf"), "_blank");
+    expect(mockOpen).toHaveBeenCalledWith(
+      expect.stringContaining("/sales-orders/so-2/pick-list.pdf"),
+      "_blank",
+    );
 
     // Check Print Packing Slip button
     const packingSlipBtn = screen.getByRole("button", { name: /Print Packing Slip/i });
     expect(packingSlipBtn).toBeDefined();
     fireEvent.click(packingSlipBtn);
-    expect(mockOpen).toHaveBeenCalledWith(expect.stringContaining("/sales-orders/so-2/packing-slip.pdf"), "_blank");
+    expect(mockOpen).toHaveBeenCalledWith(
+      expect.stringContaining("/sales-orders/so-2/packing-slip.pdf"),
+      "_blank",
+    );
 
     window.open = originalOpen;
   });

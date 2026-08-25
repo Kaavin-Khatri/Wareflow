@@ -30,7 +30,7 @@ describe("IndexedDB Offline Action Queue Engine (Step 19.1)", () => {
         batch_id: "batch-1",
         delta: -5,
         reason: "damage",
-      }
+      },
     );
 
     expect(item.id).toBeDefined();
@@ -92,7 +92,7 @@ describe("IndexedDB Offline Action Queue Engine (Step 19.1)", () => {
     expect(items[0].status).toBe("conflict");
     expect(items[0].error_message).toContain("Insufficient stock balance");
     expect(items[0].conflict_details?.server_message).toBe(
-      "Insufficient stock balance in target batch."
+      "Insufficient stock balance in target batch.",
     );
   });
 
@@ -111,7 +111,7 @@ describe("IndexedDB Offline Action Queue Engine (Step 19.1)", () => {
       "stock_adjustment",
       "Reapply Adj",
       "/stock/adjustments",
-      { delta: -5 }
+      { delta: -5 },
     );
     await resolveConflict(item2.id, "reapply", { delta: -3 });
 

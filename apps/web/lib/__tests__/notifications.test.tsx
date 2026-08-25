@@ -124,7 +124,7 @@ describe("Real-time Topbar Notifications (Step 13.1)", () => {
       render(
         <ThemeProvider>
           <Topbar />
-        </ThemeProvider>
+        </ThemeProvider>,
       );
     });
 
@@ -142,7 +142,7 @@ describe("Real-time Topbar Notifications (Step 13.1)", () => {
       render(
         <ThemeProvider>
           <Topbar />
-        </ThemeProvider>
+        </ThemeProvider>,
       );
     });
 
@@ -175,7 +175,7 @@ describe("Real-time Topbar Notifications (Step 13.1)", () => {
       render(
         <ThemeProvider>
           <Topbar />
-        </ThemeProvider>
+        </ThemeProvider>,
       );
     });
 
@@ -202,7 +202,7 @@ describe("Real-time Topbar Notifications (Step 13.1)", () => {
       render(
         <ThemeProvider>
           <Topbar />
-        </ThemeProvider>
+        </ThemeProvider>,
       );
     });
 

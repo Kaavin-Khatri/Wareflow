@@ -277,7 +277,7 @@ export default function InvoicesPage() {
     const totalBilled = invoices.reduce((acc, i) => acc + (Number(i.total_amount) || 0), 0);
     const paidAmount = invoices.reduce(
       (acc, i) => acc + (i.status === "paid" ? Number(i.total_amount) : Number(i.paid_amount || 0)),
-      0
+      0,
     );
     const unpaidAmount = Math.max(0, totalBilled - paidAmount);
 
@@ -291,8 +291,10 @@ export default function InvoicesPage() {
         !searchQuery ||
         inv.invoice_no.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (inv.buyer_name && inv.buyer_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (inv.sales_order_number && inv.sales_order_number.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (inv.e_invoice_irn && inv.e_invoice_irn.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (inv.sales_order_number &&
+          inv.sales_order_number.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (inv.e_invoice_irn &&
+          inv.e_invoice_irn.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (inv.e_way_bill_no && inv.e_way_bill_no.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchStatus = statusFilter === "all" || inv.status === statusFilter;
@@ -326,7 +328,8 @@ export default function InvoicesPage() {
         tax_amount: item.tax_amount,
         total_amount: item.total_amount,
         paid_amount: item.paid_amount || (item.status === "paid" ? item.total_amount : 0),
-        outstanding_balance: item.outstanding_balance ?? (item.status === "paid" ? 0 : item.total_amount),
+        outstanding_balance:
+          item.outstanding_balance ?? (item.status === "paid" ? 0 : item.total_amount),
         status: item.status,
         e_invoice_irn: item.e_invoice_irn,
         e_way_bill_no: item.e_way_bill_no,
@@ -451,8 +454,8 @@ export default function InvoicesPage() {
       inv.outstanding_balance !== undefined
         ? inv.outstanding_balance
         : inv.status === "paid"
-        ? 0
-        : inv.total_amount;
+          ? 0
+          : inv.total_amount;
     setPayAmount(outstanding);
     setPayMethod("upi");
     setPayDate(new Date().toISOString().split("T")[0]);
@@ -500,7 +503,7 @@ export default function InvoicesPage() {
       setScanningOverdue(true);
       setError(null);
       const res = await apiClient.post<{ transitioned_count: number; message: string }>(
-        "/invoices/detect-overdue?due_days=30"
+        "/invoices/detect-overdue?due_days=30",
       );
       setSuccess(res.message);
       await fetchInvoices();
@@ -588,14 +591,12 @@ export default function InvoicesPage() {
           inv.outstanding_balance !== undefined
             ? inv.outstanding_balance
             : inv.status === "paid"
-            ? 0
-            : inv.total_amount;
+              ? 0
+              : inv.total_amount;
         return (
           <div className="space-y-0.5 font-mono text-right">
             <div
-              className={`font-bold text-xs ${
-                balance > 0 ? "text-rose-400" : "text-emerald-400"
-              }`}
+              className={`font-bold text-xs ${balance > 0 ? "text-rose-400" : "text-emerald-400"}`}
             >
               ₹{Number(balance).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </div>
@@ -617,11 +618,8 @@ export default function InvoicesPage() {
         else if (inv.status === "overdue") variant = "error";
 
         return (
-          <GlassBadge variant={variant}>
-            {inv.status.replace("_", " ").toUpperCase()}
-          </GlassBadge>
+          <GlassBadge variant={variant}>{inv.status.replace("_", " ").toUpperCase()}</GlassBadge>
         );
-
       },
     },
     {
@@ -688,7 +686,8 @@ export default function InvoicesPage() {
                 GST Tax Invoices & E-Invoicing
               </h1>
               <p className="text-xs text-[var(--text-muted)]">
-                Immutable GST-compliant tax invoices, HSN validations, and E-Invoice/E-Way Bill integration.
+                Immutable GST-compliant tax invoices, HSN validations, and E-Invoice/E-Way Bill
+                integration.
               </p>
             </div>
           </div>
@@ -701,7 +700,9 @@ export default function InvoicesPage() {
               disabled={scanningOverdue}
               className="text-xs"
             >
-              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 text-amber-400 ${scanningOverdue ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`w-3.5 h-3.5 mr-1.5 text-amber-400 ${scanningOverdue ? "animate-spin" : ""}`}
+              />
               {scanningOverdue ? "Scanning..." : "Scan Overdue (30d)"}
             </GlassButton>
             <Link href="/admin/sales-orders">
@@ -718,7 +719,9 @@ export default function InvoicesPage() {
           <div className="flex items-center gap-2.5">
             <ShieldCheck className="w-4 h-4 text-purple-400 shrink-0" />
             <div>
-              <span className="font-semibold text-purple-300">GST E-Invoice & E-Way Bill Integration: </span>
+              <span className="font-semibold text-purple-300">
+                GST E-Invoice & E-Way Bill Integration:{" "}
+              </span>
               <span className="text-[var(--text-muted)]">
                 {einvoiceConfig?.turnover_threshold_notice ||
                   "Mandatory above ₹5 Crore annual turnover. Seamlessly operates in sandbox test mode below threshold."}
@@ -755,7 +758,9 @@ export default function InvoicesPage() {
             <div className="text-2xl font-bold font-mono text-[var(--text)]">
               ₹{kpis.totalBilled.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
             </div>
-            <p className="text-[11px] text-[var(--text-muted)]">{kpis.totalCount} total tax invoices</p>
+            <p className="text-[11px] text-[var(--text-muted)]">
+              {kpis.totalCount} total tax invoices
+            </p>
           </GlassCard>
 
           <GlassCard className="p-4 space-y-1">
@@ -782,9 +787,7 @@ export default function InvoicesPage() {
             <span className="text-xs text-cyan-400 font-medium flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5" /> Active Invoices
             </span>
-            <div className="text-2xl font-bold font-mono text-cyan-400">
-              {kpis.totalCount}
-            </div>
+            <div className="text-2xl font-bold font-mono text-cyan-400">{kpis.totalCount}</div>
             <p className="text-[11px] text-[var(--text-muted)]">Sequential audit-ready series</p>
           </GlassCard>
         </div>
@@ -845,7 +848,6 @@ export default function InvoicesPage() {
             <div className="space-y-5 print:p-0">
               {/* Printable Invoice Container */}
               <div className="p-4 sm:p-6 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] space-y-6">
-                
                 {/* Government E-Invoice IRN & QR Block */}
                 {selectedInvoice.e_invoice_irn ? (
                   <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-2">
@@ -860,7 +862,9 @@ export default function InvoicesPage() {
                     </div>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-2 rounded-lg bg-black/40 font-mono text-xs">
                       <div className="break-all text-[11px] text-purple-200">
-                        <span className="text-[var(--text-muted)] uppercase block text-[9px]">IRN (Invoice Reference Number):</span>
+                        <span className="text-[var(--text-muted)] uppercase block text-[9px]">
+                          IRN (Invoice Reference Number):
+                        </span>
                         {selectedInvoice.e_invoice_irn}
                       </div>
                       <button
@@ -868,7 +872,11 @@ export default function InvoicesPage() {
                         className="p-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 shrink-0 flex items-center gap-1 text-[10px]"
                         title="Copy IRN to clipboard"
                       >
-                        {copiedIrn ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                        {copiedIrn ? (
+                          <Check className="w-3 h-3 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
                         {copiedIrn ? "Copied" : "Copy"}
                       </button>
                     </div>
@@ -889,7 +897,8 @@ export default function InvoicesPage() {
                     <div className="flex items-center gap-2">
                       <Info className="w-4 h-4 text-amber-400 shrink-0" />
                       <div className="text-[11px] text-[var(--text-muted)]">
-                        E-Invoice not yet generated for this invoice. (Applicable above ₹5 Cr threshold or in sandbox).
+                        E-Invoice not yet generated for this invoice. (Applicable above ₹5 Cr
+                        threshold or in sandbox).
                       </div>
                     </div>
                     <GlassButton
@@ -899,7 +908,9 @@ export default function InvoicesPage() {
                       disabled={generatingIrn}
                       className="text-xs shrink-0 bg-purple-600 hover:bg-purple-500"
                     >
-                      <QrCode className={`w-3.5 h-3.5 mr-1.5 ${generatingIrn ? "animate-spin" : ""}`} />
+                      <QrCode
+                        className={`w-3.5 h-3.5 mr-1.5 ${generatingIrn ? "animate-spin" : ""}`}
+                      />
                       {generatingIrn ? "Generating IRN..." : "Generate E-Invoice (IRN)"}
                     </GlassButton>
                   </div>
@@ -910,16 +921,22 @@ export default function InvoicesPage() {
                   <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-between text-xs font-mono">
                     <div className="flex items-center gap-2">
                       <Truck className="w-4 h-4 text-cyan-400 shrink-0" />
-                      <span>E-Way Bill: <strong className="text-cyan-300">{selectedInvoice.e_way_bill_no}</strong></span>
+                      <span>
+                        E-Way Bill:{" "}
+                        <strong className="text-cyan-300">{selectedInvoice.e_way_bill_no}</strong>
+                      </span>
                     </div>
                     <span className="text-[10px] text-cyan-300/80">Valid Transit Document</span>
                   </div>
                 ) : (
-                  selectedInvoice.total_amount >= (einvoiceConfig?.eway_bill_threshold_inr || 50000) && (
+                  selectedInvoice.total_amount >=
+                    (einvoiceConfig?.eway_bill_threshold_inr || 50000) && (
                     <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
                         <Truck className="w-4 h-4 text-amber-400 shrink-0" />
-                        <span className="text-amber-300 text-[11px]">Goods value exceeds ₹50,000 threshold — E-Way Bill recommended.</span>
+                        <span className="text-amber-300 text-[11px]">
+                          Goods value exceeds ₹50,000 threshold — E-Way Bill recommended.
+                        </span>
                       </div>
                       <GlassButton
                         variant="secondary"
@@ -944,8 +961,14 @@ export default function InvoicesPage() {
                       WareFlow Wholesale Distribution
                     </h2>
                     <div className="text-[11px] text-[var(--text-muted)] space-y-0.5 mt-1 font-mono">
-                      <div>GSTIN: <span className="text-[var(--text)] font-semibold">07AAAAA0000A1Z5</span></div>
-                      <div>FSSAI Lic: <span className="text-[var(--text)] font-semibold">10019011000123</span></div>
+                      <div>
+                        GSTIN:{" "}
+                        <span className="text-[var(--text)] font-semibold">07AAAAA0000A1Z5</span>
+                      </div>
+                      <div>
+                        FSSAI Lic:{" "}
+                        <span className="text-[var(--text)] font-semibold">10019011000123</span>
+                      </div>
                       <div>Central Distribution Center, Okhla Phase III, New Delhi - 110020</div>
                     </div>
                   </div>
@@ -955,13 +978,31 @@ export default function InvoicesPage() {
                       {selectedInvoice.invoice_no}
                     </div>
                     <div className="text-xs text-[var(--text-muted)]">
-                      Date: <span className="text-[var(--text)]">{new Date(selectedInvoice.invoice_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                      Date:{" "}
+                      <span className="text-[var(--text)]">
+                        {new Date(selectedInvoice.invoice_date).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </span>
                     </div>
                     <div className="text-xs text-[var(--text-muted)]">
-                      SO Ref: <span className="text-[var(--text)] font-semibold">{selectedInvoice.sales_order_number || "Direct"}</span>
+                      SO Ref:{" "}
+                      <span className="text-[var(--text)] font-semibold">
+                        {selectedInvoice.sales_order_number || "Direct"}
+                      </span>
                     </div>
                     <div className="pt-1 flex items-center justify-end gap-1.5">
-                      <GlassBadge variant={selectedInvoice.status === "paid" ? "success" : selectedInvoice.status === "partially_paid" ? "accent" : "warning"}>
+                      <GlassBadge
+                        variant={
+                          selectedInvoice.status === "paid"
+                            ? "success"
+                            : selectedInvoice.status === "partially_paid"
+                              ? "accent"
+                              : "warning"
+                        }
+                      >
                         {selectedInvoice.status.toUpperCase()}
                       </GlassBadge>
                     </div>
@@ -983,9 +1024,24 @@ export default function InvoicesPage() {
                   </div>
 
                   <div className="sm:text-right font-mono text-[11px] space-y-0.5">
-                    <div>Buyer GSTIN: <span className="text-[var(--text)] font-semibold">{selectedInvoice.buyer_gstin || "Unregistered / Consumer"}</span></div>
-                    <div>Phone: <span className="text-[var(--text)]">{selectedInvoice.buyer_phone || "—"}</span></div>
-                    <div>Email: <span className="text-[var(--text)]">{selectedInvoice.buyer_email || "—"}</span></div>
+                    <div>
+                      Buyer GSTIN:{" "}
+                      <span className="text-[var(--text)] font-semibold">
+                        {selectedInvoice.buyer_gstin || "Unregistered / Consumer"}
+                      </span>
+                    </div>
+                    <div>
+                      Phone:{" "}
+                      <span className="text-[var(--text)]">
+                        {selectedInvoice.buyer_phone || "—"}
+                      </span>
+                    </div>
+                    <div>
+                      Email:{" "}
+                      <span className="text-[var(--text)]">
+                        {selectedInvoice.buyer_email || "—"}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -1010,11 +1066,21 @@ export default function InvoicesPage() {
                           <td className="p-2.5 font-sans font-medium text-[var(--text)]">
                             {it.product_name}
                           </td>
-                          <td className="p-2.5 text-purple-300 font-semibold">{it.hsn_code || "0401"}</td>
-                          <td className="p-2.5 text-right font-bold text-[var(--text)]">{it.qty}</td>
-                          <td className="p-2.5 text-right text-[var(--text-muted)]">{it.unit_price.toFixed(2)}</td>
-                          <td className="p-2.5 text-right text-amber-400">{it.tax_amount.toFixed(2)}</td>
-                          <td className="p-2.5 text-right font-bold text-emerald-400">{it.total.toFixed(2)}</td>
+                          <td className="p-2.5 text-purple-300 font-semibold">
+                            {it.hsn_code || "0401"}
+                          </td>
+                          <td className="p-2.5 text-right font-bold text-[var(--text)]">
+                            {it.qty}
+                          </td>
+                          <td className="p-2.5 text-right text-[var(--text-muted)]">
+                            {it.unit_price.toFixed(2)}
+                          </td>
+                          <td className="p-2.5 text-right text-amber-400">
+                            {it.tax_amount.toFixed(2)}
+                          </td>
+                          <td className="p-2.5 text-right font-bold text-emerald-400">
+                            {it.total.toFixed(2)}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1030,18 +1096,33 @@ export default function InvoicesPage() {
                     {selectedInvoice.payments && selectedInvoice.payments.length > 0 ? (
                       <div className="space-y-1.5">
                         {selectedInvoice.payments.map((p) => (
-                          <div key={p.id} className="p-2 rounded-lg bg-black/20 border border-white/[0.06] text-xs font-mono flex items-center justify-between">
+                          <div
+                            key={p.id}
+                            className="p-2 rounded-lg bg-black/20 border border-white/[0.06] text-xs font-mono flex items-center justify-between"
+                          >
                             <div>
-                              <span className="text-emerald-400 font-bold">₹{p.amount.toFixed(2)}</span>
-                              <span className="text-[var(--text-muted)] text-[10px] ml-2 uppercase">({p.method.replace("_", " ")})</span>
-                              {p.note && <div className="text-[10px] text-[var(--text-muted)] font-sans">{p.note}</div>}
+                              <span className="text-emerald-400 font-bold">
+                                ₹{p.amount.toFixed(2)}
+                              </span>
+                              <span className="text-[var(--text-muted)] text-[10px] ml-2 uppercase">
+                                ({p.method.replace("_", " ")})
+                              </span>
+                              {p.note && (
+                                <div className="text-[10px] text-[var(--text-muted)] font-sans">
+                                  {p.note}
+                                </div>
+                              )}
                             </div>
-                            <span className="text-[10px] text-[var(--text-muted)]">{new Date(p.paid_at).toLocaleDateString("en-IN")}</span>
+                            <span className="text-[10px] text-[var(--text-muted)]">
+                              {new Date(p.paid_at).toLocaleDateString("en-IN")}
+                            </span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-[var(--text-muted)] italic">No payments recorded yet.</p>
+                      <p className="text-xs text-[var(--text-muted)] italic">
+                        No payments recorded yet.
+                      </p>
                     )}
                   </div>
 
@@ -1068,7 +1149,13 @@ export default function InvoicesPage() {
                     </div>
                     <div className="flex justify-between text-sm font-bold text-rose-400 bg-rose-500/10 p-1.5 rounded-lg border border-rose-500/20">
                       <span>Outstanding Balance:</span>
-                      <span>₹{(selectedInvoice.outstanding_balance ?? (selectedInvoice.total_amount - (selectedInvoice.paid_amount || 0))).toFixed(2)}</span>
+                      <span>
+                        ₹
+                        {(
+                          selectedInvoice.outstanding_balance ??
+                          selectedInvoice.total_amount - (selectedInvoice.paid_amount || 0)
+                        ).toFixed(2)}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1076,11 +1163,7 @@ export default function InvoicesPage() {
 
               {/* Modal Actions */}
               <div className="flex items-center justify-between pt-2">
-                <GlassButton
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsDetailOpen(false)}
-                >
+                <GlassButton variant="ghost" size="sm" onClick={() => setIsDetailOpen(false)}>
                   <X className="w-4 h-4 mr-1" /> Close
                 </GlassButton>
 
@@ -1110,7 +1193,10 @@ export default function InvoicesPage() {
                     size="sm"
                     onClick={async () => {
                       try {
-                        await apiClient.downloadBlob(`/invoices/${selectedInvoice.id}/pdf`, `${selectedInvoice.invoice_no}.pdf`);
+                        await apiClient.downloadBlob(
+                          `/invoices/${selectedInvoice.id}/pdf`,
+                          `${selectedInvoice.invoice_no}.pdf`,
+                        );
                       } catch (err) {
                         console.error("Invoice PDF download failed:", err);
                       }
@@ -1119,11 +1205,7 @@ export default function InvoicesPage() {
                   >
                     <FileDown className="w-4 h-4 mr-1.5" /> Download Official GST PDF
                   </GlassButton>
-                  <GlassButton
-                    variant="primary"
-                    size="sm"
-                    onClick={handlePrint}
-                  >
+                  <GlassButton variant="primary" size="sm" onClick={handlePrint}>
                     <Printer className="w-4 h-4 mr-1.5" /> Print Invoice
                   </GlassButton>
                 </div>
@@ -1141,7 +1223,8 @@ export default function InvoicesPage() {
         >
           <form onSubmit={handleGenerateEwayBillSubmit} className="space-y-4">
             <p className="text-xs text-[var(--text-muted)]">
-              Generate an official 12-digit E-Way Bill for goods transit per statutory compliance rules.
+              Generate an official 12-digit E-Way Bill for goods transit per statutory compliance
+              rules.
             </p>
 
             {ewayError && (
@@ -1232,12 +1315,13 @@ export default function InvoicesPage() {
             <div className="p-3 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] flex items-center justify-between text-xs">
               <span className="text-[var(--text-muted)]">Outstanding Receivable:</span>
               <span className="font-mono font-bold text-rose-400 text-sm">
-                ₹{Number(
+                ₹
+                {Number(
                   targetInvoice?.outstanding_balance !== undefined
                     ? targetInvoice.outstanding_balance
                     : targetInvoice?.status === "paid"
-                    ? 0
-                    : targetInvoice?.total_amount || 0
+                      ? 0
+                      : targetInvoice?.total_amount || 0,
                 ).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
               </span>
             </div>

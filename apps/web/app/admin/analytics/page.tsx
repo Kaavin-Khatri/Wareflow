@@ -110,7 +110,8 @@ const ANALYTICS_HUBS = [
   },
   {
     title: "Profitability & Product Margins",
-    description: "Gross margin matrix, SKU-level contribution analysis, and category revenue ranking.",
+    description:
+      "Gross margin matrix, SKU-level contribution analysis, and category revenue ranking.",
     href: "/admin/analytics/profitability",
     icon: TrendingUp,
     badge: "Margin Matrix",
@@ -119,7 +120,8 @@ const ANALYTICS_HUBS = [
   },
   {
     title: "Turnover Velocity & Stock Aging",
-    description: "Annualized inventory velocity, dead stock flags, and fast vs slow-moving SKU classification.",
+    description:
+      "Annualized inventory velocity, dead stock flags, and fast vs slow-moving SKU classification.",
     href: "/admin/analytics/turnover",
     icon: Activity,
     badge: "Velocity",
@@ -137,7 +139,8 @@ const ANALYTICS_HUBS = [
   },
   {
     title: "Supplier Performance Scorecards",
-    description: "On-time delivery rates, purchase fulfillment accuracy, and purchase return rates.",
+    description:
+      "On-time delivery rates, purchase fulfillment accuracy, and purchase return rates.",
     href: "/admin/analytics/suppliers",
     icon: Truck,
     badge: "Vendor SLAs",
@@ -146,7 +149,8 @@ const ANALYTICS_HUBS = [
   },
   {
     title: "Retailer Performance & Churn Risk",
-    description: "Wholesale buyer revenue ranking, order frequency trends, and churn risk heuristics.",
+    description:
+      "Wholesale buyer revenue ranking, order frequency trends, and churn risk heuristics.",
     href: "/admin/analytics/retailers",
     icon: Users,
     badge: "Customer Health",
@@ -155,7 +159,8 @@ const ANALYTICS_HUBS = [
   },
   {
     title: "Multi-Warehouse Breakdown",
-    description: "Location-level holding valuation, utilization rates, and 30-day throughput metrics.",
+    description:
+      "Location-level holding valuation, utilization rates, and 30-day throughput metrics.",
     href: "/admin/analytics/warehouses",
     icon: Warehouse,
     badge: "Facilities",
@@ -164,7 +169,8 @@ const ANALYTICS_HUBS = [
   },
   {
     title: "Shrinkage & Damage Write-offs",
-    description: "Damage adjustments, loss rate analysis, and root-cause classification breakdowns.",
+    description:
+      "Damage adjustments, loss rate analysis, and root-cause classification breakdowns.",
     href: "/admin/analytics/shrinkage",
     icon: ShieldAlert,
     badge: "Loss Prevention",
@@ -227,7 +233,7 @@ export default function AnalyticsLandingPage() {
         channels: ["email", "whatsapp", "in_app"],
       });
       setSendSuccessMsg(
-        `Report dispatched successfully to ${res.recipients_count} recipient(s) across ${res.channels_used.join(", ")}!`
+        `Report dispatched successfully to ${res.recipients_count} recipient(s) across ${res.channels_used.join(", ")}!`,
       );
       setTimeout(() => setSendSuccessMsg(null), 6000);
     } catch (err) {
@@ -254,7 +260,8 @@ export default function AnalyticsLandingPage() {
               </GlassBadge>
             </div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-              Real-time enterprise metrics, period comparisons, automated executive summaries, and specialized reports.
+              Real-time enterprise metrics, period comparisons, automated executive summaries, and
+              specialized reports.
             </p>
           </div>
 
@@ -324,7 +331,9 @@ export default function AnalyticsLandingPage() {
           {/* 1. Revenue */}
           <GlassTiltCard className="p-4 rounded-2xl flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Total Revenue</span>
+              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Total Revenue
+              </span>
               <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
                 <TrendingUp className="w-4 h-4" />
               </div>
@@ -349,7 +358,9 @@ export default function AnalyticsLandingPage() {
           {/* 2. Gross Margin */}
           <GlassTiltCard className="p-4 rounded-2xl flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Gross Margin</span>
+              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Gross Margin
+              </span>
               <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
                 <Activity className="w-4 h-4" />
               </div>
@@ -374,7 +385,9 @@ export default function AnalyticsLandingPage() {
           {/* 3. Stock Holding Valuation */}
           <GlassTiltCard className="p-4 rounded-2xl flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Stock Valuation</span>
+              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Stock Valuation
+              </span>
               <div className="p-2 rounded-xl bg-violet-500/10 text-violet-500">
                 <Boxes className="w-4 h-4" />
               </div>
@@ -399,7 +412,9 @@ export default function AnalyticsLandingPage() {
           {/* 4. Turnover Velocity */}
           <GlassTiltCard className="p-4 rounded-2xl flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Turnover Velocity</span>
+              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Turnover Velocity
+              </span>
               <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
                 <RefreshCw className="w-4 h-4" />
               </div>
@@ -424,7 +439,9 @@ export default function AnalyticsLandingPage() {
           {/* 5. Units Sold */}
           <GlassTiltCard className="p-4 rounded-2xl flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Units Sold</span>
+              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Units Sold
+              </span>
               <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-500">
                 <Layers className="w-4 h-4" />
               </div>
@@ -449,7 +466,9 @@ export default function AnalyticsLandingPage() {
           {/* 6. Shrinkage Loss */}
           <GlassTiltCard className="p-4 rounded-2xl flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Shrinkage Loss</span>
+              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                Shrinkage Loss
+              </span>
               <div className="p-2 rounded-xl bg-rose-500/10 text-rose-500">
                 <ShieldAlert className="w-4 h-4" />
               </div>
@@ -525,10 +544,7 @@ export default function AnalyticsLandingPage() {
                           {h.description}
                         </div>
                       </div>
-                      <GlassBadge
-                        variant={h.badge_variant}
-                        className="shrink-0 font-bold"
-                      >
+                      <GlassBadge variant={h.badge_variant} className="shrink-0 font-bold">
                         {h.metric_value}
                       </GlassBadge>
                     </div>
@@ -586,7 +602,9 @@ export default function AnalyticsLandingPage() {
                             <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                               {s.name}
                             </span>
-                            <span className="text-[10px] text-zinc-400 ml-1.5">({s.on_hand} on hand)</span>
+                            <span className="text-[10px] text-zinc-400 ml-1.5">
+                              ({s.on_hand} on hand)
+                            </span>
                           </div>
                           <div className="font-bold text-amber-600 dark:text-amber-400 tabular-nums">
                             ₹{s.tied_up_capital.toLocaleString()}
@@ -609,7 +627,8 @@ export default function AnalyticsLandingPage() {
                 Specialized BI & Analytics Reports
               </h2>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Drill down into domain-specific reports across inventory, finance, suppliers, and buyers.
+                Drill down into domain-specific reports across inventory, finance, suppliers, and
+                buyers.
               </p>
             </div>
           </div>
@@ -619,17 +638,15 @@ export default function AnalyticsLandingPage() {
               const Icon = hub.icon;
               return (
                 <Link key={hub.href} href={hub.href} className="group block">
-                  <GlassCard
-                    className="h-full p-5 rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col justify-between"
-                  >
+                  <GlassCard className="h-full p-5 rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 flex flex-col justify-between">
                     <div>
                       <div className="flex items-center justify-between">
-                        <div className={`p-3 rounded-2xl bg-gradient-to-br ${hub.gradient} ${hub.iconColor} border border-zinc-200/60 dark:border-zinc-700/60`}>
+                        <div
+                          className={`p-3 rounded-2xl bg-gradient-to-br ${hub.gradient} ${hub.iconColor} border border-zinc-200/60 dark:border-zinc-700/60`}
+                        >
                           <Icon className="w-5 h-5" />
                         </div>
-                        <GlassBadge variant="neutral">
-                          {hub.badge}
-                        </GlassBadge>
+                        <GlassBadge variant="neutral">{hub.badge}</GlassBadge>
                       </div>
 
                       <h3 className="mt-4 text-base font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors flex items-center justify-between">

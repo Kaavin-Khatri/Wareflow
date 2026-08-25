@@ -164,9 +164,7 @@ export function LeadDiscoveryView() {
             <span>Total Discovered</span>
             <Store className="w-4 h-4 text-[var(--accent)]" />
           </div>
-          <div className="text-2xl font-black tracking-tight text-[var(--text)]">
-            {totalLeads}
-          </div>
+          <div className="text-2xl font-black tracking-tight text-[var(--text)]">{totalLeads}</div>
           <span className="text-[10px] text-[var(--text-subtle)] font-mono mt-1 block">
             Across 15km Territory
           </span>
@@ -180,9 +178,7 @@ export function LeadDiscoveryView() {
             </span>
             <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
           </div>
-          <div className="text-2xl font-black tracking-tight text-amber-300">
-            {newLeadsCount}
-          </div>
+          <div className="text-2xl font-black tracking-tight text-amber-300">{newLeadsCount}</div>
           <span className="text-[10px] text-amber-400/80 font-mono mt-1 block">
             Uncontacted leads
           </span>
@@ -209,9 +205,7 @@ export function LeadDiscoveryView() {
             </span>
             <span className="w-2 h-2 rounded-full bg-cyan-400" />
           </div>
-          <div className="text-2xl font-black tracking-tight text-cyan-300">
-            {convertedCount}
-          </div>
+          <div className="text-2xl font-black tracking-tight text-cyan-300">{convertedCount}</div>
           <span className="text-[10px] text-cyan-400/80 font-mono mt-1 block">
             Active wholesale accounts
           </span>

@@ -52,7 +52,6 @@ function computeFssaiStatus(expiryDate: string | null): {
   return { label: "Valid", variant: "success", daysRemaining: days };
 }
 
-
 export interface SupplierItem {
   id: string;
   name: string;
@@ -304,9 +303,7 @@ export default function SuppliersAdminPage() {
             <div className="flex items-center gap-1.5">
               <GlassBadge variant={fssai.variant} className="text-[10px] px-2 py-0.5">
                 <ShieldCheck className="w-2.5 h-2.5 mr-0.5" />
-                {row.fssai_license_no
-                  ? `FSSAI: ${fssai.label}`
-                  : fssai.label}
+                {row.fssai_license_no ? `FSSAI: ${fssai.label}` : fssai.label}
               </GlassBadge>
               {fssai.daysRemaining !== null && (
                 <span className="text-[10px] text-[var(--text-muted)] flex items-center gap-0.5">

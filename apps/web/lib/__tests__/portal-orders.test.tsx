@@ -65,7 +65,7 @@ describe("Portal Cart State Manager (lib/portal-cart.ts)", () => {
         unitPrice: 190.0,
         unit: "Piece",
       },
-      2
+      2,
     );
 
     const items = getCartItems();
@@ -82,7 +82,7 @@ describe("Portal Cart State Manager (lib/portal-cart.ts)", () => {
         unitPrice: 190.0,
         unit: "Piece",
       },
-      3
+      3,
     );
 
     const updated = getCartItems();
@@ -98,7 +98,7 @@ describe("Portal Cart State Manager (lib/portal-cart.ts)", () => {
         name: "Assam Gold Premium Tea",
         unitPrice: 200.0,
       },
-      2
+      2,
     );
     addToCart(
       {
@@ -107,7 +107,7 @@ describe("Portal Cart State Manager (lib/portal-cart.ts)", () => {
         name: "Butter Crunch Cookies",
         unitPrice: 100.0,
       },
-      4
+      4,
     );
 
     let total = getCartTotal();
@@ -148,7 +148,7 @@ describe("Portal Cart Page (app/portal/cart/page.tsx)", () => {
         unitPrice: 200.0,
         unit: "Piece",
       },
-      10
+      10,
     );
 
     // Mock successful POST /portal/orders
@@ -184,7 +184,7 @@ describe("Portal Cart Page (app/portal/cart/page.tsx)", () => {
           body: JSON.stringify({
             items: [{ product_id: "prod-tea-1", qty: 10 }],
           }),
-        })
+        }),
       );
     });
 
@@ -203,7 +203,7 @@ describe("Portal Cart Page (app/portal/cart/page.tsx)", () => {
         unitPrice: 200.0,
         unit: "Piece",
       },
-      500
+      500,
     );
 
     const mockFetch = vi.fn().mockResolvedValue({
@@ -231,7 +231,7 @@ describe("Portal Cart Page (app/portal/cart/page.tsx)", () => {
       expect(screen.getByText("Order Submitted (Pending Review)")).toBeDefined();
       expect(screen.getByText("SO-2026-0100")).toBeDefined();
       expect(
-        screen.getByText("Credit limit exceeded: Required 100000.0, available 50000.0")
+        screen.getByText("Credit limit exceeded: Required 100000.0, available 50000.0"),
       ).toBeDefined();
     });
   });

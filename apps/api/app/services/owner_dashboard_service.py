@@ -5,8 +5,8 @@ urgent low-stock and accounts-receivable aging quick lists, and weekly intellige
 in a single efficient API round trip.
 """
 
-from datetime import UTC, date, datetime, timedelta
 import logging
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from app.models.billing import InvoiceStatusEnum

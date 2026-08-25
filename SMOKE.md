@@ -4,11 +4,12 @@
 > **Frontend**: `https://wareflow-web-seven.vercel.app`  
 > **Backend**: `https://wareflow-api-kg2c.onrender.com`  
 > **Database**: Supabase Postgres (`yappumzftktliybmztgg`)  
-> **Target Roles**: `Owner` and `Warehouse Staff`  
+> **Target Roles**: `Owner` and `Warehouse Staff`
 
 ---
 
 ## 🎯 Objective
+
 Validate the complete real-world FMCG/Agro wholesale distribution workflow from manufacturer procurement, batch-tracked FIFO inventory receiving, sales order dispatch, tax invoicing, and credit accounting to delivery and returns without database shortcuts.
 
 ---
@@ -32,6 +33,7 @@ flowchart LR
 ---
 
 ### Step 1: Owner Authentication & Staff Invitation
+
 1. Open [`https://wareflow-web-seven.vercel.app/login`](https://wareflow-web-seven.vercel.app/login) in your browser.
 2. Sign in using **Google Sign-In** or **Email/Password**.
 3. Confirm redirection to the main ERP Dashboard (`/dashboard`).
@@ -47,6 +49,7 @@ flowchart LR
 ---
 
 ### Step 2: Supplier & Product Master Creation (with UoM)
+
 1. Navigate to **Suppliers** (`/suppliers`) → click **+ Add Supplier**:
    - **Company Name**: `Tata Consumer Products Ltd`
    - **Contact Person**: `Vikram Joshi`
@@ -73,6 +76,7 @@ flowchart LR
 ---
 
 ### Step 3: Raise & Receive Purchase Order (Inbound Stock Ledger)
+
 1. Navigate to **Procurement / POs** (`/purchases`) → click **+ Raise Purchase Order**:
    - **Supplier**: `Tata Consumer Products Ltd`
    - **Destination Warehouse**: `Bhiwandi Central Hub`
@@ -90,6 +94,7 @@ flowchart LR
 ---
 
 ### Step 4: Retailer Onboarding with Credit Limits
+
 1. Navigate to **Retailers** (`/retailers`) → click **+ Add Retailer**:
    - **Store Name**: `Shree Ganesh Supermarket`
    - **Owner Name**: `Ramesh Patel`
@@ -104,6 +109,7 @@ flowchart LR
 ---
 
 ### Step 5: Sales Order & FIFO Batch Allocation
+
 1. Navigate to **Sales Orders** (`/orders`) → click **+ New Sales Order**:
    - **Retailer**: `Shree Ganesh Supermarket`
    - **Fulfillment Warehouse**: `Bhiwandi Central Hub`
@@ -117,6 +123,7 @@ flowchart LR
 ---
 
 ### Step 6: GST Tax Invoice Generation & E-Way Bill
+
 1. On the confirmed Sales Order page, click **Generate Tax Invoice** (`/invoices`):
    - Verifies sequential invoice numbering (e.g. `INV-2026-001`).
    - Verifies tax breakdown: CGST 2.5% (`₹35.00`), SGST 2.5% (`₹35.00`).
@@ -126,6 +133,7 @@ flowchart LR
 ---
 
 ### Step 7: Partial Payment Collection & Ledger Update
+
 1. Open the generated invoice at `/invoices/[id]`.
 2. Click **Record Payment**:
    - **Amount Paid**: `₹1,000.00`
@@ -138,6 +146,7 @@ flowchart LR
 ---
 
 ### Step 8: Accounts Receivable (AR) Aging Report
+
 1. Navigate to **Finance / AR Aging** (`/finance` or `/reports/ar-aging`).
 2. Search for `Shree Ganesh Supermarket`:
    - **Pass Condition**: `₹470.00` outstanding balance is correctly categorized in the **0–30 Days** aging bucket.
@@ -145,6 +154,7 @@ flowchart LR
 ---
 
 ### Step 9: Delivery Dispatch & Proof of Delivery (POD)
+
 1. Navigate to **Deliveries** (`/deliveries`).
 2. Find the dispatch for Sales Order `Shree Ganesh Supermarket`:
    - Click **Assign Fleet**: Driver `Raju Yadav` (Vehicle `MH-04-AB-1290`).
@@ -155,6 +165,7 @@ flowchart LR
 ---
 
 ### Step 10: Retailer Return (Credit Note Processing)
+
 1. Navigate to **Returns** (`/returns`) → click **+ Process Sales Return**:
    - **Invoice**: Select `INV-2026-001`
    - **Retailer**: `Shree Ganesh Supermarket`
@@ -167,6 +178,7 @@ flowchart LR
 ---
 
 ### Step 11: Low-Stock Buffer & Predictive Alerting
+
 1. Raise a sales order for `110 kg` of `Tata Salt 1kg Crystal` to reduce remaining available stock to `35 kg` (below the `50 kg` reorder threshold).
 2. Confirm the order.
 3. Check the **Notifications** bell (`/notifications`) and **Dashboard Alert Banner**:
@@ -176,16 +188,16 @@ flowchart LR
 
 ## 🏁 Sign-Off Verification Matrix
 
-| Step | Capability | Verified On Production? | Response Time | Status |
-| :--- | :--- | :---: | :---: | :---: |
-| 1 | Owner Login & Staff RBAC | ✅ | < 1.2s | PASS |
-| 2 | Supplier & Multi-UoM SKU Master | ✅ | < 800ms | PASS |
-| 3 | PO Creation & FIFO Goods Receipt | ✅ | < 950ms | PASS |
-| 4 | Retailer Credit Limit Enforcement | ✅ | < 650ms | PASS |
-| 5 | Sales Order FIFO Stock Allocation | ✅ | < 900ms | PASS |
-| 6 | GST Tax Invoicing & PDF Generation | ✅ | < 1.4s | PASS |
-| 7 | Partial Payment & Status Transition | ✅ | < 750ms | PASS |
-| 8 | AR Aging Bucket Ledger Calculation | ✅ | < 850ms | PASS |
-| 9 | Vehicle Dispatch Routing & POD | ✅ | < 700ms | PASS |
-| 10 | Retailer Return & Credit Note | ✅ | < 950ms | PASS |
-| 11 | Reorder Point Low-Stock Trigger | ✅ | < 600ms | PASS |
+| Step | Capability                          | Verified On Production? | Response Time | Status |
+| :--- | :---------------------------------- | :---------------------: | :-----------: | :----: |
+| 1    | Owner Login & Staff RBAC            |           ✅            |    < 1.2s     |  PASS  |
+| 2    | Supplier & Multi-UoM SKU Master     |           ✅            |    < 800ms    |  PASS  |
+| 3    | PO Creation & FIFO Goods Receipt    |           ✅            |    < 950ms    |  PASS  |
+| 4    | Retailer Credit Limit Enforcement   |           ✅            |    < 650ms    |  PASS  |
+| 5    | Sales Order FIFO Stock Allocation   |           ✅            |    < 900ms    |  PASS  |
+| 6    | GST Tax Invoicing & PDF Generation  |           ✅            |    < 1.4s     |  PASS  |
+| 7    | Partial Payment & Status Transition |           ✅            |    < 750ms    |  PASS  |
+| 8    | AR Aging Bucket Ledger Calculation  |           ✅            |    < 850ms    |  PASS  |
+| 9    | Vehicle Dispatch Routing & POD      |           ✅            |    < 700ms    |  PASS  |
+| 10   | Retailer Return & Credit Note       |           ✅            |    < 950ms    |  PASS  |
+| 11   | Reorder Point Low-Stock Trigger     |           ✅            |    < 600ms    |  PASS  |

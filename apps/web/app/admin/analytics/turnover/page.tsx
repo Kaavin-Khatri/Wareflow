@@ -92,7 +92,7 @@ export default function InventoryTurnoverPage() {
   const filteredAndSortedItems = useMemo(() => {
     if (!data?.items) return [];
 
-    let filtered = data.items.filter((item) => {
+    const filtered = data.items.filter((item) => {
       // Band filter
       if (bandFilter !== "all" && item.turnover_band !== bandFilter) {
         return false;
@@ -107,7 +107,7 @@ export default function InventoryTurnoverPage() {
       );
     });
 
-    return filtered.sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       let aVal = a[sortField];
       let bVal = b[sortField];
 
@@ -121,7 +121,7 @@ export default function InventoryTurnoverPage() {
       bVal = Number(bVal) || 0;
       return sortAsc ? aVal - bVal : bVal - aVal;
     });
-  }, [data?.items, bandFilter, searchQuery, sortField, sortAsc]);
+  }, [data, bandFilter, searchQuery, sortField, sortAsc]);
 
   const handleSort = (field: keyof TurnoverItem) => {
     if (sortField === field) {
@@ -147,7 +147,8 @@ export default function InventoryTurnoverPage() {
               </h1>
             </div>
             <p className="text-xs md:text-sm text-[var(--text-muted)] mt-1">
-              Continuous stock velocity ratios and early-warning health banding before stock becomes dead.
+              Continuous stock velocity ratios and early-warning health banding before stock becomes
+              dead.
             </p>
           </div>
 
@@ -550,7 +551,10 @@ export default function InventoryTurnoverPage() {
 
                         {/* Tied-Up Capital */}
                         <td className="p-3.5 font-mono font-semibold text-[var(--text)]">
-                          ₹{item.tied_up_capital.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          ₹
+                          {item.tied_up_capital.toLocaleString("en-IN", {
+                            minimumFractionDigits: 2,
+                          })}
                         </td>
 
                         {/* Action Link */}

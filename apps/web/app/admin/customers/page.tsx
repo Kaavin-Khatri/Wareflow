@@ -118,7 +118,6 @@ export default function CustomersPage() {
     };
   }, []);
 
-
   // Filtered list
   const filteredCustomers = useMemo(() => {
     return customers.filter((c) => {
@@ -193,8 +192,8 @@ export default function CustomersPage() {
         err instanceof Error
           ? err.message
           : typeof err === "object" && err !== null && "message" in err
-          ? String((err as { message: unknown }).message)
-          : "Failed to register customer.";
+            ? String((err as { message: unknown }).message)
+            : "Failed to register customer.";
       setErrorMessage(errorMsg);
     } finally {
       setSubmitting(false);
@@ -227,8 +226,8 @@ export default function CustomersPage() {
         err instanceof Error
           ? err.message
           : typeof err === "object" && err !== null && "message" in err
-          ? String((err as { message: unknown }).message)
-          : "Failed to update customer.";
+            ? String((err as { message: unknown }).message)
+            : "Failed to update customer.";
       setErrorMessage(errorMsg);
     } finally {
       setSubmitting(false);
@@ -238,7 +237,7 @@ export default function CustomersPage() {
   const handleDelete = async (customer: Customer) => {
     if (
       !window.confirm(
-        `Are you sure you want to delete customer "${customer.name}"? This action cannot be undone.`
+        `Are you sure you want to delete customer "${customer.name}"? This action cannot be undone.`,
       )
     ) {
       return;
@@ -253,8 +252,8 @@ export default function CustomersPage() {
         err instanceof Error
           ? err.message
           : typeof err === "object" && err !== null && "message" in err
-          ? String((err as { message: unknown }).message)
-          : "Cannot delete customer with active order history.";
+            ? String((err as { message: unknown }).message)
+            : "Cannot delete customer with active order history.";
       alert(errorMsg);
     }
   };
@@ -390,7 +389,9 @@ export default function CustomersPage() {
             </div>
             <div>
               <p className="text-xs text-[var(--text-muted)] font-medium">Direct Customers</p>
-              <h3 className="text-2xl font-bold font-mono text-[var(--text)]">{metrics.totalCount}</h3>
+              <h3 className="text-2xl font-bold font-mono text-[var(--text)]">
+                {metrics.totalCount}
+              </h3>
             </div>
           </GlassCard>
 
@@ -400,7 +401,9 @@ export default function CustomersPage() {
             </div>
             <div>
               <p className="text-xs text-[var(--text-muted)] font-medium">Active Buyers</p>
-              <h3 className="text-2xl font-bold font-mono text-emerald-400">{metrics.activeBuyers}</h3>
+              <h3 className="text-2xl font-bold font-mono text-emerald-400">
+                {metrics.activeBuyers}
+              </h3>
             </div>
           </GlassCard>
 
@@ -442,15 +445,10 @@ export default function CustomersPage() {
           onSearchChange={setSearchQuery}
           searchPlaceholder="Search customers by name, phone, email, notes..."
           primaryAction={
-            <GlassButton
-              variant="primary"
-              size="md"
-              onClick={openCreateModal}
-            >
+            <GlassButton variant="primary" size="md" onClick={openCreateModal}>
               <UserPlus className="w-4 h-4 mr-2" /> Add Direct Customer
             </GlassButton>
           }
-
         >
           <DataTable
             data={filteredCustomers}
@@ -478,7 +476,10 @@ export default function CustomersPage() {
             )}
 
             <div className="space-y-1">
-              <label htmlFor="create-cust-name" className="block text-xs font-medium text-[var(--text-muted)]">
+              <label
+                htmlFor="create-cust-name"
+                className="block text-xs font-medium text-[var(--text-muted)]"
+              >
                 Customer Name *
               </label>
               <input
@@ -494,7 +495,10 @@ export default function CustomersPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label htmlFor="create-cust-phone" className="block text-xs font-medium text-[var(--text-muted)]">
+                <label
+                  htmlFor="create-cust-phone"
+                  className="block text-xs font-medium text-[var(--text-muted)]"
+                >
                   Phone Number
                 </label>
                 <input
@@ -508,7 +512,10 @@ export default function CustomersPage() {
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="create-cust-email" className="block text-xs font-medium text-[var(--text-muted)]">
+                <label
+                  htmlFor="create-cust-email"
+                  className="block text-xs font-medium text-[var(--text-muted)]"
+                >
                   Email Address
                 </label>
                 <input
@@ -523,7 +530,10 @@ export default function CustomersPage() {
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="create-cust-address" className="block text-xs font-medium text-[var(--text-muted)]">
+              <label
+                htmlFor="create-cust-address"
+                className="block text-xs font-medium text-[var(--text-muted)]"
+              >
                 Delivery / Billing Address
               </label>
               <textarea
@@ -537,7 +547,10 @@ export default function CustomersPage() {
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="create-cust-notes" className="block text-xs font-medium text-[var(--text-muted)]">
+              <label
+                htmlFor="create-cust-notes"
+                className="block text-xs font-medium text-[var(--text-muted)]"
+              >
                 Internal Buyer Notes
               </label>
               <textarea
@@ -551,7 +564,12 @@ export default function CustomersPage() {
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t border-[var(--glass-border)]">
-              <GlassButton variant="ghost" size="sm" type="button" onClick={() => setIsCreateOpen(false)}>
+              <GlassButton
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={() => setIsCreateOpen(false)}
+              >
                 Cancel
               </GlassButton>
               <GlassButton variant="primary" size="sm" type="submit" disabled={submitting}>
@@ -576,7 +594,10 @@ export default function CustomersPage() {
             )}
 
             <div className="space-y-1">
-              <label htmlFor="edit-cust-name" className="block text-xs font-medium text-[var(--text-muted)]">
+              <label
+                htmlFor="edit-cust-name"
+                className="block text-xs font-medium text-[var(--text-muted)]"
+              >
                 Customer Name *
               </label>
               <input
@@ -591,7 +612,10 @@ export default function CustomersPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label htmlFor="edit-cust-phone" className="block text-xs font-medium text-[var(--text-muted)]">
+                <label
+                  htmlFor="edit-cust-phone"
+                  className="block text-xs font-medium text-[var(--text-muted)]"
+                >
                   Phone Number
                 </label>
                 <input
@@ -604,7 +628,10 @@ export default function CustomersPage() {
               </div>
 
               <div className="space-y-1">
-                <label htmlFor="edit-cust-email" className="block text-xs font-medium text-[var(--text-muted)]">
+                <label
+                  htmlFor="edit-cust-email"
+                  className="block text-xs font-medium text-[var(--text-muted)]"
+                >
                   Email Address
                 </label>
                 <input
@@ -618,7 +645,10 @@ export default function CustomersPage() {
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="edit-cust-address" className="block text-xs font-medium text-[var(--text-muted)]">
+              <label
+                htmlFor="edit-cust-address"
+                className="block text-xs font-medium text-[var(--text-muted)]"
+              >
                 Address
               </label>
               <textarea
@@ -631,7 +661,10 @@ export default function CustomersPage() {
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="edit-cust-notes" className="block text-xs font-medium text-[var(--text-muted)]">
+              <label
+                htmlFor="edit-cust-notes"
+                className="block text-xs font-medium text-[var(--text-muted)]"
+              >
                 Internal Notes
               </label>
               <textarea
@@ -644,7 +677,12 @@ export default function CustomersPage() {
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t border-[var(--glass-border)]">
-              <GlassButton variant="ghost" size="sm" type="button" onClick={() => setIsEditOpen(false)}>
+              <GlassButton
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={() => setIsEditOpen(false)}
+              >
                 Cancel
               </GlassButton>
               <GlassButton variant="primary" size="sm" type="submit" disabled={submitting}>
@@ -664,7 +702,9 @@ export default function CustomersPage() {
             <div className="space-y-5">
               <div className="p-4 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-base font-bold text-[var(--text)]">{selectedCustomer.name}</h3>
+                  <h3 className="text-base font-bold text-[var(--text)]">
+                    {selectedCustomer.name}
+                  </h3>
                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20">
                     Walk-In Customer
                   </span>
@@ -685,7 +725,9 @@ export default function CustomersPage() {
                   </div>
                   {selectedCustomer.notes && (
                     <div className="sm:col-span-2 p-2.5 rounded-xl bg-purple-500/5 border border-purple-500/20 text-purple-300">
-                      <span className="text-[10px] uppercase font-bold text-purple-400 block mb-0.5">Notes</span>
+                      <span className="text-[10px] uppercase font-bold text-purple-400 block mb-0.5">
+                        Notes
+                      </span>
                       <p className="italic">&ldquo;{selectedCustomer.notes}&rdquo;</p>
                     </div>
                   )}
@@ -703,7 +745,10 @@ export default function CustomersPage() {
                 <div className="p-3 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-center">
                   <span className="text-[11px] text-[var(--text-muted)] block">Total Spend</span>
                   <span className="text-xl font-bold font-mono text-amber-400">
-                    ₹{(selectedCustomer.total_spend || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    ₹
+                    {(selectedCustomer.total_spend || 0).toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                    })}
                   </span>
                 </div>
               </div>
@@ -723,7 +768,6 @@ export default function CustomersPage() {
                   Close
                 </GlassButton>
               </div>
-
             </div>
           )}
         </GlassModal>

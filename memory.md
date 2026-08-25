@@ -48,7 +48,7 @@
 
 ## Change Log
 
-### Step 0.1 — Local Toolchain Setup
+## Step 0.1 — Local Toolchain Setup
 
 **Timestamp:** 2026-08-17T16:34:00Z
 **Status:** COMPLETE
@@ -71,7 +71,7 @@
 
 ---
 
-### Step 0.2 — GitHub Repo + Supabase (Database) + Firebase (Auth) Projects
+## Step 0.2 — GitHub Repo + Supabase (Database) + Firebase (Auth) Projects
 
 **Timestamp:** 2026-08-17T16:55:00Z
 **Status:** COMPLETE
@@ -100,7 +100,7 @@
 
 ---
 
-### Step 0.3 — Email Alerts, Deploy Accounts & Env Convention
+## Step 0.3 — Email Alerts, Deploy Accounts & Env Convention
 
 **Timestamp:** 2026-08-17T17:02:00Z
 **Status:** COMPLETE
@@ -127,7 +127,7 @@
 
 ---
 
-### Step 1.1 — Scaffold apps/web + apps/api + Protocol Files
+## Step 1.1 — Scaffold apps/web + apps/api + Protocol Files
 
 **Timestamp:** 2026-08-17T17:04:00Z
 **Status:** COMPLETE
@@ -150,8 +150,8 @@
 
 ### Key values for future steps
 
-- Web: http://localhost:3000 (Next.js dev server)
-- API: http://localhost:8000 (uvicorn dev server)
+- Web: `http://localhost:3000` (Next.js dev server)
+- API: `http://localhost:8000` (uvicorn dev server)
 - SOLID rule: routers never import repositories directly, only services
 
 ### SOLID Principles Applied
@@ -1702,7 +1702,7 @@
 
 ---
 
-### Step 7.2 — Purchase Orders & Goods Receiving
+## Step 7.2 — Purchase Orders & Goods Receiving
 
 **Timestamp:** 2026-08-18T16:30:00Z
 **Status:** COMPLETE
@@ -1861,7 +1861,7 @@
 
 ---
 
-### Step 7.4 — FSSAI License Compliance Tracking
+## Step 7.4 — FSSAI License Compliance Tracking
 
 **Timestamp:** 2026-08-18T19:20:00Z
 **Status:** COMPLETE
@@ -1937,6 +1937,7 @@
 ---
 
 ## Step 8.1 — Retailer CRUD & Bulk Pricing Tiers
+
 **Timestamp:** 2026-08-18T19:35:00Z
 **Status:** COMPLETE
 
@@ -2521,7 +2522,7 @@
 
 ---
 
-### Step 10.2 — Payments & Accounts-Receivable Ledger
+## Step 10.2 — Payments & Accounts-Receivable Ledger
 
 **Timestamp:** 2026-08-19T01:47:00Z
 **Status:** COMPLETE
@@ -2992,6 +2993,7 @@
 - `apps/web/app/portal/catalog/page.tsx`
 - `apps/web/app/portal/orders/page.tsx`
 - `apps/web/lib/__tests__/portal-catalog.test.tsx`
+
 ---
 
 ## Step 12.1 — Delivery Assignment & Status Board
@@ -3067,7 +3069,7 @@
 - `codebase_audit.md`
 - `memory.md`
 
-### Step 12.2 — Packing Slip & Pick List Generation
+## Step 12.2 — Packing Slip & Pick List Generation
 
 **Timestamp:** 2026-08-19T07:25:00Z
 **Status:** COMPLETE
@@ -3134,10 +3136,12 @@
 - `memory.md`
 
 ## Step 13.1 — Notification Engine (Strategy Pattern: channels)
+
 **Timestamp:** 2026-08-19T07:40:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Created `NotificationPayload` and `BaseNotificationChannel` strategy interface defining `send(payload) -> bool`.
 - Implemented `InAppChannel` writing to both PostgreSQL `notifications` table (system of record) and Firestore `notifications/{uid}/items/{id}` path (realtime mirror).
 - Implemented `EmailChannel` integrating Resend API for transactional HTML alert emails with development simulation logging fallback.
@@ -3148,10 +3152,12 @@
 - Added comprehensive backend Pytest tests (channel fanout, OCP extensibility with `StubSmsChannel`, Firestore realtime mirror, unread counts, HTTP endpoints) and frontend Vitest tests.
 
 ### Decisions
+
 - Channel pattern recorded as a reference OCP example: adding new channels (e.g. `SmsChannel`, `WhatsAppChannel`) requires zero changes to `NotificationService`.
 - Firestore used narrowly for realtime notification delivery only (`notifications/{uid}/items/{id}`) — Postgres stays the system of record for everything, including notification history and pagination.
 
 ### Key values for future steps
+
 - Notification Service: `NotificationService` (`apps/api/app/services/notification_service.py`)
 - InApp Channel: `InAppChannel` (`apps/api/app/services/notification_channels/in_app_channel.py`)
 - Email Channel: `EmailChannel` (`apps/api/app/services/notification_channels/email_channel.py`)
@@ -3161,10 +3167,12 @@
 ---
 
 ## Step 13.2 — Low-Stock, Reorder-Point, Expiring-Batch & Overdue-Invoice Alerts
+
 **Timestamp:** 2026-08-19T07:55:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Created `BaseAlertRule` interface (`apps/api/app/services/alert_rules/base.py`) with `rule_name`, `evaluate(context)`, and `evaluate_entity(entity_id, context)` methods.
 - Implemented 4 concrete alert rule strategies adhering strictly to OCP & SRP:
   - `LowStockRule`: Flags products where aggregate on-hand stock <= `reorder_point`, calculates suggested replenishment quantity (`reorder_qty` or 2x reorder point), and links to `/admin/purchase-orders`.
@@ -3179,11 +3187,13 @@
 - All 193 backend Pytest tests, 146 frontend Vitest tests, and Next.js production build passing 100% green.
 
 ### Decisions
+
 - Strategy Pattern for Alert Rules (OCP): New alerts (e.g. supplier fulfillment delays, price spike anomalies) can be added as standalone classes extending `BaseAlertRule` with zero changes to `AlertEngineService`.
 - 24-Hour Deduplication Window: Repeated evaluation cycles within 24 hours check `alert_logs` table before sending notifications to avoid notification fatigue.
 - Hybrid Trigger Architecture: 30-minute periodic APScheduler scan acts as a safety net, while event hooks on stock and sales order operations fire alerts instantly.
 
 ### Key values for future steps
+
 - Alert Engine: `AlertEngineService` (`apps/api/app/services/alert_engine_service.py`)
 - Alert Rules: `apps/api/app/services/alert_rules/`
 - Alert Scheduler: `AlertScheduler` (`apps/api/app/core/alert_scheduler.py`)
@@ -3193,10 +3203,12 @@
 ---
 
 ## Step 13.3 — WhatsApp Notification Channel
+
 **Timestamp:** 2026-08-19T08:15:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Created `WhatsAppClient` (`apps/api/app/services/whatsapp_client.py`) as the single isolated point for Meta WhatsApp Business Cloud API calls (`https://graph.facebook.com/v21.0/{phone_number_id}/messages`).
 - Implemented phone number normalization (`normalize_phone_number`) stripping non-digit characters and prepending country code `91` for standard 10-digit Indian numbers.
 - Built `WhatsAppChannel` (`apps/api/app/services/notification_channels/whatsapp_channel.py`) implementing `BaseNotificationChannel`:
@@ -3209,11 +3221,13 @@
 - All 201 backend Pytest tests, 146 frontend Vitest tests, and Next.js lint pass 100% green.
 
 ### Decisions
+
 - Strategy Pattern for Notification Channels: WhatsApp is registered as a third pluggable channel (`InAppChannel`, `EmailChannel`, `WhatsAppChannel`).
 - Meta Cloud API Free Tier Guard: Meta provides 1,000 free service conversations/month; email remains the always-available free fallback.
 - Pre-Approved Templates: Business-initiated WhatsApp messages strictly use pre-approved templates (`wareflow_stock_available`, `wareflow_goods_ready`) with positional parameters.
 
 ### Key values for future steps
+
 - WhatsApp Client: `WhatsAppClient` (`apps/api/app/services/whatsapp_client.py`)
 - WhatsApp Channel: `WhatsAppChannel` (`apps/api/app/services/notification_channels/whatsapp_channel.py`)
 - Registered Templates: `wareflow_stock_available`, `wareflow_goods_ready`
@@ -3222,10 +3236,12 @@
 ---
 
 ## Step 13.4 — Retailer Restock Subscriptions & Availability Alerts
+
 **Timestamp:** 2026-08-19T11:05:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - **Stock Subscription Repository & Domain Service**:
   - Implemented `StockSubscriptionRepositoryInterface` and implementations (`SqlAlchemyStockSubscriptionRepository`, `InMemoryStockSubscriptionRepository`).
   - Created `StockSubscriptionService` managing subscribe, unsubscribe, active subscriber listing, and per-retailer subscription count aggregation.
@@ -3253,6 +3269,7 @@
   - All 205 backend Pytest tests, 149 frontend Vitest tests, and Next.js build pass 100% green.
 
 ### Decisions
+
 - **Auto-Unsubscribe on Fulfillment**: Once restock alert is delivered to a retailer, `is_active` is set to `False` with timestamp in `notified_at`. A retailer resubscribes if they want back-in-stock alerts for future depletion cycles.
 - **Targeted Notification Channel Routing**: Subscriber's preference (`whatsapp`, `email`, `both`) is strictly respected during dispatch.
 - **Phone Call Quick-Action Support**: Internal staff can search and subscribe retailers directly from the product catalog table during incoming phone queries.
@@ -3260,10 +3277,12 @@
 ---
 
 ## Step 13.5 — Supplier Ready-for-Dispatch Signal → Owner Notification
+
 **Timestamp:** 2026-08-19T12:45:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - **Supplier Access Token Repository**:
   - Created `SupplierAccessTokenRepositoryInterface` (`apps/api/app/repositories/interfaces/supplier_access_token_repository.py`).
   - Implemented `SqlAlchemySupplierAccessTokenRepository` and `InMemorySupplierAccessTokenRepository` (`apps/api/app/repositories/impl/supplier_access_token_repository.py`).
@@ -3293,6 +3312,7 @@
   - All 210 backend Pytest tests, 152 frontend Vitest tests, and Next.js build pass 100% green.
 
 ### Decisions
+
 - **Zero-Login Supplier Flow**: Suppliers need no accounts or passwords; a secure 48-byte URL-safe cryptographic token provides scoped, single-purpose access.
 - **Single-Use Invalidation**: Once marked ready for dispatch, the token is permanently removed to prevent replay actions.
 - **Multi-Channel Notification Dispatch**: WhatsApp + Email notifications are dispatched to all active staff holding `inventory:manage` permissions (or Owner role) using the `wareflow_goods_ready` template.
@@ -3300,10 +3320,12 @@
 ---
 
 ## Step 13.6 — SMS Notification Channel (Fallback)
+
 **Timestamp:** 2026-08-19T13:05:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - **SMS Client & Fallback Channel (`SmsChannel`)**:
   - Implemented `SmsClient` (`apps/api/app/services/sms_client.py`) supporting Twilio REST API with phone number normalization (defaulting to +91 for 10-digit Indian numbers), single-segment 160-character length truncation (`truncate_sms_text`), and graceful simulation mode when unconfigured (`SMS_PROVIDER_API_KEY` / `TWILIO_ACCOUNT_SID` absent).
   - Implemented `SmsChannel` (`apps/api/app/services/notification_channels/sms_channel.py`) adhering to the Strategy pattern (`BaseNotificationChannel`), formatting high-priority concise messages for low-stock warnings, order confirmations, and PO dispatch readiness.
@@ -3321,11 +3343,13 @@
   - Full suite verification: 216/216 backend Pytest tests pass, 154/154 frontend Vitest tests pass, Next.js build clean.
 
 ### Decisions
+
 - **Strict Opt-In & Length Discipline for SMS**: Because outbound SMS incurs per-segment carrier costs and strict character limits (160 characters), SMS delivery is disabled by default and reserved exclusively for high-priority operational events (critical stock depletion for warehouse owners, confirmed orders for retailers). Rich formatting and marketing messages are strictly avoided.
 - **Graceful Unconfigured Simulation**: In sandbox/dev environments without active Twilio trial credits or API keys, `SmsClient` and `SmsChannel` log simulated delivery and return `True` without breaking the alert engine.
 - **Provider Choice & Trial Limits**: Twilio REST API was selected for its standard E.164 compliance and free trial credits ($15 sandbox credit, ~$0.0079/SMS in US/India). Pay-as-you-go Indian SMS gateways (e.g. Fast2SMS / MSG91) can be swapped seamlessly via the same `SmsClient` abstraction.
 
 ### Key values for future steps
+
 - SMS Channel: `SmsChannel` (`apps/api/app/services/notification_channels/sms_channel.py`)
 - SMS Client: `SmsClient` (`apps/api/app/services/sms_client.py`)
 - Notification Preference Repo: `NotificationPreferenceRepositoryInterface` (`apps/api/app/repositories/interfaces/notification_preference_repository.py`)
@@ -3335,10 +3359,12 @@
 ---
 
 ## Step 14.1 — Demand Forecasting Service (pluggable strategy)
+
 **Timestamp:** 2026-08-19T13:20:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - **ForecastStrategy Interface & Pluggable Algorithms (OCP)**:
   - Created `ForecastStrategy` interface and `ForecastResult` dataclass (`apps/api/app/services/forecasting/base.py`).
   - Implemented `MovingAverageForecast` (`apps/api/app/services/forecasting/moving_average.py`): default strategy bucketing outbound movements into trailing 4 weekly windows with linearly increasing weights (1, 2, 3, 4) and statistical confidence scoring.
@@ -3363,11 +3389,13 @@
   - Full test suite: 222/222 backend Pytest tests pass (100% green), 154/154 frontend Vitest tests pass (100% green).
 
 ### Decisions
+
 - **Pluggable Statistical Strategy over External AI API**: Chose pure mathematical algorithms (Weighted Moving Average & Exponential Smoothing) behind a Strategy interface instead of external paid ML APIs. This delivers instant, zero-latency, explainable, cost-free forecasting with zero cloud lock-in while preserving seamless drop-in extensibility for future models.
 - **24-Hour Database Cache TTL**: Forecasting runs over historical stock movements which change incrementally; caching results per product in the `forecasts` table for 24h ensures sub-millisecond API response times while `force_refresh=True` allows instant recalculation when needed.
 - **Honest Insufficient Data Response**: Products without outbound history return `status="insufficient_data"` with 0.0 confidence and a clear diagnostic message rather than fabricating misleading numbers.
 
 ### Key values for future steps
+
 - Strategy Interface: `ForecastStrategy` (`apps/api/app/services/forecasting/base.py`)
 - Moving Average Strategy: `MovingAverageForecast` (`apps/api/app/services/forecasting/moving_average.py`)
 - Exponential Smoothing Strategy: `ExponentialSmoothingForecast` (`apps/api/app/services/forecasting/exponential_smoothing.py`)
@@ -3384,6 +3412,7 @@
 **Status:** COMPLETE
 
 ### What was done
+
 - **Reorder Suggestion Engine (`ReorderSuggestionService`)**:
   - Implemented dynamic reorder suggestion generation based on current on-hand stock, product `min_stock_level`, `reorder_quantity`, supplier lead time buffer, and Step 14.1 `ForecastingService` predicted daily demand.
   - Formula: `suggested_reorder_qty = max(product.reorder_quantity or 1, math.ceil(daily_demand * lead_time_buffer_days))` with fallback to `min_stock_level * 2` when no velocity data exists.
@@ -3411,11 +3440,13 @@
   - Full test suite: 226/226 backend Pytest tests pass (100% green), 154/154 frontend Vitest tests pass (100% green).
 
 ### Decisions
+
 - **Lead Time Buffered Reorder Formula**: Integrated Step 14.1 demand forecasts directly into reorder logic. If a product sells 5 units/day and supplier lead time is 7 days, the buffer recommends ordering at least 35 units to ensure zero stockouts during transit.
 - **Urgency Classification Model**: Differentiated stockout (`critical`), severe depletion (`high`), and low stock (`medium`) so warehouse operators can triage procurement orders effectively.
 - **Dead Stock Working Capital Ranking**: Sorted dead inventory by `tied_up_capital` rather than just unit quantity, empowering business owners to prioritize liquidation or discounting campaigns where cash is most tied up.
 
 ### Key values for future steps
+
 - Reorder Suggestion Service: `ReorderSuggestionService` (`apps/api/app/services/reorder_suggestion_service.py`)
 - Dead Stock Service: `DeadStockService` (`apps/api/app/services/dead_stock_service.py`)
 - Endpoints:
@@ -3423,10 +3454,10 @@
   - `POST /analytics/reorder-suggestions/create-po`
   - `GET /analytics/dead-stock`
 
-
 ## [Step 14.3] — Anomaly Detection & Owner Insight Narratives
 
 ### What was done
+
 - **Statistical Order Anomaly Detection ($3\sigma$)**: Implemented `AnomalyDetectionService` which flags sales order lines as `is_unusual` if the quantity exceeds $\text{mean} + 3\sigma$ of that buyer's (retailer/customer) historical orders for that product.
 - **Advisory UI Badging (Non-Blocking)**: Flagged orders surface an amber `⚠️ Unusual Size` badge in the Sales Orders DataTable and an anomaly review advisory card inside the Order Detail modal with line-item 3σ badges and explanation reasons. High order sizes never block draft creation or confirmation.
 - **Weekly Executive Insight Narrative Engine**: Implemented `InsightNarratorService` generating grounded weekly executive briefs summarizing trailing 7-day revenue, confirmed orders, velocity leaders, and tied-up dead stock capital. Uses Groq LLM when `GROQ_API_KEY` is present, with deterministic template fallback when unset or timing out.
@@ -3440,11 +3471,13 @@
   - Frontend: `apps/web/lib/__tests__/anomaly-and-insights-ui.test.tsx` (3 tests covering table badge, modal advisory banner, and dashboard executive card).
 
 ### SOLID Principles Applied
+
 - **SRP (Single Responsibility Principle)**: `AnomalyDetectionService` owns statistical $z$-score evaluation; `InsightNarratorService` owns KPI metric compilation and LLM/template prompting.
 - **DIP (Dependency Inversion Principle)**: `AnomalyDetectionService` depends strictly on `SalesOrderRepositoryInterface.get_historical_order_quantities(...)`.
 - **OCP (Open/Closed Principle)**: Pluggable AI generation with deterministic fallback ensures identical dashboard functionality without hard external API lock-in.
 
 ### Files Created/Modified
+
 - Created: `apps/api/tests/test_anomaly_detection_and_insights.py`
 - Created: `apps/web/lib/__tests__/anomaly-and-insights-ui.test.tsx`
 - Modified: `apps/api/app/schemas/analytics.py`
@@ -3457,6 +3490,7 @@
 - Modified: `apps/web/app/dashboard/page.tsx`
 
 ### Key values for future steps
+
 - Anomaly Detection Service: `AnomalyDetectionService` (`apps/api/app/services/anomaly_detection_service.py`)
 - Insight Narrator Service: `InsightNarratorService` (`apps/api/app/services/insight_narrator.py`)
 - Endpoints:
@@ -3471,6 +3505,7 @@
 **Status:** COMPLETE
 
 ### What was done
+
 - **Single Round-Trip Owner Analytics API (`GET /analytics/dashboard`)**:
   - Implemented `OwnerDashboardService` synthesizing enterprise wholesale telemetry:
     - **Monthly Wholesale Revenue**: Current calendar month sales from active/delivered orders (`confirmed`, `packed`, `shipped`, `delivered`).
@@ -3498,11 +3533,13 @@
   - Frontend: `apps/web/lib/__tests__/owner-dashboard-ui.test.tsx` (2 tests verifying KPI numbers, Recharts chart container, quick lists, top movers, and guided empty state).
 
 ### SOLID Principles Applied
+
 - **SRP (Single Responsibility Principle)**: `OwnerDashboardService` focuses solely on aggregating and computing wholesale telemetry metrics from existing domain repositories.
 - **DIP (Dependency Inversion Principle)**: `OwnerDashboardService` depends on repository abstractions (`StockRepositoryInterface`, `ProductRepositoryInterface`, `SalesOrderRepositoryInterface`, `PurchaseOrderRepositoryInterface`, `InvoiceRepositoryInterface`, `SupplierRepositoryInterface`).
 - **Zero Database Schema Bloat**: Derives all analytics dynamically from existing tables without unnecessary cache tables or redundant schema mutations.
 
 ### Files Created/Modified
+
 - Created: `apps/api/app/services/owner_dashboard_service.py`
 - Created: `apps/api/tests/test_owner_dashboard.py`
 - Created: `apps/web/lib/__tests__/owner-dashboard-ui.test.tsx`
@@ -3513,6 +3550,7 @@
 - Modified: `apps/web/app/dashboard/page.tsx`
 
 ### Key values for future steps
+
 - Owner Dashboard Service: `OwnerDashboardService` (`apps/api/app/services/owner_dashboard_service.py`)
 - DI Factory: `get_owner_dashboard_service` in `apps/api/app/core/di.py`
 - Endpoint: `GET /analytics/dashboard` (Returns `OwnerDashboardResponse`)
@@ -3525,6 +3563,7 @@
 **Status:** COMPLETE
 
 ### What was done
+
 - **AR Aging Analytics Backend Service (`GET /analytics/ar-aging`)**:
   - Implemented `ARAgingService` in `apps/api/app/services/ar_aging_service.py` to aggregate unpaid/partially-paid wholesale invoices against the live reference date (`as_of`).
   - Divided receivables into standardized aging buckets:
@@ -3550,6 +3589,7 @@
   - Frontend: `apps/web/lib/__tests__/ar-aging-ui.test.tsx` (4 tests covering KPI cards, distribution bar, search, bucket filtering, zero-balance toggle, and clean empty state). All 163 frontend tests passing.
 
 ### Decisions
+
 - **Aging Bucket Boundaries**: Fixed cutoff windows at 30/60/90-day increments:
   - Current: $\text{due\_date} \ge \text{as\_of}$ ($\text{days\_overdue} \le 0$)
   - 1–30 Days: $1 \le \text{days\_overdue} \le 30$
@@ -3560,6 +3600,7 @@
 - **Direct Ledger Navigation**: Retailer names and table actions directly link to `/admin/retailers/${retailer_id}/ledger` for seamless collection workflows.
 
 ### Key values for future steps
+
 - AR Aging Service: `ARAgingService` (`apps/api/app/services/ar_aging_service.py`)
 - DI Factory: `get_ar_aging_service` in `apps/api/app/core/di.py`
 - Endpoint: `GET /analytics/ar-aging` (Returns `ARAgingReportResponse`)
@@ -3574,6 +3615,7 @@
 **Status:** COMPLETE
 
 ### What was done
+
 - **Excel & PDF Export Backend Service (`ExportService`)**:
   - Implemented complete `ExportService` in `apps/api/app/services/export_service.py` supporting both ReportLab PDF generation and openpyxl Excel spreadsheet generation:
     - **Pick List PDF (`GET /sales-orders/{id}/pick-list.pdf`)**: Internal warehouse document with batch checkboxes, storage zone grouping, and strict zero-pricing guardrails.
@@ -3602,11 +3644,13 @@
   - Next.js production build: Succeeded with 0 errors across all 43 static/dynamic routes.
 
 ### SOLID Principles Applied
+
 - **Single Responsibility Principle (SRP)**: `ExportService` solely manages file format formatting and binary byte stream rendering, leaving database queries and business calculations to repositories and domain services.
 - **Open/Closed Principle (OCP)**: Document builders can be extended with new file formats (e.g. CSV, XML) without modifying existing PDF/Excel logic.
 - **Dependency Inversion Principle (DIP)**: `ExportService` depends exclusively on repository interfaces (`SalesOrderRepositoryInterface`, `PurchaseOrderRepositoryInterface`, `InvoiceRepositoryInterface`, etc.) injected via `apps/api/app/core/di.py`.
 
 ### Key values for future steps
+
 - Document Service: `ExportService` (`apps/api/app/services/export_service.py`)
 - DI Factory: `get_export_service` in `apps/api/app/core/di.py`
 - Endpoints:
@@ -3625,6 +3669,7 @@
 **Status:** COMPLETE
 
 ### What was done
+
 - **Backend Global Search Engine (`GET /search?q=`)**:
   - Implemented `SearchService` in `apps/api/app/services/search_service.py` performing unified querying across 6 core wholesale domain models:
     - Products (matched by SKU and product name)
@@ -3656,10 +3701,12 @@
   - Next.js production build: Succeeded in 3.4s with 0 errors across all 43 static/dynamic routes.
 
 ### Decisions
+
 - **Search Ranking Approach**: Simple relevance tiers (Exact identifier 100 > Exact name 95 > Prefix identifier 85 > Prefix name 75 > Substring 50). At this scale (thousands of wholesale rows), plain SQL / in-memory querying is sufficient and avoids third-party paid search service dependencies (free-tier guardrail).
 - **Global Command Palette**: Triggered via `Cmd+K` / `Ctrl+K` or topbar search box, ensuring mouse-free keyboard navigation.
 
 ### Key values for future steps
+
 - Search Service: `SearchService` (`apps/api/app/services/search_service.py`)
 - DI Factory: `get_search_service` in `apps/api/app/core/di.py`
 - Endpoint: `GET /search?q={query}&limit={limit}` (Returns `SearchResponse`)
@@ -3673,6 +3720,7 @@
 **Status:** COMPLETE
 
 ### What was done
+
 - **Profitability Analytics (`ProfitabilityService` + `GET /analytics/profitability`)**:
   - Implemented tier-adjusted gross margin calculations weighted by actual line item sales and quantities across customizable periods (`7d`, `30d`, `90d`, `12m`, `all`).
   - Supported multi-dimensional rollups by `product`, `category`, and `retailer`.
@@ -3701,10 +3749,12 @@
   - Next.js production build: Succeeded in 1.8s across all 45 routes with 0 errors.
 
 ### Decisions
+
 - **Turnover as Continuous Early Warning**: While dead stock detection (Step 12.2) provides a binary flag (0 movement for 90+ days), inventory turnover ratio provides a continuous velocity signal (0.3 - 1.0x slowing, <0.3x at-risk) allowing proactive price adjustments or promotions weeks before dead stock lock-up occurs.
 - **Tier-Adjusted Frozen Order Pricing**: Uses frozen sales order line item unit prices to compute actual gross profit captured across different buyer tiers.
 
 ### Key values for future steps
+
 - Services: `ProfitabilityService` (`apps/api/app/services/profitability_service.py`), `TurnoverService` (`apps/api/app/services/turnover_service.py`)
 - DI Factories: `get_profitability_service`, `get_turnover_service` in `apps/api/app/core/di.py`
 - Endpoints:
@@ -3714,12 +3764,13 @@
 
 ---
 
-### Step 16.2 — Supplier & Retailer Performance + Warehouse Breakdown + Shrinkage Tracking
+## Step 16.2 — Supplier & Retailer Performance + Warehouse Breakdown + Shrinkage Tracking
 
 **Timestamp:** 2026-08-24T20:53:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - **Supplier Performance Analytics (`SupplierPerformanceService` + `GET /analytics/supplier-performance`)**:
   - Implemented supplier vendor scoring across on-time delivery rate, fulfillment accuracy, return rate, and total procurement spend.
   - Metrics:
@@ -3752,11 +3803,13 @@
   - Next.js production build: Succeeded across all 49 routes with 0 errors.
 
 ### Decisions
-- **Churn-Risk Heuristic Protocol**: Recorded as a *tunable, explicitly-approximate signal — not a prediction, a flag worth a human look*. When a retailer's dormancy interval exceeds 2x their established cadence, a human sales rep should proactively reach out before the customer is lost.
+
+- **Churn-Risk Heuristic Protocol**: Recorded as a _tunable, explicitly-approximate signal — not a prediction, a flag worth a human look_. When a retailer's dormancy interval exceeds 2x their established cadence, a human sales rep should proactively reach out before the customer is lost.
 - **Quality Banding for Suppliers**: Multi-variable grading prevents vendors with high fulfillment accuracy but chronic delivery delays from receiving top tier ratings.
 - **Shrinkage Valuation at Cost Price**: Shrinkage reflects direct capital loss of procurement cost rather than unrealized potential retail margin.
 
 ### Key values for future steps
+
 - Services:
   - `SupplierPerformanceService` (`apps/api/app/services/supplier_performance_service.py`)
   - `RetailerPerformanceService` (`apps/api/app/services/retailer_performance_service.py`)
@@ -3778,6 +3831,7 @@
 **Status:** COMPLETE
 
 ### What was done
+
 - **Core Period Comparison Engine (`ComparisonService`)**:
   - Implemented pure delta math (`compute_metric_delta`) supporting exact percentage deltas (`((current - prior) / prior) * 100`), absolute value deltas, polarity inversion for inverted metrics (e.g. shrinkage loss where drop = favorable), and robust handling of zero-prior / zero-current edge cases.
   - Implemented multi-window scorecard generation for 6 key wholesale metrics (`revenue`, `gross_margin`, `stock_valuation`, `turnover_rate`, `units_sold`, `shrinkage_value`) across 4 standard periods (`7d`, `30d`, `90d`, `12m`).
@@ -3808,11 +3862,13 @@
   - Next.js production build: Succeeded across all 50 routes with 0 errors.
 
 ### Decisions
+
 - **Zero-Prior Delta Math**: When prior value is 0 and current > 0, delta percentage is set to `+100.0%` with clear string formatting, avoiding `DivisionByZero` runtime errors.
 - **ReportLab Flowable 1-Page Layout**: Enforced strict vertical spacing (`Spacer(1, 4)` to `Spacer(1, 8)`) and table paddings to guarantee the weekly executive report fits cleanly on a single high-impact page without page overflow.
 - **Idempotent Multi-Channel Dispatch**: `send-now` generates identical data and narrative payload to the scheduled cron job, ensuring deterministic owner reporting across scheduled and manual triggers.
 
 ### Key values for future steps
+
 - Services:
   - `ComparisonService` (`apps/api/app/services/comparison_service.py`)
   - `ScheduledReportService` (`apps/api/app/services/scheduled_report_service.py`)
@@ -3829,10 +3885,12 @@
 ---
 
 ## Step 17.1 — Google Places Lead Scanner (schema + scheduled scan)
+
 **Timestamp:** 2026-08-25T01:45:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - **Database Schema & Models (`leads`, `lead_scan_runs`)**:
   - Created `Lead` and `LeadScanRun` SQLAlchemy models with `LeadCategoryEnum` (`gruh_udyog`, `snack_store`, `grocery_kirana`, `other`), unique `place_id` index, `is_new` boolean default, `contacted` tracking, `contact_notes`, and optional `converted_retailer_id` FK.
   - Created Alembic migration `0007_leads_and_scan_runs.py` and registered models in `app.models.__init__.py`.
@@ -3857,7 +3915,8 @@
   - Next.js production build: Succeeded across all 50 routes with 0 errors.
 
 ### Decisions
-- **Definition of 'New'**: 'New' is strictly defined as *never seen in our database before*, rather than recently opened in physical reality. This distinction accounts for Google's indexing latency and prevents false assumptions.
+
+- **Definition of 'New'**: 'New' is strictly defined as _never seen in our database before_, rather than recently opened in physical reality. This distinction accounts for Google's indexing latency and prevents false assumptions.
 - **Scan Keywords & Types Verbatim List**:
   - Keywords: `gruh udyog`, `home industry food`, `kirana store`, `grocery store`, `namkeen shop`, `snacks shop`, `farsan shop`, `general store`
   - Nearby types: `grocery_or_supermarket`, `convenience_store`
@@ -3865,6 +3924,7 @@
 - **Idempotent Multi-Scan Protection**: Existing leads update mutable details (name, phone, address, location coordinates, Google Maps URI) on subsequent scans, but `is_new` is never re-armed, ensuring zero redundant notification spam.
 
 ### Key values for future steps
+
 - Models: `Lead`, `LeadCategoryEnum`, `LeadScanRun` (`apps/api/app/models/lead.py`)
 - Service: `GooglePlacesLeadService` (`apps/api/app/services/places_lead_scanner.py`)
 - Repository Interface: `LeadRepositoryInterface` (`apps/api/app/repositories/interfaces/lead_repository.py`)
@@ -3880,10 +3940,12 @@
 ---
 
 ## Step 17.2 — Interactive Lead Map (existing shops + highlighted new ones)
+
 **Timestamp:** 2026-08-25T02:00:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - **Backend API Query Expansion (`apps/api/app/api/routers/leads.py` & Repositories)**:
   - Extended `LeadRepositoryInterface`, `SqlAlchemyLeadRepository`, and `InMemoryLeadRepository` to support full-text search (`search` across lead name and address) and geographic bounding box filters (`min_lat`, `max_lat`, `min_lng`, `max_lng`).
   - Updated `GET /leads` endpoint to accept `search`, `min_lat`, `max_lat`, `min_lng`, `max_lng` query parameters.
@@ -3905,11 +3967,13 @@
   - Next.js production build: Succeeded across all 52 routes with 0 errors.
 
 ### Decisions
+
 - **Spatial Fallback Schematic**: Included an interactive SVG/HTML canvas schematic fallback inside `LeadMap.tsx` when `window.google` is absent or in test environments. This guarantees 100% deterministic test coverage and graceful offline user experience.
 - **Direct Phone Protocol Link**: Used standard `<a href="tel:{phone}">` enabling 1-tap direct dialing on mobile devices and VoIP softphone integration on desktop.
 - **Client-Side Free-Tier Guardrails**: Google Maps JavaScript API runs client-side within the free tier $200 monthly credit pool shared with Places API.
 
 ### Key values for future steps
+
 - Route: `/admin/leads/map`
 - Components: `LeadDiscoveryView`, `LeadMap`, `LeadInfoWindow`, `LeadFilterSidebar` in `apps/web/components/leads/`
 - Navigation: `Lead Discovery Map` (`/admin/leads/map`) under Wholesale Operations in `apps/web/lib/nav.ts`
@@ -3918,10 +3982,12 @@
 ---
 
 ## Step 17.3 — Lead Contact Tracking & Convert-to-Retailer
+
 **Timestamp:** 2026-08-25T02:05:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - **Backend API & Repositories (`apps/api/`)**:
   - `LeadRepositoryInterface`, `SqlAlchemyLeadRepository`, and `InMemoryLeadRepository`:
     - Updated `mark_lead_contacted(lead_id: str, notes: str | None = None, contacted: bool = True)` to immediately clear `is_new = False` upon being marked contacted.
@@ -3954,11 +4020,13 @@
   - `pnpm --filter web build` succeeded across all 52 routes with 0 errors.
 
 ### Decisions
+
 - **Unified Conversion Pipeline**: Reused Phase 7's `RetailerService.create_retailer` within `POST /leads/{id}/convert-to-retailer`, ensuring all validation (pricing tiers, GSTIN format, initial credit limits) and audit logs are consistently applied to converted leads.
 - **Attention Management**: Marking a lead contacted or converted automatically sets `is_new = False`, immediately removing the pulsing radar glow and "New" badge so sales reps focus attention on uncontacted prospects.
 - **Duplicate Conversion Guardrail**: Once converted, a lead cannot be converted again (prevented at both backend router level with 400 error and frontend UI with disabled state and direct link to the resulting retailer account).
 
 ### Key values for future steps
+
 - Lead Converted Retailer Field: `leads.converted_retailer_id`
 - Conversion Endpoint: `POST /leads/{lead_id}/convert-to-retailer`
 - Contact Tracking Endpoint: `PATCH /leads/{lead_id}/contacted` or `PATCH /leads/{lead_id}`
@@ -4032,10 +4100,12 @@
 ---
 
 ## Step 18.2 — Bulk CSV Import / Export
+
 **Timestamp:** 2026-08-25T04:45:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Built `ProductImportService` in `apps/api/app/services/import_service.py` implementing:
   - Header normalization and parsing for CSV files with line-level index tracking.
   - Pydantic validation via `ProductImportRow` and dry-run preview classification (`create`, `update`, `reject`).
@@ -4059,11 +4129,13 @@
 - Verified all 320 backend pytest tests passing, all 214 frontend vitest tests passing (47 test files), and 53 Next.js routes built cleanly.
 
 ### Decisions
+
 - **Preview-Before-Commit Pattern for Bulk Operations**: All bulk catalog and operational CSV imports execute a dry-run validation pass returning line-by-line classification (`create`, `update`, `reject`) with explicit error reasons before committing changes to the database.
 - **Idempotent Upsert-by-SKU**: SKU acts as the natural key for upserting products. Repeatedly importing the same CSV file updates existing records safely without duplicating records or throwing conflict errors.
 - **On-the-fly Category & Barcode Handling**: CSV rows with new category names automatically create the category record in the repository, and rows with blank barcodes auto-generate internal enterprise EAN-13 barcodes.
 
 ### Key values for future steps
+
 - Product Import Service: `apps/api/app/services/import_service.py`
 - Product Import API: `POST /products/import?dry_run=true|false`
 - Product Export API: `GET /products/export.csv`
@@ -4075,10 +4147,12 @@
 ---
 
 ## Step 19.1 — PWA Shell, Caching & Local Queue
+
 **Timestamp:** 2026-08-25T04:53:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Built an installable PWA application shell:
   - Created Web App Manifests in `apps/web/public/manifest.json` and `apps/web/app/manifest.ts` declaring standalone display, orientation, theme colors (`#8b5cf6`, `#090d16`), and app icons.
   - Hand-rolled Service Worker in `apps/web/public/sw.js` implementing:
@@ -4100,15 +4174,17 @@
 - Verified all 320 backend pytest tests passing, all 223 frontend vitest tests passing across 49 test files, and all 55 Next.js routes built cleanly.
 
 ### Decisions
+
 - **Deliberate Offline Scope Boundary**: Offline queuing is strictly scoped to high-velocity floor operations:
   1. `stock_adjustment` (`POST /stock/adjustments`)
   2. `stock_transfer` (`POST /stock/transfers`)
   3. `barcode_scan_lookup` (cached product lookups & scan events)
-  Financial and multi-user transactional flows (`sales_order_confirmed`, `receive_po`, `invoice_generation`, `payments`, `credit_limit_updates`) remain strictly online-only to prevent credit over-extension, duplicate sequential GST tax invoice numbering, and multi-user batch deduction race conditions.
+     Financial and multi-user transactional flows (`sales_order_confirmed`, `receive_po`, `invoice_generation`, `payments`, `credit_limit_updates`) remain strictly online-only to prevent credit over-extension, duplicate sequential GST tax invoice numbering, and multi-user batch deduction race conditions.
 - **Explicit Conflict Surfacing**: When an offline action encounters server-side batch balance changes or validation rejections, sync flags the item as `conflict` and surfaces an interactive conflict card rather than silently dropping or overwriting data.
 - **Stale-While-Revalidate Caching for Floor Lookups**: Staff walking into deep warehouse dead spots can instantly browse cached product prices, SKUs, barcodes, and stock levels without spinning loaders.
 
 ### Key values for future steps
+
 - PWA Service Worker: `apps/web/public/sw.js`
 - Web Manifest: `apps/web/public/manifest.json`, `apps/web/app/manifest.ts`
 - Offline Fallback Page: `/offline` (`apps/web/app/offline/page.tsx`)
@@ -4120,10 +4196,12 @@
 ---
 
 ## Step 20.1 — Award-Benchmark Screen Audit (Design · Usability · Creativity · Content)
+
 **Timestamp:** 2026-08-25T05:28:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Conducted a comprehensive award-benchmark evaluation across all 48 active production routes defined in `docs/SITEMAP.md`.
 - Scored each screen across all 4 official Awwwards / FWA evaluation pillars: Design (1–10), Usability (1–10), Creativity (1–10), and Content (1–10).
 - Cross-referenced side-by-side against three tier-1 B2B / SaaS benchmarks:
@@ -4135,11 +4213,13 @@
 - Updated `codebase_audit.md` with UX Audit baseline notes.
 
 ### Decisions
+
 - **Strict 4-Pillar Evaluation Standard**: Every view must satisfy the same criteria evaluated by Awwwards/FWA juries rather than subjective aesthetic impressions.
 - **Zero Below-7 Threshold Baseline**: No screen scored below the 7.0 baseline; 29 screens achieved high excellence scores (>= 8.8).
 - **Targeted Micro-Polish Punch List**: Step 20.2 and 20.3 will execute focused improvements on tabular numeric alignment (`font-mono tabular-nums`), contextual empty state illustrations, and entrance animation choreography.
 
 ### Key values for future steps
+
 - UX Audit Document: `docs/UX_AUDIT.md`
 - Master Sitemap: `docs/SITEMAP.md`
 - Visual Polish Targets: Tabular figures in `DataTable.tsx`, empty states across `/admin/*`, and hover sheen performance.
@@ -4147,10 +4227,12 @@
 ---
 
 ## Step 20.2 — Micro-Interaction, Cursor & Page-Load Choreography Completeness
+
 **Timestamp:** 2026-08-25T05:35:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Built and integrated custom desktop magnetic cursor (`apps/web/components/motion/CustomCursor.tsx`):
   - Central precision point (`w-2 h-2`) and smooth spring-solved trailing halo (`w-8 h-8`, `damping: 28, stiffness: 350`).
   - Interactive target detection: automatically scales to `1.6x` and illuminates accent border when hovering buttons, links, inputs, and clickable table rows.
@@ -4164,11 +4246,13 @@
 - Verified Next.js build compiles 55/55 routes cleanly with zero TypeScript errors.
 
 ### Decisions
+
 - **Touch-Device Auto-Disable for Custom Cursor**: On mobile phones, tablets, or touch screens, custom cursors degrade ergonomics. Using `(hover: hover) and (pointer: fine)` eliminates unwanted cursor overlays while preserving native touch responsiveness.
 - **Snappy Entrance Staggering (<300ms)**: Page content reveal must feel immediate and responsive rather than delayed or cinematic. Using `staggerDelay={0.04}` with `SPRING_PRESETS.glassMorph` delivers a polished, premium reveal without blocking user action.
 - **Shape-Matched Skeletons**: Replaced generic loading placeholders with dedicated component-matched silhouettes (`SkeletonCatalogGrid`, `SkeletonTable`, `SkeletonCard`) to eliminate layout shift upon data resolution.
 
 ### Key values for future steps
+
 - Custom Cursor Component: `apps/web/components/motion/CustomCursor.tsx`
 - Animation Guide Registry: `docs/ANIMATION_GUIDE.md` (Section 5)
 - Skeleton Primitives: `apps/web/components/SkeletonPrimitives.tsx`
@@ -4177,10 +4261,12 @@
 ---
 
 ## Step 20.3 — Typography Rhythm, Spacing & Final Visual Consistency Pass
+
 **Timestamp:** 2026-08-25T05:46:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Completed visual consistency sweep against the 4.1 token system and 4.3 12-column grid:
   - Applied `font-mono tabular-nums tracking-tight` to right-aligned numeric columns in `DataTable.tsx` for vertical currency and quantity alignment.
   - Verified 100% unified icon set: strictly `lucide-react` with standard 1.5–2px stroke weight across all components (zero mixed icon libraries).
@@ -4195,11 +4281,13 @@
 - Verified all 320 backend pytest tests passing, all 233 frontend vitest tests passing, and 55/55 clean Next.js production routes.
 
 ### Decisions
+
 - **Automatic Tabular Numeric Alignment for Right-Aligned Columns**: In data tables, any right-aligned cell automatically inherits `font-mono tabular-nums tracking-tight` to ensure currency amounts, GST percentages, batch counts, and stock quantities align on decimal points without ad-hoc class repetition.
 - **Glassmorphic Error & 404 Fallbacks**: Replaced standard browser 404/500 screens with obsidian glass cards styled with ambient glows and clear recovery actions, ensuring judges and warehouse users never encounter a broken or unfinished state.
 - **Strict Iconography Monoculture**: Restricted all iconography strictly to `lucide-react` to prevent stroke weight mismatches, visual weight disparities, or icon scaling artifacts.
 
 ### Key values for future steps
+
 - 404 Not Found Page: `apps/web/app/not-found.tsx`
 - Global Error Boundary: `apps/web/app/error.tsx`
 - Final UX Audit & Scores: `docs/UX_AUDIT.md`
@@ -4208,10 +4296,12 @@
 ---
 
 ## Step 21.1 — API → Render (guided)
+
 **Timestamp:** 2026-08-25T06:15:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Conducted pre-deploy backend audit:
   - Validated dynamic `$PORT` binding with uvicorn start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`.
   - Configured Render blueprint in `render.yaml` with root directory `apps/api` and health check `/health`.
@@ -4229,11 +4319,13 @@
 - Updated `codebase_audit.md` Services table and Known Issues with Render live configuration.
 
 ### Decisions
+
 - **Local Migration Execution against Session Pooler**: Render free tier has no interactive shell or persistent disk. Schema DDL migrations are strictly executed locally via Alembic against Supabase Port 5432 (`DIRECT_DATABASE_URL`), and runtime queries use Port 6543 (`DATABASE_URL`) with `NullPool` to prevent double-pooling.
 - **UptimeRobot Keep-Alive Strategy**: Pinging `GET /health` every 5 minutes prevents Render free instances from sleeping during working hours, providing zero cold-start latency for warehouse operations.
 - **Strict Secrets Segregation**: Zero credentials committed to git or shared in chat; credentials mounted exclusively via Render environment dashboard and Secret Files.
 
 ### Key values for future steps
+
 - Live API Base URL: `https://wareflow-api-kg2c.onrender.com`
 - Live Health Endpoint: `https://wareflow-api-kg2c.onrender.com/health`
 - Live Database Health Endpoint: `https://wareflow-api-kg2c.onrender.com/health/db`
@@ -4244,10 +4336,12 @@
 ---
 
 ## Step 21.2 — Web → Vercel + Auth URL Wiring (guided)
+
 **Timestamp:** 2026-08-25T07:05:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Deployed Next.js 16 frontend to Vercel Hobby Tier:
   - Root directory set to `apps/web`.
   - Configured client environment variables: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_FIREBASE_*`, `NEXT_PUBLIC_SUPABASE_*`.
@@ -4265,10 +4359,12 @@
 - Updated `codebase_audit.md` Services table and appended Step 21.2 log to `memory.md`.
 
 ### Decisions
+
 - **Strict Origin Whitelisting**: Restricted backend CORS to the exact Vercel production URL + local development to prevent unauthorized cross-origin requests from third-party sites.
 - **Client Bundle Secret Shield**: Firebase public web configuration is safely bundled on client; all sensitive operations (service role keys, Fernet TOTP keys, database credentials) remain strictly server-side on Render.
 
 ### Key values for future steps
+
 - Production Web URL: `https://wareflow-web-seven.vercel.app`
 - Production API URL: `https://wareflow-api-kg2c.onrender.com`
 - Vercel Project Name: `wareflow-web`
@@ -4277,10 +4373,12 @@
 ---
 
 ## Step 21.3 — Production Smoke Test
+
 **Timestamp:** 2026-08-25T07:38:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Authored End-to-End Production Smoke Test Protocol in `SMOKE.md` and `docs/SMOKE.md`:
   - Detailed 11-step click-path covering: Owner onboarding & staff RBAC invitation, supplier & product creation with multi-UoM conversion, PO creation & FIFO goods receiving (GRN), retailer onboarding with credit limits, sales order FIFO batch allocation, GST tax invoicing & PDF download, partial payment recording, AR aging bucket calculation (0-30, 31-60, 61-90, 90+ days), delivery dispatch & driver assignment, retailer return with credit note, and reorder point low-stock automated alert triggers.
 - Executed production database seeding via `scripts/seed.py`:
@@ -4301,10 +4399,12 @@
 - Updated `codebase_audit.md` Known Issues section with production verification records.
 
 ### Decisions
+
 - **Non-Destructive Idempotent Seeding**: Enhanced `scripts/seed.py` to use session-level commits after each entity group with direct session pooler fallback (`DIRECT_DATABASE_URL`), ensuring transaction resiliency across cloud network latencies.
 - **Production Protocol Formalization**: Captured the exact human click-path in `SMOKE.md` so that operational teams can verify platform health at any time without engineering intervention.
 
 ### Key values for future steps
+
 - Smoke Test Protocol: `SMOKE.md` & `docs/SMOKE.md`
 - Production Web App: `https://wareflow-web-seven.vercel.app`
 - Production API: `https://wareflow-api-kg2c.onrender.com`
@@ -4314,10 +4414,12 @@
 ---
 
 ## Step 21.4 — Database Backup & Disaster Recovery Plan
+
 **Timestamp:** 2026-08-25T09:25:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - Built automated database backup engine in `scripts/backup.py` and `scripts/backup.sh`:
   - Connects to PostgreSQL over direct session pooler port 5432 (`DIRECT_DATABASE_URL`).
   - Generates compressed SQL dump (`.sql.gz`) with table-by-table streaming serialization.
@@ -4336,10 +4438,12 @@
 - Updated `codebase_audit.md` Services table and Known Issues section with backup architecture.
 
 ### Decisions
+
 - **Dual Cloud & Artifact Redundancy**: Backup files are uploaded simultaneously to Supabase Storage `backups` bucket and GitHub Actions 14-day run artifacts, guaranteeing that database snapshots survive even if one provider encounters downtime.
 - **Cross-Platform Resilience**: Provided both shell script (`backup.sh`) and Python CLI (`backup.py`, `restore.py`) so disaster recovery procedures can be run on Windows developer workstations, Linux servers, or CI/CD runners without requiring native `pg_dump` binaries.
 
 ### Key values for future steps
+
 - Disaster Recovery Manual: `docs/DISASTER_RECOVERY.md`
 - Backup Engine: `scripts/backup.py` & `scripts/backup.sh`
 - Restore Tool: `scripts/restore.py`
@@ -4350,10 +4454,12 @@
 ---
 
 ## Step 22.1 — Security & Validation Audit
+
 **Timestamp:** 2026-08-25T09:50:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - **Permission Security Test Suite**:
   - Implemented [`apps/api/tests/test_permission_security.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_permission_security.py) verifying that every mutating route (products, sales orders, invoices, payments, staff management) rejects unauthorized roles with 401 Unauthorized or 403 Forbidden.
 - **Financial-Integrity Test Suite**:
@@ -4374,10 +4480,12 @@
   - Verified full test suite: **333 backend pytest tests** passing.
 
 ### Decisions
+
 - **Granular Permission Decorators**: Bound `require_permission` guards directly to router endpoints (`orders:manage`, `inventory:manage`, `staff:manage`), ensuring fail-safe RBAC enforcement at the API gateway layer before service logic execution.
 - **Zero-Trust Financial Invariance**: Enforced invoice balance validation in `PaymentService` to mathematically eliminate floating point overpayment anomalies.
 
 ### Key values for future steps
+
 - Security Test Suites: `apps/api/tests/test_permission_security.py`, `test_financial_integrity.py`, `test_rate_limiting.py`
 - Rate Limiting Module: `apps/api/app/core/limiter.py`
 - Frontend Security Headers: `apps/web/next.config.ts`
@@ -4386,10 +4494,12 @@
 ---
 
 ## Step 22.2 — SOLID Principles Review & Refactor Pass
+
 **Timestamp:** 2026-08-25T10:00:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - **Comprehensive SOLID Principles Architecture Audit**:
   - Walked every domain (products, suppliers, retailers, POs, SOs, invoices, returns, deliveries, stock, portal, alerts):
     - **Single Responsibility (SRP)**: Routers handle only serialization and HTTP protocol binding; domain logic is strictly encapsulated in Services.
@@ -4398,20 +4508,22 @@
     - Verified by `grep`: **0 direct repository imports in routers**.
 - **Permanent Open/Closed Principle (OCP) Proof Test Suite**:
   - Authored [`apps/api/tests/test_solid_ocp_proofs.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_solid_ocp_proofs.py) (4 tests):
-    1. *Pricing Strategy OCP*: Wholesale tiered volume discount plugin swappability without modifying core catalog models.
-    2. *Notification Channel OCP*: Custom Slack/Webhook channel extension without altering `AlertDispatcher`.
-    3. *Forecasting Algorithm OCP*: Exponential smoothing demand algorithm swappability without modifying `ForecastingService`.
-    4. *RBAC Matrix OCP*: Dynamic runtime custom role extension without modifying auth middleware.
+    1. _Pricing Strategy OCP_: Wholesale tiered volume discount plugin swappability without modifying core catalog models.
+    2. _Notification Channel OCP_: Custom Slack/Webhook channel extension without altering `AlertDispatcher`.
+    3. _Forecasting Algorithm OCP_: Exponential smoothing demand algorithm swappability without modifying `ForecastingService`.
+    4. _RBAC Matrix OCP_: Dynamic runtime custom role extension without modifying auth middleware.
 - **Architecture Documentation**:
   - Created [`docs/ARCHITECTURE.md`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/docs/ARCHITECTURE.md) with comprehensive Mermaid component diagram and code evidence for all 4 OCP extension points.
 - **Codebase Audit & Ledger Synchronization**:
   - Added Architecture Layers & SOLID Compliance section to `codebase_audit.md`.
 
 ### Decisions
+
 - **Complete Router-Repository Decoupling**: Enforced that no FastAPI router ever interacts directly with a database repository, guaranteeing that transport layers remain swappable (e.g. gRPC or CLI adapters can reuse domain services without modification).
 - **Permanent OCP Test Guard**: Added `test_solid_ocp_proofs.py` to the default pytest run to prevent architectural regressions as features expand.
 
 ### Key values for future steps
+
 - Architecture Specification: `docs/ARCHITECTURE.md`
 - SOLID OCP Proof Suite: `apps/api/tests/test_solid_ocp_proofs.py` (4/4 passing)
 - Architecture Compliance: Zero repository imports in routers (100% DIP/SRP compliant)
@@ -4420,10 +4532,12 @@
 ---
 
 ## Step 22.3 — README, Owner Handover Guide & Freeze
+
 **Timestamp:** 2026-08-25T10:15:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - **Comprehensive Developer README (`README.md`)**:
   - Authored full production README featuring live URLs, architecture Mermaid diagram, detailed explanation of SOLID layering, 4 OCP extension examples, complete '$0 Infrastructure Footprint' service breakdown, and local setup guide.
 - **Plain-Language Business Handover Guide (`HANDOVER.md` & `docs/HANDOVER.md`)**:
@@ -4448,13 +4562,16 @@
 ---
 
 ## 🧊 V1 FREEZE — PROJECT JOURNEY & FINAL SYSTEM STATS
+
 **Timestamp:** 2026-08-25T10:30:00Z
 **Status:** FROZEN (v1.0 Production Release)
 
 ### Project Journey Summary
+
 WareFlow has progressed from initial concept through **22 complete engineering phases** (Phase 0 Monorepo Scaffold to Phase 22 Hardening & Handover) into a production-grade, agentic wholesale ERP running live at **$0 infrastructure cost**.
 
 ### Final System Statistics
+
 - **Total Backend Pytest Tests**: **337 Tests** (100% Green, 0 Failures)
 - **Total Frontend Vitest Tests**: **233 Tests** (100% Green, 25 Test Suites)
 - **Total Production Routes**: **55 Next.js Pages** (Compiling cleanly on Vercel)
@@ -4467,6 +4584,7 @@ WareFlow has progressed from initial concept through **22 complete engineering p
 - **Codebase State**: Fully audited, hardened, documented, and frozen for production operations.
 
 ### Key values for future steps
+
 - Developer Guide: `README.md`
 - Owner Operating Manual: `HANDOVER.md` & `docs/HANDOVER.md`
 - Architecture Spec: `docs/ARCHITECTURE.md`
@@ -4478,10 +4596,12 @@ WareFlow has progressed from initial concept through **22 complete engineering p
 ---
 
 ## Step 22.4 — Accessibility (a11y) Audit
+
 **Timestamp:** 2026-08-25T10:45:00Z
 **Status:** COMPLETE
 
 ### What was done
+
 - **Universal Keyboard Navigation & Focus Ring Layer**:
   - Configured universal `:focus-visible` ring outlines in `apps/web/app/globals.css` with 2px offset for keyboard-only tab order navigation.
   - Enhanced `GlassModal.tsx` with dynamic `id` generation, `aria-labelledby`, `aria-describedby`, `role="dialog"`, `aria-modal="true"`, and Escape keydown event dismissal.
@@ -4495,48 +4615,67 @@ WareFlow has progressed from initial concept through **22 complete engineering p
   - Updated `codebase_audit.md` Security & Quality section with a11y audit verification status.
 
 ### Decisions
+
 - **Non-Destructive Motion Reduction**: Injected global CSS override ensuring that all 5 motion engines (Motion, GSAP, CSS animations) gracefully collapse when OS-level reduced motion is toggled without breaking UI layouts.
 
 ### Key values for future steps
+
 - a11y Test Suite: `apps/web/lib/__tests__/a11y-audit.test.tsx` (5/5 passing)
 - Global Focus & Reduced Motion: `apps/web/app/globals.css`
 
+---
 
+### [2026-08-25 16:00] — System-Wide Optimization, Bug Fixes & Code Cleanup
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- **Agent:** Antigravity IDE (Gemini 3.7 Flash)
+- **Changes Made:**
+  - Resolved TypeScript compilation error in `apps/web/lib/__tests__/a11y-audit.test.tsx` by removing invalid `domain` prop from `<StatusBadge />`.
+  - Silenced production `console.log` noise in `apps/web/components/pwa/PwaProvider.tsx`.
+  - Added missing `/auth/2fa/regenerate-backup-codes` route handler to `apps/api/app/api/routers/two_factor.py`, fixing 404 test assertion in `test_2fa.py`.
+  - Fixed undefined name `ProfileRepositoryInterface` in `apps/api/app/services/scheduled_report_service.py` by alias-importing `ProfileRepository as ProfileRepositoryInterface`.
+  - Replaced raw string concatenation with clean multi-line string in `apps/api/app/services/export_service.py` removing empty f-strings.
+  - Re-added `SalesOrder` model type annotation import in `apps/api/app/services/export_service.py`.
+  - Fixed `datetime.UTC` alias usages across `apps/api/app/services/comparison_service.py`.
+  - Fixed mid-file import (E402) in `apps/api/app/schemas/leads.py`.
+  - Fixed exception chaining (B904) in `apps/api/app/services/import_service.py`.
+  - Fixed blank-line whitespace (W293) in `apps/api/app/schemas/analytics.py`.
+  - Fixed SIM102, SIM105, SIM108, B007 lint and style issues in `retailer_user_repository.py`, `expiring_batch_rule.py`, `overdue_invoice_rule.py`, `ar_aging_service.py`, `purchase_order_service.py`, `reorder_suggestion_service.py`, `sales_order_service.py`, `stock_service.py`, and `sms_client.py`.
+- **SOLID Principles Applied:**
+  - Satisfied SRP and DIP across repositories and services by verifying clean separation of interface types and business domain implementations.
+  - Ensured routers only dispatch to services and never import repositories directly.
+- **Files Modified:**
+  - `apps/web/lib/__tests__/a11y-audit.test.tsx`
+  - `apps/web/components/pwa/PwaProvider.tsx`
+  - `apps/api/app/api/routers/two_factor.py`
+  - `apps/api/app/services/scheduled_report_service.py`
+  - `apps/api/app/services/export_service.py`
+  - `apps/api/app/services/comparison_service.py`
+  - `apps/api/app/schemas/leads.py`
+  - `apps/api/app/services/import_service.py`
+  - `apps/api/app/schemas/analytics.py`
+  - `apps/api/app/repositories/impl/retailer_user_repository.py`
+  - `apps/api/app/services/alert_rules/expiring_batch_rule.py`
+  - `apps/api/app/services/alert_rules/overdue_invoice_rule.py`
+  - `apps/api/app/services/ar_aging_service.py`
+  - `apps/api/app/services/purchase_order_service.py`
+  - `apps/api/app/services/reorder_suggestion_service.py`
+  - `apps/api/app/services/sales_order_service.py`
+  - `apps/api/app/services/stock_service.py`
+  - `apps/api/app/services/sms_client.py`
+  - `memory.md`
+- **Files Created:**
+  - `pyrightconfig.json` (root Python language server path configuration for `apps/api`)
+  - `.vscode/settings.json` (Python analysis extraPaths & testing configuration)
+  - `.markdownlint.json` (configured `siblings_only: true` for MD024 to cleanly support multi-section changelogs)
+- **Files Modified:**
+  - `.github/workflows/database-backup.yml` (bracket indexing for secrets to eliminate IDE context access schema warnings)
+  - `memory.md` (wrapped localhost URLs in backticks to fix MD034 bare URLs)
+- **Validation:**
+  - Pytest Suite: **337 / 337 tests passed** (100% passing)
+  - Vitest Frontend Suite: **238 / 238 tests passed** across 52 test suites (100% passing)
+  - Next.js Production Build: **55 / 55 routes compiled cleanly** (0 TypeScript errors)
+  - Python Ruff Linting: **All checks passed! 0 errors**
+  - Next.js ESLint: **0 errors** (`eslint . --quiet` passed with exit code 0)
+  - Prettier Formatting: **100% clean** (`prettier --check .` passed with exit code 0)
+- **Breaking Changes:** No
+- **Next Agent Notes:** Codebase is clean, hardened, zero warnings/errors across all tools and linters.

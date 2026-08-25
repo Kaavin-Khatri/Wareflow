@@ -192,7 +192,7 @@ describe("Staff Inquiries Inbox (/admin/inquiries)", () => {
         expect.objectContaining({
           method: "PATCH",
           body: JSON.stringify({ response: "Yes, 200 bags can be dispatched by Friday." }),
-        })
+        }),
       );
     });
   });
@@ -280,9 +280,11 @@ describe("Retailer Portal Catalog Inquiry Flow (/portal/catalog)", () => {
             product_id: "prod-1",
             message: "Need bulk quotation for 100 bags",
           }),
-        })
+        }),
       );
-      expect(screen.getByText(/Inquiry for Royal Basmati Rice 25kg submitted successfully!/i)).toBeDefined();
+      expect(
+        screen.getByText(/Inquiry for Royal Basmati Rice 25kg submitted successfully!/i),
+      ).toBeDefined();
     });
   });
 });

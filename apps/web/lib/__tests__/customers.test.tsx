@@ -43,40 +43,43 @@ vi.mock("@/lib/api-client", () => ({
       if (url === "/customers") return Promise.resolve(MOCK_CUSTOMERS_DATA);
       return Promise.resolve([]);
     }),
-    post: vi.fn().mockImplementation(
-      (
-        url: string,
-        body: { name?: string; phone?: string; email?: string; address?: string; notes?: string }
-      ) => {
-        if (url === "/customers") {
+    post: vi
+      .fn()
+      .mockImplementation(
+        (
+          url: string,
+          body: { name?: string; phone?: string; email?: string; address?: string; notes?: string },
+        ) => {
+          if (url === "/customers") {
+            return Promise.resolve({
+              id: "cust-3",
+              name: body.name || "Customer",
+              phone: body.phone,
+              email: body.email,
+              address: body.address,
+              notes: body.notes,
+              created_at: new Date().toISOString(),
+              total_orders_count: 0,
+              total_spend: 0,
+            });
+          }
+          return Promise.resolve({});
+        },
+      ),
+    patch: vi
+      .fn()
+      .mockImplementation(
+        (
+          url: string,
+          body: { name?: string; phone?: string; email?: string; address?: string; notes?: string },
+        ) => {
           return Promise.resolve({
-            id: "cust-3",
-            name: body.name || "Customer",
-            phone: body.phone,
-            email: body.email,
-            address: body.address,
-            notes: body.notes,
-            created_at: new Date().toISOString(),
-            total_orders_count: 0,
-            total_spend: 0,
+            ...MOCK_CUSTOMERS_DATA[0],
+            ...body,
           });
-        }
-        return Promise.resolve({});
-      }
-    ),
-    patch: vi.fn().mockImplementation(
-      (
-        url: string,
-        body: { name?: string; phone?: string; email?: string; address?: string; notes?: string }
-      ) => {
-        return Promise.resolve({
-          ...MOCK_CUSTOMERS_DATA[0],
-          ...body,
-        });
-      }
-    ),
+        },
+      ),
     delete: vi.fn().mockResolvedValue(true),
-
   },
 }));
 
@@ -89,7 +92,9 @@ describe("Customers Admin Page", () => {
     render(<CustomersPage />);
 
     await waitFor(() => {
-      expect(screen.getAllByText("Direct Customers & Walk-In Buyers").length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText("Direct Customers & Walk-In Buyers").length,
+      ).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("Ramesh Gupta").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("Sunita Sharma").length).toBeGreaterThanOrEqual(1);
     });
@@ -120,7 +125,9 @@ describe("Customers Admin Page", () => {
     const addBtn = screen.getByRole("button", { name: /Add Direct Customer/i });
     fireEvent.click(addBtn);
 
-    expect(screen.getAllByText("Register Direct Walk-In Customer").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Register Direct Walk-In Customer").length).toBeGreaterThanOrEqual(
+      1,
+    );
 
     fireEvent.change(screen.getByLabelText(/Customer Name \*/i), {
       target: { value: "Anil Verma" },
@@ -142,7 +149,7 @@ describe("Customers Admin Page", () => {
           name: "Anil Verma",
           phone: "+91 99887 76655",
           email: "anil.verma@example.com",
-        })
+        }),
       );
     });
   });
@@ -170,7 +177,7 @@ describe("Customers Admin Page", () => {
         "/customers/cust-1",
         expect.objectContaining({
           notes: "Prefers morning deliveries",
-        })
+        }),
       );
     });
   });

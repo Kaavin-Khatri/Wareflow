@@ -93,7 +93,7 @@ describe("Retailer Portal Authentication & Scoped Shell (Step 11.1)", () => {
     render(
       <PortalLayout>
         <div data-testid="portal-content">Catalog View</div>
-      </PortalLayout>
+      </PortalLayout>,
     );
 
     await waitFor(() => {

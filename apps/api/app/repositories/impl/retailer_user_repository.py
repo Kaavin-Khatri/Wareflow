@@ -128,10 +128,12 @@ class InMemoryRetailerUserRepository(RetailerUserRepository):
         norm = email.strip().lower()
         now = datetime.now(UTC)
         for inv in self._invites.values():
-            if inv.email.strip().lower() == norm and not inv.is_accepted:
-                # If timezone aware, check expiration
-                if inv.expires_at.tzinfo is None or inv.expires_at > now:
-                    return inv
+            if (
+                inv.email.strip().lower() == norm
+                and not inv.is_accepted
+                and (inv.expires_at.tzinfo is None or inv.expires_at > now)
+            ):
+                return inv
         return None
 
     def mark_invite_accepted(self, token: str) -> bool:

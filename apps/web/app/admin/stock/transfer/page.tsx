@@ -175,7 +175,7 @@ export default function StockTransferPage() {
       }
       try {
         const res = await apiClient.get<{ batches: BatchOption[] }>(
-          `/products/${selectedProductId}/stock?warehouse_id=${selectedFromWhId}`
+          `/products/${selectedProductId}/stock?warehouse_id=${selectedFromWhId}`,
         );
         if (!isMounted) return;
         const bList = res?.batches || [];
@@ -209,7 +209,7 @@ export default function StockTransferPage() {
       }
       try {
         const res = await apiClient.get<{ batches: BatchOption[] }>(
-          `/products/${selectedProductId}/stock?warehouse_id=${selectedToWhId}`
+          `/products/${selectedProductId}/stock?warehouse_id=${selectedToWhId}`,
         );
         if (!isMounted) return;
         const total = (res?.batches || []).reduce((acc, b) => acc + Number(b.quantity), 0);
@@ -266,7 +266,7 @@ export default function StockTransferPage() {
     }
     if (isOverStock) {
       setErrorMessage(
-        `Requested quantity (${numericQty.toFixed(2)}) exceeds available stock in source batch (${sourceAvailableQty.toFixed(2)}).`
+        `Requested quantity (${numericQty.toFixed(2)}) exceeds available stock in source batch (${sourceAvailableQty.toFixed(2)}).`,
       );
       return;
     }
@@ -288,7 +288,7 @@ export default function StockTransferPage() {
       const toWhName = warehouses.find((w) => w.id === selectedToWhId)?.name || "Destination";
 
       setSuccessMessage(
-        `Successfully transferred ${numericQty.toFixed(2)} units from ${fromWhName} to ${toWhName}.`
+        `Successfully transferred ${numericQty.toFixed(2)} units from ${fromWhName} to ${toWhName}.`,
       );
 
       // Append new transfer to history
@@ -316,7 +316,7 @@ export default function StockTransferPage() {
 
       // Refresh source batches
       const updatedBatches = await apiClient.get<{ batches: BatchOption[] }>(
-        `/products/${selectedProductId}/stock?warehouse_id=${selectedFromWhId}`
+        `/products/${selectedProductId}/stock?warehouse_id=${selectedFromWhId}`,
       );
       if (updatedBatches?.batches) {
         setSourceBatches(updatedBatches.batches);
@@ -326,8 +326,8 @@ export default function StockTransferPage() {
         err instanceof Error
           ? err.message
           : typeof err === "object" && err !== null && "message" in err
-          ? String((err as { message: unknown }).message)
-          : "Failed to execute stock transfer.";
+            ? String((err as { message: unknown }).message)
+            : "Failed to execute stock transfer.";
       setErrorMessage(errorMsg);
     } finally {
       setSubmitting(false);
@@ -382,11 +382,7 @@ export default function StockTransferPage() {
     {
       key: "batch_no",
       header: "Batch #",
-      render: (t) => (
-        <GlassBadge variant="neutral">
-          {t.batch_no}
-        </GlassBadge>
-      ),
+      render: (t) => <GlassBadge variant="neutral">{t.batch_no}</GlassBadge>,
     },
     {
       key: "quantity",
@@ -402,11 +398,7 @@ export default function StockTransferPage() {
     {
       key: "notes",
       header: "Context / Notes",
-      render: (t) => (
-        <span className="text-xs text-[var(--text-muted)]">
-          {t.notes || "—"}
-        </span>
-      ),
+      render: (t) => <span className="text-xs text-[var(--text-muted)]">{t.notes || "—"}</span>,
     },
   ];
 
@@ -427,7 +419,8 @@ export default function StockTransferPage() {
                 Inter-Warehouse Stock Transfers
               </h1>
               <p className="text-xs text-[var(--text-muted)]">
-                Relocate inventory batches across physical warehouse facilities with atomic paired ledger movement.
+                Relocate inventory batches across physical warehouse facilities with atomic paired
+                ledger movement.
               </p>
             </div>
           </div>
@@ -466,7 +459,10 @@ export default function StockTransferPage() {
                 {/* Product Select */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="trf-product" className="block text-xs font-medium text-[var(--text-muted)]">
+                    <label
+                      htmlFor="trf-product"
+                      className="block text-xs font-medium text-[var(--text-muted)]"
+                    >
                       Product to Relocate *
                     </label>
                     <button
@@ -497,7 +493,10 @@ export default function StockTransferPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Source Warehouse */}
                   <div className="space-y-1">
-                    <label htmlFor="trf-from-wh" className="block text-xs font-medium text-[var(--text-muted)]">
+                    <label
+                      htmlFor="trf-from-wh"
+                      className="block text-xs font-medium text-[var(--text-muted)]"
+                    >
                       Source Warehouse (Dispatch) *
                     </label>
                     <select
@@ -518,7 +517,10 @@ export default function StockTransferPage() {
 
                   {/* Destination Warehouse */}
                   <div className="space-y-1">
-                    <label htmlFor="trf-to-wh" className="block text-xs font-medium text-[var(--text-muted)]">
+                    <label
+                      htmlFor="trf-to-wh"
+                      className="block text-xs font-medium text-[var(--text-muted)]"
+                    >
                       Destination Warehouse (Receive) *
                     </label>
                     <select
@@ -542,7 +544,10 @@ export default function StockTransferPage() {
 
                 {/* Source Batch Select */}
                 <div className="space-y-1">
-                  <label htmlFor="trf-batch" className="block text-xs font-medium text-[var(--text-muted)]">
+                  <label
+                    htmlFor="trf-batch"
+                    className="block text-xs font-medium text-[var(--text-muted)]"
+                  >
                     Source Stock Batch *
                   </label>
                   <select
@@ -555,13 +560,17 @@ export default function StockTransferPage() {
                   >
                     {sourceBatches.length === 0 ? (
                       <option value="">
-                        {selectedProductId ? "No active batches in source warehouse" : "Select product and warehouse first"}
+                        {selectedProductId
+                          ? "No active batches in source warehouse"
+                          : "Select product and warehouse first"}
                       </option>
                     ) : (
                       sourceBatches.map((b) => (
                         <option key={b.id} value={b.id}>
                           Batch: {b.batch_no} — Available: {Number(b.quantity).toFixed(2)} units{" "}
-                          {b.expiry_date ? `(Exp: ${new Date(b.expiry_date).toLocaleDateString()})` : ""}
+                          {b.expiry_date
+                            ? `(Exp: ${new Date(b.expiry_date).toLocaleDateString()})`
+                            : ""}
                         </option>
                       ))
                     )}
@@ -577,7 +586,10 @@ export default function StockTransferPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Quantity Input */}
                   <div className="space-y-1">
-                    <label htmlFor="trf-quantity" className="block text-xs font-medium text-[var(--text-muted)]">
+                    <label
+                      htmlFor="trf-quantity"
+                      className="block text-xs font-medium text-[var(--text-muted)]"
+                    >
                       Quantity to Transfer *
                     </label>
                     <input
@@ -595,7 +607,10 @@ export default function StockTransferPage() {
 
                   {/* Notes */}
                   <div className="space-y-1">
-                    <label htmlFor="trf-notes" className="block text-xs font-medium text-[var(--text-muted)]">
+                    <label
+                      htmlFor="trf-notes"
+                      className="block text-xs font-medium text-[var(--text-muted)]"
+                    >
                       Reference / Reason Notes
                     </label>
                     <input
@@ -651,13 +666,17 @@ export default function StockTransferPage() {
 
                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--glass-border)] text-xs">
                     <div>
-                      <span className="text-[10px] text-[var(--text-muted)] block">Current On-Hand</span>
+                      <span className="text-[10px] text-[var(--text-muted)] block">
+                        Current On-Hand
+                      </span>
                       <span className="font-mono font-bold text-xs text-[var(--text)]">
                         {sourceAvailableQty.toFixed(2)} units
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-[var(--text-muted)] block">Projected Balance</span>
+                      <span className="text-[10px] text-[var(--text-muted)] block">
+                        Projected Balance
+                      </span>
                       <span
                         className={`font-mono font-bold text-xs ${
                           isOverStock ? "text-red-400" : "text-amber-400"
@@ -690,13 +709,17 @@ export default function StockTransferPage() {
 
                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[var(--glass-border)] text-xs">
                     <div>
-                      <span className="text-[10px] text-[var(--text-muted)] block">Current On-Hand</span>
+                      <span className="text-[10px] text-[var(--text-muted)] block">
+                        Current On-Hand
+                      </span>
                       <span className="font-mono font-bold text-xs text-[var(--text)]">
                         {destProductStock.toFixed(2)} units
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-[var(--text-muted)] block">Projected Balance</span>
+                      <span className="text-[10px] text-[var(--text-muted)] block">
+                        Projected Balance
+                      </span>
                       <span className="font-mono font-bold text-xs text-emerald-400">
                         {projectedDestQty.toFixed(2)} units
                       </span>
@@ -710,7 +733,9 @@ export default function StockTransferPage() {
                     <Package className="w-3 h-3" /> Atomic Paired Ledger Guarantee
                   </span>
                   <p className="text-[var(--text-muted)]">
-                    Source deduction (-{numericQty.toFixed(2)}) and destination addition (+{numericQty.toFixed(2)}) execute within a single atomic database transaction. Zero risk of lost in-transit stock.
+                    Source deduction (-{numericQty.toFixed(2)}) and destination addition (+
+                    {numericQty.toFixed(2)}) execute within a single atomic database transaction.
+                    Zero risk of lost in-transit stock.
                   </p>
                 </div>
               </GlassCard>

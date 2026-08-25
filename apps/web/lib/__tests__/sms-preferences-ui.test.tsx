@@ -56,7 +56,8 @@ describe("Step 13.6 SMS Channel & Notification Preferences UI Suite", () => {
         </div>
 
         <p className="text-xs text-slate-300">
-          Strict single-segment 160-character messages for high-priority stock depletion and dispatch signals.
+          Strict single-segment 160-character messages for high-priority stock depletion and
+          dispatch signals.
         </p>
 
         <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-white/5">
@@ -70,7 +71,7 @@ describe("Step 13.6 SMS Channel & Notification Preferences UI Suite", () => {
             Opt In to SMS
           </button>
         </div>
-      </GlassCard>
+      </GlassCard>,
     );
 
     expect(screen.getByText("SMS Fallback & Critical Text Alerts")).toBeDefined();
@@ -112,7 +113,7 @@ describe("Step 13.6 SMS Channel & Notification Preferences UI Suite", () => {
           />
           Sales Order Confirmation Alerts
         </label>
-      </div>
+      </div>,
     );
 
     const stockChk = screen.getByTestId("chk-stock") as HTMLInputElement;

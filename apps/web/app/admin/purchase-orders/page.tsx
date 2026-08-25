@@ -380,7 +380,6 @@ export default function PurchaseOrdersPage() {
       return;
     }
 
-
     await executeCreateDraftPO();
   };
 
@@ -631,7 +630,10 @@ export default function PurchaseOrdersPage() {
             size="sm"
             onClick={async () => {
               try {
-                await apiClient.downloadBlob(`/purchase-orders/${po.id}/pdf`, `${po.po_number}.pdf`);
+                await apiClient.downloadBlob(
+                  `/purchase-orders/${po.id}/pdf`,
+                  `${po.po_number}.pdf`,
+                );
               } catch (err) {
                 console.error("PDF download failed:", err);
               }
@@ -839,10 +841,13 @@ export default function PurchaseOrdersPage() {
                       <div className="mt-0.5 text-[var(--text-muted)]">
                         {selectedSupplierForCompliance.name}&apos;s FSSAI license
                         {selectedSupplierForCompliance.fssai_license_no && (
-                          <span className="font-mono"> ({selectedSupplierForCompliance.fssai_license_no})</span>
-                        )}
-                        {" "}expired on {selectedSupplierForCompliance.fssai_expiry_date}.
-                        Placing a PO requires explicit compliance acknowledgment.
+                          <span className="font-mono">
+                            {" "}
+                            ({selectedSupplierForCompliance.fssai_license_no})
+                          </span>
+                        )}{" "}
+                        expired on {selectedSupplierForCompliance.fssai_expiry_date}. Placing a PO
+                        requires explicit compliance acknowledgment.
                       </div>
                     </div>
                   </div>
@@ -1227,7 +1232,9 @@ export default function PurchaseOrdersPage() {
                     </GlassButton>
                   </div>
                   <p className="text-[11px] text-slate-300">
-                    Send this link to <span className="text-white font-medium">{activePO.supplier_name}</span> via WhatsApp/SMS so they can signal dispatch readiness without logging in.
+                    Send this link to{" "}
+                    <span className="text-white font-medium">{activePO.supplier_name}</span> via
+                    WhatsApp/SMS so they can signal dispatch readiness without logging in.
                   </p>
                 </div>
               )}
@@ -1271,25 +1278,22 @@ export default function PurchaseOrdersPage() {
               <div className="flex items-start gap-3">
                 <ShieldAlert className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold text-rose-400">
-                    Compliance Risk Warning
-                  </div>
+                  <div className="font-semibold text-rose-400">Compliance Risk Warning</div>
                   <p className="text-xs text-[var(--text-muted)] mt-1">
-                    <strong className="text-rose-300">
-                      {selectedSupplierForCompliance?.name}
-                    </strong>
+                    <strong className="text-rose-300">{selectedSupplierForCompliance?.name}</strong>
                     &apos;s FSSAI license
                     {selectedSupplierForCompliance?.fssai_license_no && (
                       <span className="font-mono">
-                        {" "}({selectedSupplierForCompliance.fssai_license_no})
+                        {" "}
+                        ({selectedSupplierForCompliance.fssai_license_no})
                       </span>
-                    )}
-                    {" "}expired on{" "}
+                    )}{" "}
+                    expired on{" "}
                     <strong className="text-rose-300">
                       {selectedSupplierForCompliance?.fssai_expiry_date}
-                    </strong>.
-                    Procuring from non-compliant suppliers carries regulatory risk under
-                    FSSAI Food Safety regulations.
+                    </strong>
+                    . Procuring from non-compliant suppliers carries regulatory risk under FSSAI
+                    Food Safety regulations.
                   </p>
                 </div>
               </div>
@@ -1303,8 +1307,9 @@ export default function PurchaseOrdersPage() {
                 className="rounded border-[var(--border)] text-amber-500 focus:ring-amber-500/40 bg-[var(--surface)] mt-0.5"
               />
               <span className="text-xs text-[var(--text)]">
-                I acknowledge the compliance risk and wish to proceed with this purchase order.
-                This is a human decision — the supplier&apos;s FSSAI renewal will be followed up separately.
+                I acknowledge the compliance risk and wish to proceed with this purchase order. This
+                is a human decision — the supplier&apos;s FSSAI renewal will be followed up
+                separately.
               </span>
             </label>
 
@@ -1332,7 +1337,6 @@ export default function PurchaseOrdersPage() {
             </div>
           </div>
         </GlassModal>
-
       </ListViewTemplate>
     </AppLayout>
   );

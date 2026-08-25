@@ -71,7 +71,7 @@ export default function SupplierPerformancePage() {
       setLoading(true);
       setError(null);
       const res = await apiClient.get<SupplierPerformanceResponse>(
-        "/analytics/supplier-performance"
+        "/analytics/supplier-performance",
       );
       setData(res);
     } catch (err: any) {
@@ -97,30 +97,32 @@ export default function SupplierPerformancePage() {
 
   const filteredItems = useMemo(() => {
     if (!data?.items) return [];
-    return data.items.filter((item) => {
-      if (ratingFilter !== "all" && item.rating_band !== ratingFilter) {
-        return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const nameMatch = item.supplier_name.toLowerCase().includes(q);
-        const contactMatch = item.contact_person?.toLowerCase().includes(q) ?? false;
-        if (!nameMatch && !contactMatch) return false;
-      }
-      return true;
-    }).sort((a, b) => {
-      const valA = a[sortField];
-      const valB = b[sortField];
-      if (valA === null || valA === undefined) return sortAsc ? -1 : 1;
-      if (valB === null || valB === undefined) return sortAsc ? 1 : -1;
-      if (typeof valA === "number" && typeof valB === "number") {
-        return sortAsc ? valA - valB : valB - valA;
-      }
-      return sortAsc
-        ? String(valA).localeCompare(String(valB))
-        : String(valB).localeCompare(String(valA));
-    });
-  }, [data?.items, ratingFilter, searchQuery, sortField, sortAsc]);
+    return data.items
+      .filter((item) => {
+        if (ratingFilter !== "all" && item.rating_band !== ratingFilter) {
+          return false;
+        }
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const nameMatch = item.supplier_name.toLowerCase().includes(q);
+          const contactMatch = item.contact_person?.toLowerCase().includes(q) ?? false;
+          if (!nameMatch && !contactMatch) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const valA = a[sortField];
+        const valB = b[sortField];
+        if (valA === null || valA === undefined) return sortAsc ? -1 : 1;
+        if (valB === null || valB === undefined) return sortAsc ? 1 : -1;
+        if (typeof valA === "number" && typeof valB === "number") {
+          return sortAsc ? valA - valB : valB - valA;
+        }
+        return sortAsc
+          ? String(valA).localeCompare(String(valB))
+          : String(valB).localeCompare(String(valA));
+      });
+  }, [data, ratingFilter, searchQuery, sortField, sortAsc]);
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -158,7 +160,8 @@ export default function SupplierPerformancePage() {
                   Supplier Reliability & Performance
                 </h1>
                 <p className="text-xs text-white/50">
-                  On-time delivery rates, fulfillment accuracy, vendor returns, and procurement spend
+                  On-time delivery rates, fulfillment accuracy, vendor returns, and procurement
+                  spend
                 </p>
               </div>
             </div>
@@ -197,8 +200,7 @@ export default function SupplierPerformancePage() {
             </div>
             <div className="mt-3 flex items-baseline gap-2">
               <span className="text-3xl font-bold tracking-tight text-white">
-                <AnimatedNumber value={data?.summary?.average_on_time_pct ?? 0} decimals={1} />
-                %
+                <AnimatedNumber value={data?.summary?.average_on_time_pct ?? 0} decimals={1} />%
               </span>
             </div>
             <p className="mt-1 text-xs text-white/40">Expected vs actual receipt dates</p>
@@ -215,8 +217,7 @@ export default function SupplierPerformancePage() {
             </div>
             <div className="mt-3 flex items-baseline gap-2">
               <span className="text-3xl font-bold tracking-tight text-white">
-                <AnimatedNumber value={data?.summary?.average_accuracy_pct ?? 0} decimals={1} />
-                %
+                <AnimatedNumber value={data?.summary?.average_accuracy_pct ?? 0} decimals={1} />%
               </span>
             </div>
             <p className="mt-1 text-xs text-white/40">Total units received vs ordered</p>
@@ -386,10 +387,7 @@ export default function SupplierPerformancePage() {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {filteredItems.map((item) => (
-                    <tr
-                      key={item.supplier_id}
-                      className="transition-colors hover:bg-white/[0.02]"
-                    >
+                    <tr key={item.supplier_id} className="transition-colors hover:bg-white/[0.02]">
                       <td className="px-4 py-3.5">
                         <div>
                           <div className="font-semibold text-white">{item.supplier_name}</div>
@@ -414,8 +412,8 @@ export default function SupplierPerformancePage() {
                                 item.on_time_delivery_pct >= 90
                                   ? "text-emerald-400"
                                   : item.on_time_delivery_pct >= 75
-                                  ? "text-amber-400"
-                                  : "text-rose-400"
+                                    ? "text-amber-400"
+                                    : "text-rose-400"
                               }`}
                             >
                               {item.on_time_delivery_pct}%
@@ -427,8 +425,8 @@ export default function SupplierPerformancePage() {
                                 item.on_time_delivery_pct >= 90
                                   ? "bg-emerald-500"
                                   : item.on_time_delivery_pct >= 75
-                                  ? "bg-amber-500"
-                                  : "bg-rose-500"
+                                    ? "bg-amber-500"
+                                    : "bg-rose-500"
                               }`}
                               style={{ width: `${Math.min(item.on_time_delivery_pct, 100)}%` }}
                             />
@@ -445,8 +443,8 @@ export default function SupplierPerformancePage() {
                                 item.fulfillment_accuracy_pct >= 95
                                   ? "text-blue-400"
                                   : item.fulfillment_accuracy_pct >= 85
-                                  ? "text-amber-400"
-                                  : "text-rose-400"
+                                    ? "text-amber-400"
+                                    : "text-rose-400"
                               }`}
                             >
                               {item.fulfillment_accuracy_pct}%
@@ -468,8 +466,8 @@ export default function SupplierPerformancePage() {
                             item.return_rate_pct > 5
                               ? "text-rose-400"
                               : item.return_rate_pct > 0
-                              ? "text-amber-400"
-                              : "text-white/60"
+                                ? "text-amber-400"
+                                : "text-white/60"
                           }`}
                         >
                           {item.return_rate_pct}%

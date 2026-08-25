@@ -76,7 +76,6 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         requiredPermission: "inventory:manage",
       },
 
-
       {
         name: "Suppliers & Vendors",
 
@@ -116,7 +115,6 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         requiredPermission: "inventory:view",
       },
 
-
       {
         name: "Stock Analytics",
         href: "/admin/analytics/stock",
@@ -154,7 +152,6 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         icon: "Clock",
         requiredPermission: "invoices:view",
       },
-
 
       {
         name: "Returns & RMA",

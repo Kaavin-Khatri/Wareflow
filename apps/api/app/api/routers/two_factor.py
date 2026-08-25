@@ -63,3 +63,14 @@ def disable_two_factor(
 ) -> TwoFactorStatusResponse:
     """Disable 2FA for an authenticated user with mandatory code confirmation."""
     return two_factor_service.disable(profile_id=current_user.id, code=payload.code)
+
+
+@router.post("/regenerate-backup-codes", response_model=list[str])
+def regenerate_backup_codes(
+    payload: TwoFactorVerifyRequest,
+    current_user: CurrentUser = Depends(get_current_user),
+    two_factor_service: TwoFactorService = Depends(get_two_factor_service),
+) -> list[str]:
+    """Regenerate a fresh set of 10 single-use recovery backup codes."""
+    return two_factor_service.regenerate_backup_codes(profile_id=current_user.id, code=payload.code)
+

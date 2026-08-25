@@ -156,11 +156,15 @@ export default function ProductsAdminPage() {
 
   // Restock Notification Quick-Action Modal State (Step 13.4)
   const [notifyModalOpen, setNotifyModalOpen] = useState(false);
-  const [selectedProductForNotify, setSelectedProductForNotify] = useState<ProductItem | null>(null);
+  const [selectedProductForNotify, setSelectedProductForNotify] = useState<ProductItem | null>(
+    null,
+  );
   const [retailersList, setRetailersList] = useState<RetailerOptionItem[]>([]);
   const [subscribersList, setSubscribersList] = useState<StockSubscriberItem[]>([]);
   const [selectedRetailerId, setSelectedRetailerId] = useState("");
-  const [selectedChannelPref, setSelectedChannelPref] = useState<"both" | "whatsapp" | "email">("both");
+  const [selectedChannelPref, setSelectedChannelPref] = useState<"both" | "whatsapp" | "email">(
+    "both",
+  );
   const [notifySubmitting, setNotifySubmitting] = useState(false);
   const [loadingSubscribers, setLoadingSubscribers] = useState(false);
   const [notifyError, setNotifyError] = useState<string | null>(null);
@@ -490,11 +494,11 @@ export default function ProductsAdminPage() {
         {
           retailer_id: selectedRetailerId,
           channel_preference: selectedChannelPref,
-        }
+        },
       );
       setNotifySuccess(`Subscribed retailer for restock alerts via ${selectedChannelPref}.`);
       const subs = await apiClient.get<StockSubscriberItem[]>(
-        `/products/${selectedProductForNotify.id}/subscribers`
+        `/products/${selectedProductForNotify.id}/subscribers`,
       );
       setSubscribersList(subs);
     } catch (err: unknown) {
@@ -508,7 +512,7 @@ export default function ProductsAdminPage() {
     if (!selectedProductForNotify) return;
     try {
       await apiClient.delete(
-        `/products/${selectedProductForNotify.id}/subscribe?retailer_id=${retailerId}`
+        `/products/${selectedProductForNotify.id}/subscribe?retailer_id=${retailerId}`,
       );
       setSubscribersList((prev) => prev.filter((s) => s.retailer_id !== retailerId));
       setNotifySuccess("Unsubscribed retailer from restock notifications.");
@@ -1267,8 +1271,12 @@ export default function ProductsAdminPage() {
                   <Package className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-white">{selectedProductForNotify.name}</div>
-                  <div className="text-xs text-purple-400 font-mono">{selectedProductForNotify.sku}</div>
+                  <div className="text-sm font-medium text-white">
+                    {selectedProductForNotify.name}
+                  </div>
+                  <div className="text-xs text-purple-400 font-mono">
+                    {selectedProductForNotify.sku}
+                  </div>
                 </div>
               </div>
               <div className="text-right">
@@ -1281,14 +1289,19 @@ export default function ProductsAdminPage() {
           )}
 
           {/* Phone Call Quick Subscription Form */}
-          <form onSubmit={handleSubscribeRetailer} className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-4">
+          <form
+            onSubmit={handleSubscribeRetailer}
+            className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-4"
+          >
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-purple-300">
               <Plus className="w-3.5 h-3.5" />
               <span>Add Standing Restock Alert</span>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-white/70 mb-1.5">Select Wholesale Retailer</label>
+              <label className="block text-xs font-medium text-white/70 mb-1.5">
+                Select Wholesale Retailer
+              </label>
               <select
                 value={selectedRetailerId}
                 onChange={(e) => setSelectedRetailerId(e.target.value)}
@@ -1307,7 +1320,9 @@ export default function ProductsAdminPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-white/70 mb-1.5">Notification Channel</label>
+              <label className="block text-xs font-medium text-white/70 mb-1.5">
+                Notification Channel
+              </label>
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
@@ -1381,9 +1396,13 @@ export default function ProductsAdminPage() {
                     className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs"
                   >
                     <div>
-                      <div className="font-medium text-white">{sub.retailer_name || "Wholesale Retailer"}</div>
+                      <div className="font-medium text-white">
+                        {sub.retailer_name || "Wholesale Retailer"}
+                      </div>
                       <div className="text-[11px] text-white/40 flex items-center gap-2 mt-0.5">
-                        <span className="capitalize text-purple-300 font-mono">{sub.channel_preference}</span>
+                        <span className="capitalize text-purple-300 font-mono">
+                          {sub.channel_preference}
+                        </span>
                         <span>•</span>
                         <span>{new Date(sub.created_at).toLocaleDateString()}</span>
                       </div>

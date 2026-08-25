@@ -152,7 +152,7 @@ export default function PortalOrdersPage() {
 
   const totalValue = orders.reduce((sum, o) => sum + o.total_amount, 0);
   const activeFulfillments = orders.filter((o) =>
-    ["confirmed", "packed", "shipped"].includes(o.status.toLowerCase())
+    ["confirmed", "packed", "shipped"].includes(o.status.toLowerCase()),
   ).length;
 
   return (

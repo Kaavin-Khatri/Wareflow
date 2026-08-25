@@ -137,7 +137,7 @@ describe("PWA Offline Shell & Sync Queue UI Suite (Step 19.1)", () => {
       expect(screen.getByText("Conflict Detected")).toBeDefined();
       expect(screen.getByText("Server Stock Discrepancy")).toBeDefined();
       expect(
-        screen.getByText("Batch balance was altered on server (current balance: 20 units).")
+        screen.getByText("Batch balance was altered on server (current balance: 20 units)."),
       ).toBeDefined();
       expect(screen.getByText("Discard Action")).toBeDefined();
       expect(screen.getByText("Re-apply Against Current Stock")).toBeDefined();
@@ -151,7 +151,7 @@ describe("PWA Offline Shell & Sync Queue UI Suite (Step 19.1)", () => {
     render(
       <ThemeProvider>
         <Topbar />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
     expect(screen.getByTestId("sync-queue-trigger")).toBeDefined();
   });

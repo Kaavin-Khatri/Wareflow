@@ -9,7 +9,7 @@ Follows SOLID Principles:
 - Dependency Inversion: Injected with repository interfaces.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.models.retailer import SOStatusEnum
 from app.repositories.interfaces.retailer_repository import RetailerRepository
@@ -36,7 +36,7 @@ class RetailerPerformanceService:
         self, as_of: datetime | None = None
     ) -> RetailerPerformanceResponse:
         """Calculate retailer scorecards, volume rankings, and churn risk flags."""
-        now = as_of or datetime.now(timezone.utc)
+        now = as_of or datetime.now(UTC)
 
         retailers = self.retailer_repo.list_all(limit=1000)
         so_tuple = self.sales_order_repo.list_all(limit=2000)
@@ -81,7 +81,7 @@ class RetailerPerformanceService:
                 last_order = ret_orders[-1]
                 last_order_dt = last_order.order_date or last_order.created_at
                 if last_order_dt.tzinfo is None:
-                    last_order_dt = last_order_dt.replace(tzinfo=timezone.utc)
+                    last_order_dt = last_order_dt.replace(tzinfo=UTC)
 
                 last_order_date_str = last_order_dt.strftime("%Y-%m-%d")
                 days_since_last = max((now - last_order_dt).days, 0)
@@ -93,7 +93,7 @@ class RetailerPerformanceService:
                 if order_count >= 2:
                     first_dt = ret_orders[0].order_date or ret_orders[0].created_at
                     if first_dt.tzinfo is None:
-                        first_dt = first_dt.replace(tzinfo=timezone.utc)
+                        first_dt = first_dt.replace(tzinfo=UTC)
                     span_days = max((last_order_dt - first_dt).days, 1)
                     avg_gap = round(span_days / (order_count - 1), 1)
 
@@ -126,7 +126,7 @@ class RetailerPerformanceService:
                 # Registered retailer with 0 lifetime orders
                 ret_created = getattr(ret, "created_at", None) or now
                 if ret_created.tzinfo is None:
-                    ret_created = ret_created.replace(tzinfo=timezone.utc)
+                    ret_created = ret_created.replace(tzinfo=UTC)
                 days_registered = max((now - ret_created).days, 0)
                 if days_registered >= 30:
                     is_churn_risk = True

@@ -105,7 +105,7 @@ describe("Global Admin Search & Command Palette (Step 15.4)", () => {
     render(
       <ThemeProvider>
         <Topbar />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     const searchTrigger = screen.getByTestId("global-search-trigger");
@@ -125,7 +125,7 @@ describe("Global Admin Search & Command Palette (Step 15.4)", () => {
     render(
       <ThemeProvider>
         <Topbar />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     // Dispatch global Cmd+K
@@ -135,7 +135,7 @@ describe("Global Admin Search & Command Palette (Step 15.4)", () => {
           key: "k",
           metaKey: true,
           bubbles: true,
-        })
+        }),
       );
     });
 

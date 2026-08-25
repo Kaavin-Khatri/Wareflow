@@ -214,7 +214,9 @@ describe("Owner Analytics Dashboard UI (Step 15.1)", () => {
     expect(screen.getByText("Low Stock Quick Action")).toBeDefined();
     expect(screen.getByText("Organic Sugar 50kg")).toBeDefined();
     expect(screen.getByText("Sunflower Refined Oil 15L")).toBeDefined();
-    expect(screen.getAllByText(/Supplier: Agro Prime Commodities Ltd/i).length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText(/Supplier: Agro Prime Commodities Ltd/i).length,
+    ).toBeGreaterThanOrEqual(1);
 
     // Verify Overdue Receivables Queue widget
     expect(screen.getByText("Overdue Receivables Queue")).toBeDefined();

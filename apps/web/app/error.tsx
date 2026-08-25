@@ -39,7 +39,8 @@ export default function GlobalError({
               Warehouse Processing Interrupted
             </h1>
             <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">
-              An unexpected runtime exception occurred while rendering this view. Your database transactions and local offline queue remain intact.
+              An unexpected runtime exception occurred while rendering this view. Your database
+              transactions and local offline queue remain intact.
             </p>
             {error?.message && (
               <p className="p-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--border)] text-[11px] font-mono text-rose-400/90 break-all text-left">

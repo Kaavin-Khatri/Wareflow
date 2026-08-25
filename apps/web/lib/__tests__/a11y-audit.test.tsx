@@ -56,7 +56,7 @@ describe("Accessibility (a11y) Quality Audit Suite (Step 22.4)", () => {
   });
 
   it("StatusBadge renders with semantic role and text for screen readers", () => {
-    render(<StatusBadge status="paid" domain="invoice" />);
+    render(<StatusBadge status="paid" />);
     const badge = screen.getByText("Paid");
     expect(badge).toBeDefined();
   });
@@ -73,9 +73,7 @@ describe("Accessibility (a11y) Quality Audit Suite (Step 22.4)", () => {
     );
 
     expect(screen.getByText("No Products Found")).toBeDefined();
-    expect(
-      screen.getByText("Get started by adding your first wholesale product"),
-    ).toBeDefined();
+    expect(screen.getByText("Get started by adding your first wholesale product")).toBeDefined();
     const actionBtn = screen.getByRole("button", { name: "Create Product" });
     expect(actionBtn).toBeDefined();
     fireEvent.click(actionBtn);

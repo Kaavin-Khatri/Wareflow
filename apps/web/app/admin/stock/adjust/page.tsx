@@ -102,7 +102,6 @@ export default function StockAdjustPage() {
     };
   }, []);
 
-
   // Fetch batches when product or warehouse changes
   useEffect(() => {
     let isMounted = true;
@@ -115,7 +114,7 @@ export default function StockAdjustPage() {
       try {
         const queryParams = selectedWarehouseId ? `?warehouse_id=${selectedWarehouseId}` : "";
         const res = await apiClient.get<{ batches: BatchOption[] }>(
-          `/products/${selectedProductId}/stock${queryParams}`
+          `/products/${selectedProductId}/stock${queryParams}`,
         );
         if (!isMounted) return;
         const availableBatches = res?.batches || [];
@@ -182,7 +181,7 @@ export default function StockAdjustPage() {
     }
     if (isNegativeProjected) {
       setErrorMessage(
-        `Adjustment would result in negative stock quantity (${projectedQty.toFixed(2)}).`
+        `Adjustment would result in negative stock quantity (${projectedQty.toFixed(2)}).`,
       );
       return;
     }
@@ -219,8 +218,8 @@ export default function StockAdjustPage() {
         err instanceof Error
           ? err.message
           : typeof err === "object" && err !== null && "message" in err
-          ? String((err as { message: unknown }).message)
-          : "Failed to record stock adjustment.";
+            ? String((err as { message: unknown }).message)
+            : "Failed to record stock adjustment.";
       setErrorMessage(errorMsg);
     } finally {
       setSubmitting(false);
@@ -244,7 +243,8 @@ export default function StockAdjustPage() {
                 Record Stock Adjustment
               </h1>
               <p className="text-xs text-[var(--text-muted)]">
-                Direct write path for physical count variance, transit damage, shrinkage, and authorized audit recounts.
+                Direct write path for physical count variance, transit damage, shrinkage, and
+                authorized audit recounts.
               </p>
             </div>
           </div>
@@ -258,8 +258,12 @@ export default function StockAdjustPage() {
             </div>
             <h2 className="text-lg font-bold text-[var(--text)]">Stock Adjustment Recorded</h2>
             <p className="text-xs text-[var(--text-muted)] max-w-md mx-auto">
-              Batch <span className="font-mono text-cyan-400">{successData.batch_no || "selected"}</span> was adjusted by{" "}
-              <span className={`font-bold font-mono ${successData.delta > 0 ? "text-emerald-400" : "text-red-400"}`}>
+              Batch{" "}
+              <span className="font-mono text-cyan-400">{successData.batch_no || "selected"}</span>{" "}
+              was adjusted by{" "}
+              <span
+                className={`font-bold font-mono ${successData.delta > 0 ? "text-emerald-400" : "text-red-400"}`}
+              >
                 {successData.delta > 0 ? `+${successData.delta}` : successData.delta}
               </span>{" "}
               units. An immutable record has been appended to the Movement Ledger.
@@ -317,7 +321,10 @@ export default function StockAdjustPage() {
                 {/* Product Select */}
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <label htmlFor="adjust-product" className="block text-xs font-medium text-[var(--text-muted)]">
+                    <label
+                      htmlFor="adjust-product"
+                      className="block text-xs font-medium text-[var(--text-muted)]"
+                    >
                       Product *
                     </label>
                     <button
@@ -347,7 +354,10 @@ export default function StockAdjustPage() {
 
                 {/* Warehouse Select */}
                 <div className="space-y-1">
-                  <label htmlFor="adjust-warehouse" className="block text-xs font-medium text-[var(--text-muted)]">
+                  <label
+                    htmlFor="adjust-warehouse"
+                    className="block text-xs font-medium text-[var(--text-muted)]"
+                  >
                     Warehouse Location *
                   </label>
                   <select
@@ -369,7 +379,10 @@ export default function StockAdjustPage() {
 
               {/* Batch Select */}
               <div className="space-y-1">
-                <label htmlFor="adjust-batch" className="block text-xs font-medium text-[var(--text-muted)]">
+                <label
+                  htmlFor="adjust-batch"
+                  className="block text-xs font-medium text-[var(--text-muted)]"
+                >
                   Stock Batch *
                 </label>
                 <select
@@ -382,13 +395,17 @@ export default function StockAdjustPage() {
                 >
                   {batches.length === 0 ? (
                     <option value="">
-                      {selectedProductId ? "No active batches in selected warehouse" : "Select a product first"}
+                      {selectedProductId
+                        ? "No active batches in selected warehouse"
+                        : "Select a product first"}
                     </option>
                   ) : (
                     batches.map((b) => (
                       <option key={b.id} value={b.id}>
                         Batch: {b.batch_no} — On Hand: {Number(b.quantity).toFixed(2)} units{" "}
-                        {b.expiry_date ? `(Exp: ${new Date(b.expiry_date).toLocaleDateString()})` : ""}
+                        {b.expiry_date
+                          ? `(Exp: ${new Date(b.expiry_date).toLocaleDateString()})`
+                          : ""}
                       </option>
                     ))
                   )}
@@ -413,7 +430,10 @@ export default function StockAdjustPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Delta Input */}
                 <div className="space-y-1">
-                  <label htmlFor="adjust-delta" className="block text-xs font-medium text-[var(--text-muted)]">
+                  <label
+                    htmlFor="adjust-delta"
+                    className="block text-xs font-medium text-[var(--text-muted)]"
+                  >
                     Quantity Delta (+ / -) *
                   </label>
                   <input
@@ -427,25 +447,32 @@ export default function StockAdjustPage() {
                     className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
                   />
                   <span className="text-[10px] text-[var(--text-muted)] block">
-                    Use negative values to deduct (damage, shrinkage) and positive to add (audit recount).
+                    Use negative values to deduct (damage, shrinkage) and positive to add (audit
+                    recount).
                   </span>
                 </div>
 
                 {/* Reason Select */}
                 <div className="space-y-1">
-                  <label htmlFor="adjust-reason" className="block text-xs font-medium text-[var(--text-muted)]">
+                  <label
+                    htmlFor="adjust-reason"
+                    className="block text-xs font-medium text-[var(--text-muted)]"
+                  >
                     Adjustment Reason *
                   </label>
                   <select
                     id="adjust-reason"
                     value={reason}
-                    onChange={(e) => setReason(e.target.value as "damage" | "loss" | "recount" | "other")}
+                    onChange={(e) =>
+                      setReason(e.target.value as "damage" | "loss" | "recount" | "other")
+                    }
                     className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
                   >
                     <option value="damage">Damage (Physical breakage, leak, spoilt)</option>
                     <option value="loss">Loss (Shrinkage, missing units)</option>
                     <option value="recount" disabled={!hasRecountPermission}>
-                      Recount (Audit count variance) {!hasRecountPermission ? "🔒 Requires Recount Permission" : ""}
+                      Recount (Audit count variance){" "}
+                      {!hasRecountPermission ? "🔒 Requires Recount Permission" : ""}
                     </option>
                     <option value="other">Other (General inventory correction)</option>
                   </select>
@@ -474,7 +501,9 @@ export default function StockAdjustPage() {
                     )}
                     <span>Projected Resulting Batch Quantity:</span>
                   </div>
-                  <span className={`font-mono font-bold text-sm ${isNegativeProjected ? "text-red-400" : "text-emerald-400"}`}>
+                  <span
+                    className={`font-mono font-bold text-sm ${isNegativeProjected ? "text-red-400" : "text-emerald-400"}`}
+                  >
                     {projectedQty.toFixed(2)} units
                   </span>
                 </div>
@@ -482,7 +511,10 @@ export default function StockAdjustPage() {
 
               {/* Free-text Notes */}
               <div className="space-y-1">
-                <label htmlFor="adjust-notes" className="block text-xs font-medium text-[var(--text-muted)]">
+                <label
+                  htmlFor="adjust-notes"
+                  className="block text-xs font-medium text-[var(--text-muted)]"
+                >
                   Context Notes / Investigation Reference
                 </label>
                 <textarea
@@ -506,7 +538,9 @@ export default function StockAdjustPage() {
                 variant="primary"
                 size="md"
                 type="submit"
-                disabled={submitting || isNegativeProjected || !selectedBatchId || numericDelta === 0}
+                disabled={
+                  submitting || isNegativeProjected || !selectedBatchId || numericDelta === 0
+                }
               >
                 {submitting ? "Processing..." : "Commit Stock Adjustment"}
               </GlassButton>

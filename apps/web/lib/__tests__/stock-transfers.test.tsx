@@ -106,11 +106,15 @@ describe("Stock Transfers UI", () => {
     render(<StockTransferPage />);
 
     await waitFor(() => {
-      expect(screen.getAllByText("Inter-Warehouse Stock Transfers").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Inter-Warehouse Stock Transfers").length).toBeGreaterThanOrEqual(
+        1,
+      );
       expect(screen.getByLabelText(/Product to Relocate \*/i)).toBeDefined();
       expect(screen.getByLabelText(/Source Warehouse \(Dispatch\) \*/i)).toBeDefined();
       expect(screen.getByLabelText(/Destination Warehouse \(Receive\) \*/i)).toBeDefined();
-      expect(screen.getAllByText("Recent Inter-Warehouse Transfers").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Recent Inter-Warehouse Transfers").length).toBeGreaterThanOrEqual(
+        1,
+      );
       expect(screen.getAllByText("Organic Whole Milk 1L").length).toBeGreaterThanOrEqual(1);
     });
   });
@@ -153,9 +157,11 @@ describe("Stock Transfers UI", () => {
           to_warehouse_id: "wh-2",
           quantity: 25,
           notes: "Store stock balance",
-        })
+        }),
       );
-      expect(screen.getAllByText(/Successfully transferred 25.00 units/i).length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getAllByText(/Successfully transferred 25.00 units/i).length,
+      ).toBeGreaterThanOrEqual(1);
     });
   });
 });

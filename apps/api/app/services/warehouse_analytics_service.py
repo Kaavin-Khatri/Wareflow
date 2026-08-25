@@ -8,7 +8,7 @@ Follows SOLID Principles:
 - Dependency Inversion: Injected with repository interfaces.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from app.models.inventory import StockMovementTypeEnum
 from app.repositories.interfaces.product_repository import ProductRepositoryInterface
@@ -35,7 +35,7 @@ class WarehouseAnalyticsService:
         self, as_of: datetime | None = None
     ) -> WarehouseBreakdownResponse:
         """Calculate inventory holding values and 30-day throughput per warehouse facility."""
-        now = as_of or datetime.now(timezone.utc)
+        now = as_of or datetime.now(UTC)
         cutoff_30d = now - timedelta(days=30)
 
         warehouses = self.stock_repo.get_all_warehouses(active_only=False)

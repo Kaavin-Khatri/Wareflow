@@ -67,7 +67,7 @@ export default function ShrinkageAnalyticsPage() {
       setLoading(true);
       setError(null);
       const res = await apiClient.get<ShrinkageResponse>(
-        `/analytics/shrinkage?group_by=${groupBy}&period=${period}`
+        `/analytics/shrinkage?group_by=${groupBy}&period=${period}`,
       );
       setData(res);
     } catch (err: any) {
@@ -93,28 +93,30 @@ export default function ShrinkageAnalyticsPage() {
 
   const filteredItems = useMemo(() => {
     if (!data?.items) return [];
-    return data.items.filter((item) => {
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const nameMatch = item.name.toLowerCase().includes(q);
-        const secMatch = item.secondary_info?.toLowerCase().includes(q) ?? false;
-        const badgeMatch = item.badge?.toLowerCase().includes(q) ?? false;
-        if (!nameMatch && !secMatch && !badgeMatch) return false;
-      }
-      return true;
-    }).sort((a, b) => {
-      const valA = a[sortField];
-      const valB = b[sortField];
-      if (valA === null || valA === undefined) return sortAsc ? -1 : 1;
-      if (valB === null || valB === undefined) return sortAsc ? 1 : -1;
-      if (typeof valA === "number" && typeof valB === "number") {
-        return sortAsc ? valA - valB : valB - valA;
-      }
-      return sortAsc
-        ? String(valA).localeCompare(String(valB))
-        : String(valB).localeCompare(String(valA));
-    });
-  }, [data?.items, searchQuery, sortField, sortAsc]);
+    return data.items
+      .filter((item) => {
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const nameMatch = item.name.toLowerCase().includes(q);
+          const secMatch = item.secondary_info?.toLowerCase().includes(q) ?? false;
+          const badgeMatch = item.badge?.toLowerCase().includes(q) ?? false;
+          if (!nameMatch && !secMatch && !badgeMatch) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const valA = a[sortField];
+        const valB = b[sortField];
+        if (valA === null || valA === undefined) return sortAsc ? -1 : 1;
+        if (valB === null || valB === undefined) return sortAsc ? 1 : -1;
+        if (typeof valA === "number" && typeof valB === "number") {
+          return sortAsc ? valA - valB : valB - valA;
+        }
+        return sortAsc
+          ? String(valA).localeCompare(String(valB))
+          : String(valB).localeCompare(String(valA));
+      });
+  }, [data, searchQuery, sortField, sortAsc]);
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -139,7 +141,8 @@ export default function ShrinkageAnalyticsPage() {
                   Inventory Shrinkage & Loss Tracking
                 </h1>
                 <p className="text-xs text-white/50">
-                  Damage write-offs, physical discrepancies, and spoilage values from ledger adjustments
+                  Damage write-offs, physical discrepancies, and spoilage values from ledger
+                  adjustments
                 </p>
               </div>
             </div>
@@ -199,7 +202,9 @@ export default function ShrinkageAnalyticsPage() {
               </span>
               <span className="text-xs text-white/50">units</span>
             </div>
-            <p className="mt-1 text-xs text-white/40">Across {data?.summary?.damage_incidents_count ?? 0} incidents</p>
+            <p className="mt-1 text-xs text-white/40">
+              Across {data?.summary?.damage_incidents_count ?? 0} incidents
+            </p>
           </GlassCard>
 
           <GlassCard className="relative overflow-hidden p-5">
@@ -213,8 +218,7 @@ export default function ShrinkageAnalyticsPage() {
             </div>
             <div className="mt-3 flex items-baseline gap-2">
               <span className="text-3xl font-bold tracking-tight text-white">
-                <AnimatedNumber value={data?.summary?.shrinkage_rate_pct ?? 0} decimals={2} />
-                %
+                <AnimatedNumber value={data?.summary?.shrinkage_rate_pct ?? 0} decimals={2} />%
               </span>
             </div>
             <p className="mt-1 text-xs text-white/40">Of total inventory valuation</p>
@@ -380,18 +384,13 @@ export default function ShrinkageAnalyticsPage() {
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {filteredItems.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="transition-colors hover:bg-white/[0.02]"
-                    >
+                    <tr key={item.id} className="transition-colors hover:bg-white/[0.02]">
                       <td className="px-4 py-3.5">
                         <div>
                           <div className="font-semibold text-white">{item.name}</div>
                           <div className="flex items-center gap-2 mt-0.5 text-white/40">
                             {item.secondary_info && <span>{item.secondary_info}</span>}
-                            {item.badge && (
-                              <GlassBadge variant="neutral">{item.badge}</GlassBadge>
-                            )}
+                            {item.badge && <GlassBadge variant="neutral">{item.badge}</GlassBadge>}
                           </div>
                         </div>
                       </td>

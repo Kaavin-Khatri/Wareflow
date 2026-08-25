@@ -114,11 +114,11 @@ export default function AdminInquiriesPage() {
     try {
       const updatedInquiry = await apiClient.patch<ProductInquiry>(
         `/inquiries/${selectedInquiry.id}/respond`,
-        { response: responseText.trim() }
+        { response: responseText.trim() },
       );
 
       setInquiries((prev) =>
-        prev.map((item) => (item.id === updatedInquiry.id ? updatedInquiry : item))
+        prev.map((item) => (item.id === updatedInquiry.id ? updatedInquiry : item)),
       );
       setSelectedInquiry(null);
       setResponseText("");
@@ -241,7 +241,9 @@ export default function AdminInquiriesPage() {
                     <div>
                       <h4 className="text-sm font-bold text-white flex items-center gap-2">
                         {inquiry.product_name}
-                        <span className="text-xs text-slate-400 font-normal">({inquiry.product_sku})</span>
+                        <span className="text-xs text-slate-400 font-normal">
+                          ({inquiry.product_sku})
+                        </span>
                       </h4>
                       <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
                         <Store className="w-3.5 h-3.5 text-slate-500" />
@@ -254,11 +256,17 @@ export default function AdminInquiriesPage() {
 
                   <div>
                     {inquiry.status.toLowerCase() === "open" ? (
-                      <GlassBadge variant="warning" className="uppercase text-[10px] tracking-wider">
+                      <GlassBadge
+                        variant="warning"
+                        className="uppercase text-[10px] tracking-wider"
+                      >
                         Action Required
                       </GlassBadge>
                     ) : (
-                      <GlassBadge variant="success" className="uppercase text-[10px] tracking-wider">
+                      <GlassBadge
+                        variant="success"
+                        className="uppercase text-[10px] tracking-wider"
+                      >
                         Responded
                       </GlassBadge>
                     )}
@@ -300,7 +308,9 @@ export default function AdminInquiriesPage() {
                     className="flex items-center gap-1.5"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    {inquiry.status.toLowerCase() === "open" ? "Respond to Retailer" : "Edit Response"}
+                    {inquiry.status.toLowerCase() === "open"
+                      ? "Respond to Retailer"
+                      : "Edit Response"}
                   </GlassButton>
                 </div>
               </GlassCard>

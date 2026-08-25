@@ -136,7 +136,7 @@
 
 ## 3. Four Core Template Specifications
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 1. ListViewTemplate                                                         │
 │    [PageHeader: Title, Description, Stats, Primary Action]                 │

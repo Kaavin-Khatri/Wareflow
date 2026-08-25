@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from app.core.limiter import limiter
 
 from app.core.di import (
     get_anomaly_detection_service,
@@ -21,10 +20,10 @@ from app.core.di import (
     get_turnover_service,
     get_warehouse_analytics_service,
 )
+from app.core.limiter import limiter
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.analytics import (
     ARAgingReportResponse,
-    ComparisonMetricResult,
     CreatePOFromSuggestionsRequest,
     DeadStockResponse,
     OrderAnomalyReportResponse,

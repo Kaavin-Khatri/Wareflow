@@ -212,7 +212,7 @@ describe("Step 16.2 Analytics Dashboard Pages", () => {
       render(
         <ThemeProvider>
           <SupplierPerformancePage />
-        </ThemeProvider>
+        </ThemeProvider>,
       );
     });
 
@@ -227,7 +227,7 @@ describe("Step 16.2 Analytics Dashboard Pages", () => {
       render(
         <ThemeProvider>
           <RetailerPerformancePage />
-        </ThemeProvider>
+        </ThemeProvider>,
       );
     });
 
@@ -246,7 +246,7 @@ describe("Step 16.2 Analytics Dashboard Pages", () => {
       render(
         <ThemeProvider>
           <WarehouseBreakdownPage />
-        </ThemeProvider>
+        </ThemeProvider>,
       );
     });
 
@@ -264,7 +264,7 @@ describe("Step 16.2 Analytics Dashboard Pages", () => {
       render(
         <ThemeProvider>
           <ShrinkageAnalyticsPage />
-        </ThemeProvider>
+        </ThemeProvider>,
       );
     });
 

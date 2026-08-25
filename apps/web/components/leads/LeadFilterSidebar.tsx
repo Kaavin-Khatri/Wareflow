@@ -59,7 +59,7 @@ export function LeadFilterSidebar({
   const contactedCount = useMemo(() => leads.filter((l) => l.contacted).length, [leads]);
   const convertedCount = useMemo(
     () => leads.filter((l) => Boolean(l.converted_retailer_id)).length,
-    [leads]
+    [leads],
   );
 
   // Filtered leads
@@ -308,9 +308,7 @@ export function LeadFilterSidebar({
                 >
                   <div className="flex items-start justify-between gap-2 mb-1.5">
                     <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                      <h4 className="text-xs font-bold text-[var(--text)] truncate">
-                        {lead.name}
-                      </h4>
+                      <h4 className="text-xs font-bold text-[var(--text)] truncate">{lead.name}</h4>
                       {lead.is_new && !lead.contacted && (
                         <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500 text-black shrink-0">
                           <Sparkles className="w-2.5 h-2.5" />

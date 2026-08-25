@@ -108,7 +108,8 @@ const MOCK_EINVOICE_CONFIG = {
   provider: "sandbox",
   is_sandbox: true,
   eway_bill_threshold_inr: 50000.0,
-  turnover_threshold_notice: "Mandatory above ₹5 Crore annual turnover. Seamlessly operates in sandbox test mode below threshold.",
+  turnover_threshold_notice:
+    "Mandatory above ₹5 Crore annual turnover. Seamlessly operates in sandbox test mode below threshold.",
   cost_structure_note: "Sandbox is free.",
 };
 
@@ -134,7 +135,7 @@ vi.mock("@/lib/api-client", () => ({
           irn: "9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e",
           ack_no: "2026100984758300",
           ack_date: "2026-08-19T00:00:00Z",
-          qr_code: "{\"SellerGstin\":\"07AAAAA0000A1Z5\"}",
+          qr_code: '{"SellerGstin":"07AAAAA0000A1Z5"}',
           is_sandbox: true,
           status: "GENERATED",
         });
@@ -205,7 +206,9 @@ describe("GST Invoices & Billing UI", () => {
     fireEvent.click(screen.getAllByText("View")[0]);
 
     await waitFor(() => {
-      expect(screen.getAllByText(/Tax Invoice: INV\/2026-27\/0001/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/Tax Invoice: INV\/2026-27\/0001/i).length).toBeGreaterThanOrEqual(
+        1,
+      );
       expect(screen.getByText("WareFlow Wholesale Distribution")).toBeDefined();
       expect(screen.getByText("06AAAAA0000A1Z5")).toBeDefined();
       expect(screen.getByText("Organic Cow Milk 1L")).toBeDefined();
@@ -235,7 +238,9 @@ describe("GST Invoices & Billing UI", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/GOVERNMENT GST E-INVOICE AUTHENTICATED/i)).toBeDefined();
-      expect(screen.getByText(/9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e/i)).toBeDefined();
+      expect(
+        screen.getByText(/9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e/i),
+      ).toBeDefined();
     });
   });
 });

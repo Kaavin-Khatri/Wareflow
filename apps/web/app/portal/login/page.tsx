@@ -55,7 +55,7 @@ function PortalLoginForm() {
       const detail = data.detail || "Authentication failed.";
       if (bootstrapRes.status === 403 && String(detail).includes("Staff accounts")) {
         throw new Error(
-          "Staff accounts cannot log in to the Retailer Portal. Please use the Staff Login at /login."
+          "Staff accounts cannot log in to the Retailer Portal. Please use the Staff Login at /login.",
         );
       }
       throw new Error(detail);
@@ -88,7 +88,11 @@ function PortalLoginForm() {
       router.refresh();
     } catch (err: unknown) {
       const authErr = err as AuthError & { message?: string };
-      if (authErr.code === "auth/user-not-found" || authErr.code === "auth/wrong-password" || authErr.code === "auth/invalid-credential") {
+      if (
+        authErr.code === "auth/user-not-found" ||
+        authErr.code === "auth/wrong-password" ||
+        authErr.code === "auth/invalid-credential"
+      ) {
         setErrorMessage("Invalid email or password. Please try again.");
       } else if (authErr.code === "auth/email-already-in-use") {
         setErrorMessage("An account with this email already exists. Please sign in instead.");
@@ -96,7 +100,9 @@ function PortalLoginForm() {
       } else if (authErr.code === "auth/weak-password") {
         setErrorMessage("Password must be at least 6 characters long.");
       } else {
-        setErrorMessage(authErr.message || "Failed to authenticate. Please check your credentials.");
+        setErrorMessage(
+          authErr.message || "Failed to authenticate. Please check your credentials.",
+        );
       }
     } finally {
       setIsLoading(false);
@@ -174,9 +180,7 @@ function PortalLoginForm() {
       <form onSubmit={handleEmailAuth} className="space-y-4">
         {mode === "signup" && (
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
-              Invite Token
-            </label>
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">Invite Token</label>
             <input
               type="text"
               value={inviteToken}
@@ -203,9 +207,7 @@ function PortalLoginForm() {
         )}
 
         <div>
-          <label className="block text-xs font-medium text-slate-300 mb-1.5">
-            Business Email
-          </label>
+          <label className="block text-xs font-medium text-slate-300 mb-1.5">Business Email</label>
           <input
             type="email"
             required
@@ -294,7 +296,10 @@ function PortalLoginForm() {
       {/* Staff cross-link reminder */}
       <div className="mt-8 text-center text-xs text-slate-500">
         Are you a WareFlow staff member?{" "}
-        <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
+        <Link
+          href="/login"
+          className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors"
+        >
           Go to Staff Login
         </Link>
       </div>
@@ -305,7 +310,11 @@ function PortalLoginForm() {
 export default function PortalLoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-slate-950 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950/40 via-slate-950 to-slate-950">
-      <Suspense fallback={<div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />}>
+      <Suspense
+        fallback={
+          <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+        }
+      >
         <PortalLoginForm />
       </Suspense>
     </div>

@@ -119,7 +119,7 @@ export function LeadInfoWindow({
   const mapsUrl =
     lead.google_maps_url ||
     `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-      `${lead.name} ${lead.address || ""}`
+      `${lead.name} ${lead.address || ""}`,
     )}`;
 
   const isConverted = Boolean(lead.converted_retailer_id);
@@ -212,7 +212,7 @@ export function LeadInfoWindow({
               <span>Contact Notes</span>
             </div>
             <p className="text-[var(--text-muted)] italic leading-relaxed">
-              "{lead.contact_notes}"
+              &quot;{lead.contact_notes}&quot;
             </p>
           </div>
         )}
@@ -321,4 +321,3 @@ export function LeadInfoWindow({
     </div>
   );
 }
-

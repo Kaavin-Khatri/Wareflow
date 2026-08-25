@@ -97,7 +97,7 @@ export function BarcodeScannerModal({
 
     try {
       const product = await apiClient.get<ScannedProduct>(
-        `/products/by-barcode/${encodeURIComponent(decodedText)}`
+        `/products/by-barcode/${encodeURIComponent(decodedText)}`,
       );
       setResolvedProduct(product);
       onScanSuccess(decodedText, product);
@@ -152,14 +152,14 @@ export function BarcodeScannerModal({
           },
           () => {
             // Ignore frame-level scan misses
-          }
+          },
         );
       } catch (err: any) {
         if (isMounted) {
           console.warn("Camera start warning:", err);
           setCameraError(
             err?.message ||
-              "Could not access camera. Please check browser camera permissions or try manual entry."
+              "Could not access camera. Please check browser camera permissions or try manual entry.",
           );
         }
       }
@@ -325,7 +325,9 @@ export function BarcodeScannerModal({
               <Upload className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs font-bold text-[var(--text)]">Upload barcode photo or scan image</p>
+              <p className="text-xs font-bold text-[var(--text)]">
+                Upload barcode photo or scan image
+              </p>
               <p className="text-[11px] text-[var(--text-muted)]">
                 Supports PNG, JPEG, WEBP containing 1D Barcodes or QR Codes
               </p>

@@ -203,7 +203,8 @@ export function DataTable<T>({
                         key={col.key}
                         className={cn(
                           "p-3.5 align-middle transition-colors",
-                          col.align === "right" && "text-right font-mono tabular-nums tracking-tight",
+                          col.align === "right" &&
+                            "text-right font-mono tabular-nums tracking-tight",
                           col.align === "center" && "text-center",
                         )}
                       >

@@ -73,7 +73,10 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         const raw = localStorage.getItem("wareflow_portal_cart");
         if (raw) {
           const items = JSON.parse(raw);
-          const count = items.reduce((sum: number, it: { quantity: number }) => sum + it.quantity, 0);
+          const count = items.reduce(
+            (sum: number, it: { quantity: number }) => sum + it.quantity,
+            0,
+          );
           setCartCount(count);
         } else {
           setCartCount(0);
@@ -110,7 +113,12 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   const navItems = [
     { name: "Catalog", href: "/portal/catalog", icon: "📦" },
-    { name: "Cart", href: "/portal/cart", icon: "🛒", badge: cartCount > 0 ? cartCount : undefined },
+    {
+      name: "Cart",
+      href: "/portal/cart",
+      icon: "🛒",
+      badge: cartCount > 0 ? cartCount : undefined,
+    },
     { name: "My Orders", href: "/portal/orders", icon: "📋" },
     { name: "Invoices & Ledger", href: "/portal/invoices", icon: "🧾" },
     { name: "Appearance", href: "/portal/settings/appearance", icon: "🎨" },

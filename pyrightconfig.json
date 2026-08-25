@@ -1,0 +1,5 @@
+{
+  "include": ["apps/api"],
+  "extraPaths": ["apps/api"],
+  "pythonVersion": "3.11"
+}

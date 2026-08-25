@@ -4,10 +4,10 @@ Compiles and dispatches 1-page Weekly Business Summary PDF and executive alerts
 via Email, WhatsApp, and In-App notification channels to Owner and Manager users.
 """
 
-from datetime import datetime, timedelta, timezone
 import io
 import logging
 import uuid
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from reportlab.lib import colors
@@ -29,7 +29,9 @@ from app.repositories.interfaces.invoice_repository import InvoiceRepositoryInte
 from app.repositories.interfaces.product_repository import (
     ProductRepositoryInterface,
 )
-from app.repositories.interfaces.profile_repository import ProfileRepository
+from app.repositories.interfaces.profile_repository import (
+    ProfileRepository as ProfileRepositoryInterface,
+)
 from app.repositories.interfaces.sales_order_repository import (
     SalesOrderRepositoryInterface,
 )
@@ -83,7 +85,7 @@ class ScheduledReportService:
         self, as_of: datetime | None = None
     ) -> WeeklyReportData:
         """Aggregate all metrics for a 7-day period and compile the executive summary."""
-        now = as_of or datetime.now(timezone.utc)
+        now = as_of or datetime.now(UTC)
         start_7d = now - timedelta(days=7)
 
         # 1. Period comparisons for 7-day window
@@ -174,7 +176,7 @@ class ScheduledReportService:
                 except ValueError:
                     continue
             if created.tzinfo is None:
-                created = created.replace(tzinfo=timezone.utc)
+                created = created.replace(tzinfo=UTC)
 
             if start_7d <= created <= now:
                 items = o.items if hasattr(o, "items") else o.get("items", [])
@@ -244,7 +246,7 @@ class ScheduledReportService:
                 except ValueError:
                     inv_dt = now
             if inv_dt and inv_dt.tzinfo is None:
-                inv_dt = inv_dt.replace(tzinfo=timezone.utc)
+                inv_dt = inv_dt.replace(tzinfo=UTC)
 
             due_dt = getattr(inv, "due_date", None)
             if due_dt is None and inv_dt:
@@ -256,7 +258,7 @@ class ScheduledReportService:
                     due_dt = now
 
             if due_dt and due_dt.tzinfo is None:
-                due_dt = due_dt.replace(tzinfo=timezone.utc)
+                due_dt = due_dt.replace(tzinfo=UTC)
 
             is_overdue = inv_st == "OVERDUE" or (due_dt and due_dt < now)
 
@@ -618,7 +620,7 @@ class ScheduledReportService:
         return SendWeeklyReportResponse(
             success=True,
             report_id=data.report_id,
-            dispatched_at=datetime.now(timezone.utc),
+            dispatched_at=datetime.now(UTC),
             channels_sent=dispatched_channels,
             recipients_count=recipients_reached,
             summary_text=summary_msg,
