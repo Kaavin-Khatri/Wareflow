@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.core.di import get_uom_service
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.uom import (
     ProductUOMConversionCreateRequest,
@@ -17,12 +18,6 @@ from app.schemas.uom import (
 from app.services.uom_service import UomConversionError, UomService
 
 router = APIRouter(tags=["Units of Measure"])
-
-
-def get_uom_service() -> UomService:
-    from app.core.di import get_uom_service as di_get_uom_service
-
-    return di_get_uom_service()
 
 
 @router.get("/uom", response_model=list[UOMResponse])

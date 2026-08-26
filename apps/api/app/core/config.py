@@ -14,7 +14,14 @@ class Settings(BaseSettings):
     app_name: str = "WareFlow API"
     debug: bool = False
     allow_first_signup: bool = True
-    allowed_origins: list[str] | str = ["http://localhost:3000"]
+    allowed_origins: list[str] | str = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ]
     frontend_url: str = "http://localhost:3000"
 
     # Supabase / Postgres

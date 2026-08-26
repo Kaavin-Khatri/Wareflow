@@ -40,10 +40,16 @@ function computeFssaiStatus(expiryDate: string | null): {
   }
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const expiry = new Date(expiryDate);
+
+  const parts = expiryDate.split("-");
+  const expiry =
+    parts.length === 3
+      ? new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+      : new Date(expiryDate);
   expiry.setHours(0, 0, 0, 0);
+
   const diffMs = expiry.getTime() - today.getTime();
-  const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const days = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
   if (days < 0) {
     return { label: "Expired", variant: "error", daysRemaining: days };
@@ -53,6 +59,13 @@ function computeFssaiStatus(expiryDate: string | null): {
   }
   return { label: "Valid", variant: "success", daysRemaining: days };
 }
+
+const formatDateStr = (d: Date): string => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 describe("computeFssaiStatus", () => {
   it("should return 'neutral' when no expiry date is provided", () => {
@@ -65,7 +78,7 @@ describe("computeFssaiStatus", () => {
   it("should return 'success' for a license valid for > 30 days", () => {
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 90);
-    const result = computeFssaiStatus(futureDate.toISOString().split("T")[0]);
+    const result = computeFssaiStatus(formatDateStr(futureDate));
     expect(result.label).toBe("Valid");
     expect(result.variant).toBe("success");
     expect(result.daysRemaining).toBe(90);
@@ -74,7 +87,7 @@ describe("computeFssaiStatus", () => {
   it("should return 'warning' for a license expiring within 30 days", () => {
     const soonDate = new Date();
     soonDate.setDate(soonDate.getDate() + 20);
-    const result = computeFssaiStatus(soonDate.toISOString().split("T")[0]);
+    const result = computeFssaiStatus(formatDateStr(soonDate));
     expect(result.label).toBe("Expiring Soon");
     expect(result.variant).toBe("warning");
     expect(result.daysRemaining).toBe(20);
@@ -83,7 +96,7 @@ describe("computeFssaiStatus", () => {
   it("should return 'error' for an expired license", () => {
     const pastDate = new Date();
     pastDate.setDate(pastDate.getDate() - 10);
-    const result = computeFssaiStatus(pastDate.toISOString().split("T")[0]);
+    const result = computeFssaiStatus(formatDateStr(pastDate));
     expect(result.label).toBe("Expired");
     expect(result.variant).toBe("error");
     expect(result.daysRemaining).toBe(-10);
@@ -92,7 +105,7 @@ describe("computeFssaiStatus", () => {
   it("should return 'warning' on the exact 30-day boundary", () => {
     const boundaryDate = new Date();
     boundaryDate.setDate(boundaryDate.getDate() + 30);
-    const result = computeFssaiStatus(boundaryDate.toISOString().split("T")[0]);
+    const result = computeFssaiStatus(formatDateStr(boundaryDate));
     expect(result.label).toBe("Expiring Soon");
     expect(result.variant).toBe("warning");
     expect(result.daysRemaining).toBe(30);
@@ -101,7 +114,7 @@ describe("computeFssaiStatus", () => {
   it("should return 'success' at day 31 (just outside window)", () => {
     const justOutside = new Date();
     justOutside.setDate(justOutside.getDate() + 31);
-    const result = computeFssaiStatus(justOutside.toISOString().split("T")[0]);
+    const result = computeFssaiStatus(formatDateStr(justOutside));
     expect(result.label).toBe("Valid");
     expect(result.variant).toBe("success");
     expect(result.daysRemaining).toBe(31);
@@ -169,6 +182,7 @@ describe("getFssaiBannerConfig", () => {
 
 // Mock apiClient for BusinessSettings page rendering
 vi.mock("@/lib/api-client", () => ({
+  getAuthToken: async () => "test_token",
   apiClient: {
     get: vi.fn().mockResolvedValue({
       id: "biz-1",

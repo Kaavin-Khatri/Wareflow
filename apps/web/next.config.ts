@@ -22,12 +22,20 @@ const securityHeaders = [
     value: "strict-origin-when-cross-origin",
   },
   {
+    // camera=(self) — the barcode scanner (html5-qrcode) needs getUserMedia.
+    // browsing-topics is dropped: only Chrome implements it, every other engine
+    // logs "Unrecognized feature" on each page load.
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+    value: "camera=(self), microphone=(), geolocation=()",
   },
   {
     key: "X-XSS-Protection",
     value: "1; mode=block",
+  },
+  {
+    // Allows Firebase OAuth popups (Google, Apple) to communicate without COOP blocking window.closed
+    key: "Cross-Origin-Opener-Policy",
+    value: "unsafe-none",
   },
 ];
 

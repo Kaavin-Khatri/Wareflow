@@ -19,6 +19,7 @@ vi.mock("next/navigation", () => ({
 
 // Mock API client
 vi.mock("@/lib/api-client", () => ({
+  getAuthToken: async () => "test_token",
   apiClient: {
     get: vi.fn().mockResolvedValue({
       id: "u-1",

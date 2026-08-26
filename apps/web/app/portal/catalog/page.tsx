@@ -5,6 +5,7 @@ import Link from "next/link";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase-client";
 import { addToCart } from "@/lib/portal-cart";
+import { GlassSelect } from "@/components/glass/GlassSelect";
 
 export interface CatalogProduct {
   id: string;
@@ -318,17 +319,18 @@ function CatalogControls({
         </div>
 
         {/* Sort Selector */}
-        <select
+        <GlassSelect
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="w-full sm:w-44 px-3 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-        >
-          <option value="name-asc">Sort: Name (A-Z)</option>
-          <option value="name-desc">Sort: Name (Z-A)</option>
-          <option value="price-asc">Sort: Price (Low to High)</option>
-          <option value="price-desc">Sort: Price (High to Low)</option>
-          <option value="discount-desc">Sort: Highest Discount</option>
-        </select>
+          onChange={setSortBy}
+          options={[
+            { value: "name-asc", label: "Sort: Name (A-Z)" },
+            { value: "name-desc", label: "Sort: Name (Z-A)" },
+            { value: "price-asc", label: "Sort: Price (Low to High)" },
+            { value: "price-desc", label: "Sort: Price (High to Low)" },
+            { value: "discount-desc", label: "Sort: Highest Discount" },
+          ]}
+          className="w-full sm:w-52"
+        />
       </div>
 
       {/* Category Pills Bar */}

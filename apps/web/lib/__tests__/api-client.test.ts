@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiClient, ApiError } from "../api-client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { apiClient, ApiError, isTwoFactorVerified, setTwoFactorVerified } from "../api-client";
 
 describe("ApiError", () => {
   it("should correctly store status, server message, and data", () => {
@@ -12,7 +12,33 @@ describe("ApiError", () => {
   });
 });
 
+describe("Two-Factor Verification State Helpers", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("should return false when no 2FA state is stored", () => {
+    expect(isTwoFactorVerified()).toBe(false);
+  });
+
+  it("should return true when setTwoFactorVerified(true) is called", () => {
+    setTwoFactorVerified(true);
+    expect(isTwoFactorVerified()).toBe(true);
+  });
+
+  it("should return false after setTwoFactorVerified(false) is called", () => {
+    setTwoFactorVerified(true);
+    expect(isTwoFactorVerified()).toBe(true);
+    setTwoFactorVerified(false);
+    expect(isTwoFactorVerified()).toBe(false);
+  });
+});
+
 describe("apiClient", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -28,6 +54,40 @@ describe("apiClient", () => {
 
     const result = await apiClient.get<{ status: string }>("/health");
     expect(result).toEqual({ status: "ok" });
+  });
+
+  it("should inject X-2FA-Verified header when 2FA is verified", async () => {
+    setTwoFactorVerified(true);
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      json: async () => ({ status: "verified_ok" }),
+    } as Response);
+
+    await apiClient.post("/categories", { name: "Snacks" });
+    expect(fetchSpy).toHaveBeenCalled();
+    const calledHeaders = fetchSpy.mock.calls[0][1]?.headers as Headers;
+    expect(calledHeaders.get("X-2FA-Verified")).toBe("true");
+  });
+
+  it("should dispatch wareflow:2fa-required when receiving 403 2FA error", async () => {
+    setTwoFactorVerified(true);
+    const eventSpy = vi.fn();
+    window.addEventListener("wareflow:2fa-required", eventSpy);
+
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: false,
+      status: 403,
+      statusText: "Forbidden",
+      json: async () => ({ detail: "Two-factor authentication required for sensitive operations." }),
+    } as Response);
+
+    await expect(apiClient.post("/categories", { name: "Test" })).rejects.toThrow(ApiError);
+    expect(eventSpy).toHaveBeenCalledTimes(1);
+    expect(isTwoFactorVerified()).toBe(false);
+
+    window.removeEventListener("wareflow:2fa-required", eventSpy);
   });
 
   it("should throw ApiError with detail message when API responds with error status", async () => {

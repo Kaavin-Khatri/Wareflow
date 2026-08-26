@@ -73,6 +73,7 @@ const mockRetailers: RetailerItem[] = [
 
 // Mock API client
 vi.mock("@/lib/api-client", () => ({
+  getAuthToken: async () => "test_token",
   apiClient: {
     get: vi.fn().mockImplementation((url: string) => {
       if (url === "/retailers") {

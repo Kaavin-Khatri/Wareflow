@@ -8,6 +8,7 @@ import { apiClient } from "@/lib/api-client";
 
 // Mock apiClient
 vi.mock("@/lib/api-client", () => ({
+  getAuthToken: async () => "test_token",
   apiClient: {
     get: vi.fn(),
   },

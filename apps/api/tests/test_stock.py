@@ -381,3 +381,13 @@ def test_stock_api_endpoints_lifecycle(stock_db, mock_user):
     res_exp = client.get("/stock/expiring?days=100")
     assert res_exp.status_code == status.HTTP_200_OK
     assert len(res_exp.json()) == 1
+
+    # 6. GET /stock/batches
+    res_batches = client.get("/stock/batches")
+    assert res_batches.status_code == status.HTTP_200_OK
+    batches_data = res_batches.json()
+    assert len(batches_data) == 1
+    assert batches_data[0]["batch_no"] == "ALM-2026-B1"
+    assert batches_data[0]["quantity"] == 100.0
+    assert batches_data[0]["product_id"] == prod.id
+

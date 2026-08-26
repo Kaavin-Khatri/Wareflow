@@ -77,11 +77,29 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+
+    // 3. Queue change subscription
     const unsub = subscribeToQueueChanges(() => refreshCounts());
+
+    // 4. Global safety interceptor for third-party async transitions
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      const msg = typeof reason === "string" ? reason : reason?.message || "";
+      if (
+        msg.includes("Cannot transition to a new state") ||
+        msg.includes("already under transition")
+      ) {
+        event.preventDefault();
+        console.debug("[SafeRejection] Suppressed third-party transition error:", msg);
+      }
+    };
+
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
 
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
       unsub();
     };
   }, []);

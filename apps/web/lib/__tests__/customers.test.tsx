@@ -38,6 +38,7 @@ const MOCK_CUSTOMERS_DATA = [
 
 // Mock apiClient
 vi.mock("@/lib/api-client", () => ({
+  getAuthToken: async () => "test_token",
   apiClient: {
     get: vi.fn().mockImplementation((url: string) => {
       if (url === "/customers") return Promise.resolve(MOCK_CUSTOMERS_DATA);

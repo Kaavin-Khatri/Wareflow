@@ -3,7 +3,12 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.core.di import get_export_service
+from app.core.di import (
+    get_export_service,
+    get_recall_service,
+    get_stock_service,
+    get_transfer_service,
+)
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.recalls import (
     BatchRecallCreateRequest,
@@ -31,12 +36,6 @@ from app.services.export_service import ExportService
 from app.services.stock_service import StockService
 
 router = APIRouter(tags=["Stock & Inventory"])
-
-
-def get_stock_service() -> StockService:
-    from app.core.di import get_stock_service as di_get_stock_service
-
-    return di_get_stock_service()
 
 
 @router.get("/stock/overview", response_model=StockOverviewResponse)
@@ -102,6 +101,17 @@ def get_expiring_batches(
 ) -> list[StockBatchResponse]:
     """Retrieve stock batches expiring within the specified number of days."""
     return service.get_batches_expiring_soon(days=days, warehouse_id=warehouse_id)
+
+
+@router.get("/stock/batches", response_model=list[StockBatchResponse])
+def list_stock_batches(
+    service: Annotated[StockService, Depends(get_stock_service)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    product_id: Annotated[str | None, Query(description="Filter by product ID")] = None,
+    warehouse_id: Annotated[str | None, Query(description="Filter by warehouse ID")] = None,
+) -> list[StockBatchResponse]:
+    """Retrieve active stock batches across products and storage warehouses."""
+    return service.list_active_batches(product_id=product_id, warehouse_id=warehouse_id)
 
 
 @router.get("/products/{product_id}/stock", response_model=ProductStockResponse)
@@ -188,12 +198,6 @@ def download_stock_movements_excel(
     )
 
 
-def get_transfer_service():
-    from app.core.di import get_transfer_service as di_get_transfer_service
-
-    return di_get_transfer_service()
-
-
 @router.post(
     "/stock/transfers",
     response_model=StockTransferResponse,
@@ -243,12 +247,6 @@ def list_stock_transfers(
         end_date=end_date,
         search=search,
     )
-
-
-def get_recall_service() -> Any:
-    from app.core.di import get_recall_service as di_get_recall_service
-
-    return di_get_recall_service()
 
 
 @router.post(

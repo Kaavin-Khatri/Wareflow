@@ -7,6 +7,7 @@ import { DataTable, DataTableColumn } from "@/components/DataTable";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassModal } from "@/components/glass/GlassModal";
+import { GlassSelect } from "@/components/glass/GlassSelect";
 import { StatusBadge } from "@/components/StatusBadge";
 import { apiClient } from "@/lib/api-client";
 import {
@@ -123,44 +124,44 @@ export default function InventoryAdminPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
 
-  useEffect(() => {
-    let ignore = false;
-    async function loadData() {
-      try {
-        setLoading(true);
-        setError(null);
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const params = new URLSearchParams();
-        if (selectedWarehouse) params.append("warehouse_id", selectedWarehouse);
-        if (selectedCategory) params.append("category_id", selectedCategory);
-        if (selectedStatus) params.append("status", selectedStatus);
-        if (searchQuery) params.append("search", searchQuery);
+      const params = new URLSearchParams();
+      if (selectedWarehouse) params.append("warehouse_id", selectedWarehouse);
+      if (selectedCategory) params.append("category_id", selectedCategory);
+      if (selectedStatus) params.append("status", selectedStatus);
+      if (searchQuery) params.append("search", searchQuery);
 
-        const [overviewData, whData, catData] = await Promise.all([
-          apiClient.get<StockOverviewResponse>(`/stock/overview?${params.toString()}`),
-          apiClient.get<WarehouseSummary[]>("/stock/warehouses").catch(() => []),
-          apiClient.get<CategorySummary[]>("/categories").catch(() => []),
-        ]);
+      const [overviewData, whData, catData] = await Promise.all([
+        apiClient.get<StockOverviewResponse>(`/stock/overview?${params.toString()}`),
+        apiClient.get<WarehouseSummary[]>("/stock/warehouses").catch(() => []),
+        apiClient.get<CategorySummary[]>("/categories").catch(() => []),
+      ]);
 
-        if (!ignore) {
-          setStockOverview(overviewData);
-          setWarehouses(whData);
-          setCategories(catData);
-        }
-      } catch (err: unknown) {
-        if (!ignore) {
-          setError(err instanceof Error ? err.message : "Failed to load inventory stock data.");
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
+      setStockOverview(overviewData);
+      setWarehouses(whData);
+      setCategories(catData);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load inventory stock data.");
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     loadData();
+
+    const handle2FAVerified = () => {
+      setError(null);
+      loadData();
+    };
+
+    window.addEventListener("wareflow:2fa-verified", handle2FAVerified);
     return () => {
-      ignore = true;
+      window.removeEventListener("wareflow:2fa-verified", handle2FAVerified);
     };
   }, [selectedWarehouse, selectedCategory, selectedStatus, searchQuery]);
 
@@ -384,51 +385,58 @@ export default function InventoryAdminPage() {
         filters={
           <div className="flex items-center gap-2 flex-wrap">
             {/* Warehouse Filter */}
-            <select
+            <GlassSelect
               value={selectedWarehouse}
-              onChange={(e) => setSelectedWarehouse(e.target.value)}
-              className="px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500/50"
-            >
-              <option value="">All Warehouses</option>
-              {warehouses.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedWarehouse}
+              options={[
+                { value: "", label: "All Warehouses" },
+                ...warehouses.map((w) => ({ value: w.id, label: w.name })),
+              ]}
+              className="w-44"
+            />
 
             {/* Category Filter */}
-            <select
+            <GlassSelect
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500/50"
-            >
-              <option value="">All Categories</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedCategory}
+              options={[
+                { value: "", label: "All Categories" },
+                ...categories.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              className="w-44"
+            />
 
             {/* Status Filter */}
-            <select
+            <GlassSelect
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500/50"
-            >
-              <option value="">All Statuses</option>
-              <option value="ok">Healthy</option>
-              <option value="low">Low Stock</option>
-              <option value="critical">Critical</option>
-            </select>
+              onChange={setSelectedStatus}
+              options={[
+                { value: "", label: "All Statuses" },
+                { value: "ok", label: "Healthy" },
+                { value: "low", label: "Low Stock" },
+                { value: "critical", label: "Critical" },
+              ]}
+              className="w-36"
+            />
           </div>
         }
       >
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+          <div className="mb-4 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg shadow-rose-950/20">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{error}</span>
+            </div>
+            {error.toLowerCase().includes("two-factor") && (
+              <GlassButton
+                size="sm"
+                variant="primary"
+                onClick={() => window.dispatchEvent(new CustomEvent("wareflow:2fa-required"))}
+                className="text-xs py-1 px-3 bg-gradient-to-r from-amber-500 to-indigo-600 border-amber-400/30 text-white font-medium self-end sm:self-auto"
+              >
+                Verify 2FA Now
+              </GlassButton>
+            )}
           </div>
         )}
 

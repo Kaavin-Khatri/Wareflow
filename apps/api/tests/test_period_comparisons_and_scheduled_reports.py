@@ -1,7 +1,7 @@
 """Tests for Step 16.3: Period Comparisons & Scheduled Weekly Owner Reports."""
 
-from datetime import datetime, timedelta, timezone
-from typing import Any
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -11,8 +11,7 @@ from app.models.auth_rbac import Role
 from app.models.billing import Invoice, InvoiceStatusEnum, Payment, PaymentMethodEnum
 from app.models.catalog import Product
 from app.models.profile import Profile
-from app.models.retailer import SOStatusEnum, SalesOrder, SalesOrderItem
-from app.models.inventory import StockMovement
+from app.models.retailer import SalesOrder, SalesOrderItem, SOStatusEnum
 from app.models.warehouse import StockBatch, Warehouse
 from app.repositories.impl.business_settings_repository import (
     InMemoryBusinessSettingsRepository,
@@ -25,7 +24,6 @@ from app.repositories.impl.product_repository import InMemoryProductRepository
 from app.repositories.impl.profile_repository import InMemoryProfileRepository
 from app.repositories.impl.sales_order_repository import InMemorySalesOrderRepository
 from app.repositories.impl.stock_repository import InMemoryStockRepository
-from app.schemas.analytics import ComparisonMetricResult
 from app.services.comparison_service import ComparisonService
 from app.services.notification_channels.in_app_channel import InAppChannel
 from app.services.notification_service import NotificationService
@@ -44,7 +42,7 @@ def mock_user() -> CurrentUser:
 
 @pytest.fixture
 def test_data():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # 1. Products
     p1 = Product(id="prod-1", name="Basmati Rice 5kg", sku="RICE-5KG", cost_price=200.0, reorder_point=20)

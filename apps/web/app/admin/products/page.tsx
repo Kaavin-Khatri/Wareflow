@@ -7,6 +7,7 @@ import { DataTable, DataTableColumn } from "@/components/DataTable";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassInput } from "@/components/glass/GlassInput";
 import { GlassModal } from "@/components/glass/GlassModal";
+import { GlassSelect } from "@/components/glass/GlassSelect";
 import { StatusBadge } from "@/components/StatusBadge";
 import { apiClient } from "@/lib/api-client";
 import {
@@ -717,18 +718,15 @@ export default function ProductsAdminPage() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         filters={
-          <select
+          <GlassSelect
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500/50"
-          >
-            <option value="">All Categories</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedCategory}
+            options={[
+              { value: "", label: "All Categories" },
+              ...categories.map((c) => ({ value: c.id, label: c.name })),
+            ]}
+            className="w-48"
+          />
         }
       >
         {error && (
@@ -799,35 +797,26 @@ export default function ProductsAdminPage() {
               <label className="block text-xs font-semibold text-white/70 mb-1.5 uppercase tracking-wider">
                 Category
               </label>
-              <select
+              <GlassSelect
                 value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-purple-500/50"
-              >
-                <option value="">Select Category</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setCategoryId}
+                placeholder="Select Category"
+                options={categories.map((c) => ({ value: c.id, label: c.name }))}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-white/70 mb-1.5 uppercase tracking-wider">
                 Base Unit of Measure
               </label>
-              <select
+              <GlassSelect
                 value={baseUomId}
-                onChange={(e) => setBaseUomId(e.target.value)}
-                className="w-full px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-purple-500/50"
-              >
-                <option value="">Select Base UoM</option>
-                {uoms.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} ({u.abbreviation})
-                  </option>
-                ))}
-              </select>
+                onChange={setBaseUomId}
+                placeholder="Select Base UoM"
+                options={uoms.map((u) => ({
+                  value: u.id,
+                  label: `${u.name} (${u.abbreviation})`,
+                }))}
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-white/70 mb-1.5 uppercase tracking-wider">
@@ -1060,35 +1049,27 @@ export default function ProductsAdminPage() {
                 <label className="block text-[11px] text-white/60 mb-1">
                   Source Unit (1 unit of)
                 </label>
-                <select
+                <GlassSelect
                   value={convFromUomId}
-                  onChange={(e) => setConvFromUomId(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500/50"
-                  required
-                >
-                  <option value="">Select From UoM</option>
-                  {uoms.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.abbreviation})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setConvFromUomId}
+                  placeholder="Select From UoM"
+                  options={uoms.map((u) => ({
+                    value: u.id,
+                    label: `${u.name} (${u.abbreviation})`,
+                  }))}
+                />
               </div>
               <div>
                 <label className="block text-[11px] text-white/60 mb-1">Target Unit</label>
-                <select
+                <GlassSelect
                   value={convToUomId}
-                  onChange={(e) => setConvToUomId(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500/50"
-                  required
-                >
-                  <option value="">Select To UoM</option>
-                  {uoms.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.abbreviation})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setConvToUomId}
+                  placeholder="Select To UoM"
+                  options={uoms.map((u) => ({
+                    value: u.id,
+                    label: `${u.name} (${u.abbreviation})`,
+                  }))}
+                />
               </div>
               <div>
                 <label className="block text-[11px] text-white/60 mb-1">Conversion Factor</label>
@@ -1134,35 +1115,27 @@ export default function ProductsAdminPage() {
               </div>
               <div>
                 <label className="block text-[11px] text-white/60 mb-1">From</label>
-                <select
+                <GlassSelect
                   value={calcFromUom}
-                  onChange={(e) => setCalcFromUom(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500/50"
-                  required
-                >
-                  <option value="">Select From UoM</option>
-                  {uoms.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.abbreviation})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setCalcFromUom}
+                  placeholder="Select From UoM"
+                  options={uoms.map((u) => ({
+                    value: u.id,
+                    label: `${u.name} (${u.abbreviation})`,
+                  }))}
+                />
               </div>
               <div>
                 <label className="block text-[11px] text-white/60 mb-1">To</label>
-                <select
+                <GlassSelect
                   value={calcToUom}
-                  onChange={(e) => setCalcToUom(e.target.value)}
-                  className="w-full px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-xs focus:outline-none focus:border-purple-500/50"
-                  required
-                >
-                  <option value="">Select To UoM</option>
-                  {uoms.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.abbreviation})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setCalcToUom}
+                  placeholder="Select To UoM"
+                  options={uoms.map((u) => ({
+                    value: u.id,
+                    label: `${u.name} (${u.abbreviation})`,
+                  }))}
+                />
               </div>
             </div>
             <div className="flex items-center justify-between pt-2">
@@ -1302,21 +1275,15 @@ export default function ProductsAdminPage() {
               <label className="block text-xs font-medium text-white/70 mb-1.5">
                 Select Wholesale Retailer
               </label>
-              <select
+              <GlassSelect
                 value={selectedRetailerId}
-                onChange={(e) => setSelectedRetailerId(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500/50"
-                required
-              >
-                <option value="" disabled className="bg-slate-900 text-white">
-                  Select a registered retailer...
-                </option>
-                {retailersList.map((r) => (
-                  <option key={r.id} value={r.id} className="bg-slate-900 text-white">
-                    {r.name} {r.phone ? `(${r.phone})` : ""}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedRetailerId}
+                placeholder="Select a registered retailer..."
+                options={retailersList.map((r) => ({
+                  value: r.id,
+                  label: `${r.name}${r.phone ? ` (${r.phone})` : ""}`,
+                }))}
+              />
             </div>
 
             <div>

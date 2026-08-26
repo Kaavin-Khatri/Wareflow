@@ -179,6 +179,15 @@ class StockService:
             batches=batch_responses,
         )
 
+    def list_active_batches(
+        self, product_id: str | None = None, warehouse_id: str | None = None
+    ) -> list[StockBatchResponse]:
+        """List active stock batches across inventory with remaining quantity > 0."""
+        batches = self.stock_repo.list_all_batches(
+            product_id=product_id, warehouse_id=warehouse_id, min_quantity=0.0
+        )
+        return [self._convert_batch_to_response(b) for b in batches]
+
     def get_stock_overview(
         self,
         warehouse_id: str | None = None,

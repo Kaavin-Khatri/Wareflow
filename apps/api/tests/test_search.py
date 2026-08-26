@@ -9,7 +9,7 @@ Verifies:
 """
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -105,7 +105,7 @@ def mock_repos():
         invoice_no="INV/2026-27/0042",
         status=InvoiceStatusEnum.UNPAID,
         total_amount=15400.0,
-        invoice_date=datetime.now(timezone.utc),
+        invoice_date=datetime.now(UTC),
     )
     inv1.sales_order = so1
     invoice_repo.list_invoices.return_value = ([inv1], 1)

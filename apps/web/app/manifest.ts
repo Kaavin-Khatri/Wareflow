@@ -13,13 +13,13 @@ export default function manifest(): MetadataRoute.Manifest {
     icons: [
       {
         src: "/icon.svg",
-        sizes: "any",
+        sizes: "512x512",
         type: "image/svg+xml",
         purpose: "maskable",
       },
       {
         src: "/wareflow-logo.svg",
-        sizes: "any",
+        sizes: "512x512",
         type: "image/svg+xml",
         purpose: "any",
       },

@@ -6,8 +6,9 @@ Validates that endpoints decorated with slowapi limiters reject excessive reques
 - CSV Bulk Imports: 10/minute
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -41,7 +42,7 @@ class TestRateLimiting:
         """Rule: 6th request within a minute to /analytics/weekly-insight returns 429."""
         app.dependency_overrides[get_current_user] = mock_owner
         mock_service = MagicMock()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         mock_service.get_weekly_insight.return_value = WeeklyInsightResponse(
             headline="Weekly FMCG Velocity",
             narrative="Executive summary narrative",

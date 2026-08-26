@@ -45,6 +45,30 @@ class SqlAlchemyStockRepository(StockRepositoryInterface):
         )
         return list(self.session.execute(stmt).scalars().all())
 
+    def list_all_batches(
+        self,
+        product_id: str | None = None,
+        warehouse_id: str | None = None,
+        min_quantity: float = 0.0,
+    ) -> list[StockBatch]:
+        stmt = (
+            select(StockBatch)
+            .options(
+                joinedload(StockBatch.warehouse),
+                joinedload(StockBatch.product).joinedload(Product.base_uom),
+            )
+            .where(StockBatch.quantity > min_quantity)
+        )
+        if product_id:
+            stmt = stmt.where(StockBatch.product_id == product_id)
+        if warehouse_id:
+            stmt = stmt.where(StockBatch.warehouse_id == warehouse_id)
+        stmt = stmt.order_by(
+            StockBatch.expiry_date.asc().nullslast(),
+            StockBatch.received_at.asc(),
+        )
+        return list(self.session.execute(stmt).scalars().all())
+
     def get_batches_expiring_soon(
         self, days: int = 30, warehouse_id: str | None = None
     ) -> list[StockBatch]:
@@ -631,6 +655,28 @@ class InMemoryStockRepository(StockRepositoryInterface):
             if b["product_id"] == product_id and (
                 warehouse_id is None or b["warehouse_id"] == warehouse_id
             ):
+                res.append(self._to_batch_model(b))
+        res.sort(
+            key=lambda x: (
+                x.expiry_date if x.expiry_date else date.max,
+                x.received_at or datetime.min,
+            )
+        )
+        return res
+
+    def list_all_batches(
+        self,
+        product_id: str | None = None,
+        warehouse_id: str | None = None,
+        min_quantity: float = 0.0,
+    ) -> list[StockBatch]:
+        res: list[StockBatch] = []
+        for b in self.batches.values():
+            if float(b["quantity"]) > min_quantity:
+                if product_id is not None and b["product_id"] != product_id:
+                    continue
+                if warehouse_id is not None and b["warehouse_id"] != warehouse_id:
+                    continue
                 res.append(self._to_batch_model(b))
         res.sort(
             key=lambda x: (

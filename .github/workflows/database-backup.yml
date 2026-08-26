@@ -29,10 +29,10 @@ jobs:
 
       - name: Execute Backup & Upload to Supabase Storage
         env:
-          DIRECT_DATABASE_URL: ${{ secrets['DIRECT_DATABASE_URL'] }}
-          DATABASE_URL: ${{ secrets['DATABASE_URL'] }}
-          SUPABASE_URL: ${{ secrets['SUPABASE_URL'] }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets['SUPABASE_SERVICE_ROLE_KEY'] }}
+          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           python scripts/backup.py --output-dir ./backups
 

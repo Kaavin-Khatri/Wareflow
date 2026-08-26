@@ -11,6 +11,7 @@ import { GlassInput } from "@/components/glass/GlassInput";
 import { GlassModal } from "@/components/glass/GlassModal";
 import { GlassBadge } from "@/components/glass/GlassBadge";
 import { GlassCard } from "@/components/glass/GlassCard";
+import { GlassSelect } from "@/components/glass/GlassSelect";
 import { apiClient } from "@/lib/api-client";
 import {
   FileSpreadsheet,
@@ -149,7 +150,12 @@ export default function PurchaseOrdersPage() {
       setError(null);
 
       const [poRes, supRes, prodRes, whRes, uomRes] = await Promise.all([
-        apiClient.get<PurchaseOrderItemType[]>("/purchase-orders").catch(() => []),
+        apiClient.get<PurchaseOrderItemType[]>("/purchase-orders").catch((err) => {
+          if (err instanceof Error && err.message.toLowerCase().includes("two-factor")) {
+            setError(err.message);
+          }
+          return [];
+        }),
         apiClient.get<SupplierOption[]>("/suppliers").catch(() => []),
         apiClient.get<{ items: ProductOption[] } | ProductOption[]>("/products").catch(() => []),
         apiClient.get<WarehouseOption[]>("/stock/warehouses").catch(() => []),
@@ -175,46 +181,16 @@ export default function PurchaseOrdersPage() {
   };
 
   useEffect(() => {
-    let ignore = false;
-    async function loadData() {
-      try {
-        setLoading(true);
-        setError(null);
+    fetchData();
 
-        const [poRes, supRes, prodRes, whRes, uomRes] = await Promise.all([
-          apiClient.get<PurchaseOrderItemType[]>("/purchase-orders").catch(() => []),
-          apiClient.get<SupplierOption[]>("/suppliers").catch(() => []),
-          apiClient.get<{ items: ProductOption[] } | ProductOption[]>("/products").catch(() => []),
-          apiClient.get<WarehouseOption[]>("/stock/warehouses").catch(() => []),
-          apiClient.get<UomOption[]>("/uom").catch(() => []),
-        ]);
+    const handle2FAVerified = () => {
+      setError(null);
+      fetchData();
+    };
 
-        if (!ignore) {
-          setPurchaseOrders(Array.isArray(poRes) ? poRes : []);
-          setSuppliers(Array.isArray(supRes) ? supRes.filter((s) => s.is_active) : []);
-
-          const resolvedProducts = Array.isArray(prodRes)
-            ? prodRes
-            : (prodRes as { items?: ProductOption[] })?.items || [];
-          setProducts(resolvedProducts.filter((p) => p.is_active));
-
-          setWarehouses(Array.isArray(whRes) ? whRes.filter((w) => w.is_active) : []);
-          setUoms(Array.isArray(uomRes) ? uomRes : []);
-        }
-      } catch (err: unknown) {
-        if (!ignore) {
-          const msg = err instanceof Error ? err.message : "Failed to load purchase orders.";
-          setError(msg);
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
-    }
-    loadData();
+    window.addEventListener("wareflow:2fa-verified", handle2FAVerified);
     return () => {
-      ignore = true;
+      window.removeEventListener("wareflow:2fa-verified", handle2FAVerified);
     };
   }, []);
 
@@ -682,9 +658,21 @@ export default function PurchaseOrdersPage() {
       >
         {/* Error / Success Notifications */}
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center gap-3 text-rose-300 text-sm">
-            <AlertCircle className="w-5 h-5 shrink-0" />
-            <span>{error}</span>
+          <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-rose-300 text-sm shadow-lg shadow-rose-950/20">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 shrink-0 text-rose-400" />
+              <span>{error}</span>
+            </div>
+            {error.toLowerCase().includes("two-factor") && (
+              <GlassButton
+                size="sm"
+                variant="primary"
+                onClick={() => window.dispatchEvent(new CustomEvent("wareflow:2fa-required"))}
+                className="text-xs py-1 px-3 bg-gradient-to-r from-amber-500 to-indigo-600 border-amber-400/30 text-white font-medium self-end sm:self-auto"
+              >
+                Verify 2FA Now
+              </GlassButton>
+            )}
           </div>
         )}
 
@@ -777,18 +765,15 @@ export default function PurchaseOrdersPage() {
 
           <div className="flex items-center gap-2">
             <label className="text-xs text-slate-400">Filter Supplier:</label>
-            <select
+            <GlassSelect
               value={selectedSupplierId}
-              onChange={(e) => setSelectedSupplierId(e.target.value)}
-              className="bg-slate-900/80 border border-white/10 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500"
-            >
-              <option value="all">All Suppliers</option>
-              {suppliers.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedSupplierId}
+              options={[
+                { value: "all", label: "All Suppliers" },
+                ...suppliers.map((s) => ({ value: s.id, label: s.name })),
+              ]}
+              className="w-48"
+            />
           </div>
         </div>
 
@@ -816,22 +801,15 @@ export default function PurchaseOrdersPage() {
                 <label className="block text-xs font-medium text-slate-300 mb-1">
                   Supplier / Vendor *
                 </label>
-                <select
+                <GlassSelect
                   value={draftSupplierId}
-                  onChange={(e) => {
-                    setDraftSupplierId(e.target.value);
+                  onChange={(val) => {
+                    setDraftSupplierId(val);
                     setFssaiAcknowledged(false);
                   }}
-                  required
-                  className="w-full bg-slate-900/90 border border-white/10 text-sm text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="">Select a supplier...</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Select a supplier..."
+                  options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                />
                 {/* FSSAI Expired Supplier Warning Banner */}
                 {isSelectedSupplierFssaiExpired && selectedSupplierForCompliance && (
                   <div className="mt-2 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-start gap-2">

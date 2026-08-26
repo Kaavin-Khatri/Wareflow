@@ -8,7 +8,7 @@ Verifies:
 4. HTTP API endpoints GET /analytics/profitability and GET /analytics/turnover return 200 with typed responses.
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -19,10 +19,8 @@ from app.core.security import get_current_user
 from app.main import create_app
 from app.models.catalog import Category, Product
 from app.models.retailer import BuyerTypeEnum, Retailer, SalesOrder, SalesOrderItem, SOStatusEnum
-from app.schemas.analytics import ProfitabilityResponse, TurnoverResponse
 from app.services.profitability_service import ProfitabilityService
 from app.services.turnover_service import TurnoverService
-
 
 # --- Fixtures ---
 
@@ -103,7 +101,7 @@ def mock_catalog_and_orders():
         retailer_id="ret-apex",
         buyer_type=BuyerTypeEnum.RETAILER,
         status=SOStatusEnum.CONFIRMED,
-        order_date=datetime.now(timezone.utc),
+        order_date=datetime.now(UTC),
         items=[item1_1, item1_2],
         retailer=r1,
     )
@@ -118,7 +116,7 @@ def mock_catalog_and_orders():
         retailer_id="ret-bharat",
         buyer_type=BuyerTypeEnum.RETAILER,
         status=SOStatusEnum.DELIVERED,
-        order_date=datetime.now(timezone.utc),
+        order_date=datetime.now(UTC),
         items=[item2_1, item2_2],
         retailer=r2,
     )

@@ -19,6 +19,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "WareFlow — Wholesale Inventory & ERP",
   description: "AI-assisted wholesale inventory, order processing, and distribution ERP platform.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/wareflow-logo.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/icon.svg" }],
+  },
+  manifest: "/manifest.json",
 };
 
 const themeScript = `

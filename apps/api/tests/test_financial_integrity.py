@@ -8,11 +8,10 @@ Validates strict financial guardrails:
 4. Retailer credit balances decrease by the exact payment amount on settlement.
 """
 
-from datetime import datetime, timezone
 import pytest
 from fastapi import HTTPException
 
-from app.models import Invoice, InvoiceStatusEnum, Payment, PaymentMethodEnum, Retailer, SalesOrder, SOStatusEnum
+from app.models import Invoice, InvoiceStatusEnum, Payment, PaymentMethodEnum, Retailer
 from app.schemas.billing import PaymentCreateRequest
 from app.services.payment_service import PaymentService
 

@@ -129,23 +129,51 @@ function PurchaseReturnsContent() {
       setError(null);
 
       const [returnsRes, posRes, batchesRes, supRes] = await Promise.all([
-        apiClient.get<PurchaseReturn[]>("/purchase-returns").catch(() => []),
+        apiClient.get<PurchaseReturn[]>("/purchase-returns").catch((err) => {
+          if (err instanceof Error && err.message.toLowerCase().includes("two-factor")) {
+            setError(err.message);
+          }
+          return [];
+        }),
         apiClient.get<PurchaseOrderItemType[]>("/purchase-orders").catch(() => []),
         apiClient
-          .get<{ batches?: StockBatchOption[] } | StockBatchOption[]>("/stock/batches")
+          .get<StockBatchOption[] | { batches?: StockBatchOption[] }>("/stock/batches")
           .catch(() => []),
         apiClient.get<SupplierOption[]>("/suppliers").catch(() => []),
       ]);
 
-      setReturns(Array.isArray(returnsRes) ? returnsRes : []);
-      setPurchaseOrders(Array.isArray(posRes) ? posRes.filter((po) => po.status !== "draft") : []);
-
+      const loadedReturns = Array.isArray(returnsRes) ? returnsRes : [];
+      const loadedPos = Array.isArray(posRes) ? posRes.filter((po) => po.status !== "draft") : [];
       const resolvedBatches = Array.isArray(batchesRes)
         ? batchesRes
         : (batchesRes as { batches?: StockBatchOption[] })?.batches || [];
-      setBatches(resolvedBatches);
+      const loadedSuppliers = Array.isArray(supRes) ? supRes.filter((s) => s.is_active) : [];
 
-      setSuppliers(Array.isArray(supRes) ? supRes.filter((s) => s.is_active) : []);
+      setReturns(loadedReturns);
+      setPurchaseOrders(loadedPos);
+      setBatches(resolvedBatches);
+      setSuppliers(loadedSuppliers);
+
+      if (prefillPoId) {
+        const targetPO = loadedPos.find((p) => p.id === prefillPoId);
+        if (targetPO) {
+          setReturnPoId(targetPO.id);
+          if (targetPO.items && targetPO.items.length > 0) {
+            const matchingBatches = resolvedBatches.filter(
+              (b) => b.product_id === targetPO.items[0].product_id,
+            );
+            setReturnLines([
+              {
+                product_id: targetPO.items[0].product_id,
+                batch_id: matchingBatches.length > 0 ? matchingBatches[0].id : "",
+                qty: 1,
+                reason: "Quality defect / damaged",
+              },
+            ]);
+          }
+          setCreateModalOpen(true);
+        }
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load supplier returns.";
       setError(msg);
@@ -155,69 +183,16 @@ function PurchaseReturnsContent() {
   };
 
   useEffect(() => {
-    let ignore = false;
-    async function loadData() {
-      try {
-        const [returnsRes, posRes, batchesRes, supRes] = await Promise.all([
-          apiClient.get<PurchaseReturn[]>("/purchase-returns").catch(() => []),
-          apiClient.get<PurchaseOrderItemType[]>("/purchase-orders").catch(() => []),
-          apiClient
-            .get<{ batches?: StockBatchOption[] } | StockBatchOption[]>("/stock/batches")
-            .catch(() => []),
-          apiClient.get<SupplierOption[]>("/suppliers").catch(() => []),
-        ]);
+    fetchData();
 
-        if (!ignore) {
-          const loadedReturns = Array.isArray(returnsRes) ? returnsRes : [];
-          const loadedPos = Array.isArray(posRes)
-            ? posRes.filter((po) => po.status !== "draft")
-            : [];
-          const resolvedBatches = Array.isArray(batchesRes)
-            ? batchesRes
-            : (batchesRes as { batches?: StockBatchOption[] })?.batches || [];
-          const loadedSuppliers = Array.isArray(supRes) ? supRes.filter((s) => s.is_active) : [];
+    const handle2FAVerified = () => {
+      setError(null);
+      fetchData();
+    };
 
-          setReturns(loadedReturns);
-          setPurchaseOrders(loadedPos);
-          setBatches(resolvedBatches);
-          setSuppliers(loadedSuppliers);
-
-          if (prefillPoId) {
-            const targetPO = loadedPos.find((p) => p.id === prefillPoId);
-            if (targetPO) {
-              setReturnPoId(targetPO.id);
-              if (targetPO.items && targetPO.items.length > 0) {
-                const matchingBatches = resolvedBatches.filter(
-                  (b) => b.product_id === targetPO.items[0].product_id,
-                );
-                setReturnLines([
-                  {
-                    product_id: targetPO.items[0].product_id,
-                    batch_id: matchingBatches.length > 0 ? matchingBatches[0].id : "",
-                    qty: 1,
-                    reason: "Quality defect / damaged",
-                  },
-                ]);
-              }
-              setCreateModalOpen(true);
-            }
-          }
-        }
-      } catch (err: unknown) {
-        if (!ignore) {
-          const msg = err instanceof Error ? err.message : "Failed to load supplier returns.";
-          setError(msg);
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadData();
+    window.addEventListener("wareflow:2fa-verified", handle2FAVerified);
     return () => {
-      ignore = true;
+      window.removeEventListener("wareflow:2fa-verified", handle2FAVerified);
     };
   }, [prefillPoId]);
 
@@ -648,14 +623,29 @@ function PurchaseReturnsContent() {
       >
         {/* Alerts */}
         {error && (
-          <div className="mb-4 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-between text-xs text-rose-300">
-            <div className="flex items-center gap-2">
+          <div className="mb-4 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-rose-300 shadow-lg shadow-rose-950/20">
+            <div className="flex items-center gap-2.5">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
               <span>{error}</span>
             </div>
-            <button onClick={() => setError(null)} className="text-rose-400 hover:text-rose-200">
-              &times;
-            </button>
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              {error.toLowerCase().includes("two-factor") && (
+                <GlassButton
+                  size="sm"
+                  variant="primary"
+                  onClick={() => window.dispatchEvent(new CustomEvent("wareflow:2fa-required"))}
+                  className="text-xs py-1 px-3 bg-gradient-to-r from-amber-500 to-indigo-600 border-amber-400/30 text-white font-medium"
+                >
+                  Verify 2FA Now
+                </GlassButton>
+              )}
+              <button
+                onClick={() => setError(null)}
+                className="text-rose-400 hover:text-rose-200 px-1 py-0.5 rounded hover:bg-rose-500/20 transition-colors"
+              >
+                &times;
+              </button>
+            </div>
           </div>
         )}
 

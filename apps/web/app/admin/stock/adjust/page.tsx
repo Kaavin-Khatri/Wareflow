@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassButton } from "@/components/glass/GlassButton";
+import { GlassSelect } from "@/components/glass/GlassSelect";
 import { apiClient } from "@/lib/api-client";
 import {
   SlidersHorizontal,
@@ -336,20 +337,16 @@ export default function StockAdjustPage() {
                       <span>Scan Barcode</span>
                     </button>
                   </div>
-                  <select
+                  <GlassSelect
                     id="adjust-product"
                     value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
-                  >
-                    <option value="">-- Choose Product --</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.sku})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedProductId}
+                    placeholder="-- Choose Product --"
+                    options={products.map((p) => ({
+                      value: p.id,
+                      label: `${p.name} (${p.sku})`,
+                    }))}
+                  />
                 </div>
 
                 {/* Warehouse Select */}
@@ -360,20 +357,16 @@ export default function StockAdjustPage() {
                   >
                     Warehouse Location *
                   </label>
-                  <select
+                  <GlassSelect
                     id="adjust-warehouse"
                     value={selectedWarehouseId}
-                    onChange={(e) => setSelectedWarehouseId(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
-                  >
-                    <option value="">-- Choose Warehouse --</option>
-                    {warehouses.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedWarehouseId}
+                    placeholder="-- Choose Warehouse --"
+                    options={warehouses.map((w) => ({
+                      value: w.id,
+                      label: w.name,
+                    }))}
+                  />
                 </div>
               </div>
 
@@ -385,31 +378,25 @@ export default function StockAdjustPage() {
                 >
                   Stock Batch *
                 </label>
-                <select
+                <GlassSelect
                   id="adjust-batch"
                   value={selectedBatchId}
-                  onChange={(e) => setSelectedBatchId(e.target.value)}
-                  required
+                  onChange={setSelectedBatchId}
                   disabled={batches.length === 0}
-                  className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500 disabled:opacity-50"
-                >
-                  {batches.length === 0 ? (
-                    <option value="">
-                      {selectedProductId
+                  placeholder={
+                    batches.length === 0
+                      ? selectedProductId
                         ? "No active batches in selected warehouse"
-                        : "Select a product first"}
-                    </option>
-                  ) : (
-                    batches.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        Batch: {b.batch_no} — On Hand: {Number(b.quantity).toFixed(2)} units{" "}
-                        {b.expiry_date
-                          ? `(Exp: ${new Date(b.expiry_date).toLocaleDateString()})`
-                          : ""}
-                      </option>
-                    ))
-                  )}
-                </select>
+                        : "Select a product first"
+                      : "-- Choose Stock Batch --"
+                  }
+                  options={batches.map((b) => ({
+                    value: b.id,
+                    label: `Batch: ${b.batch_no} — On Hand: ${Number(b.quantity).toFixed(2)} units ${
+                      b.expiry_date ? `(Exp: ${new Date(b.expiry_date).toLocaleDateString()})` : ""
+                    }`,
+                  }))}
+                />
               </div>
 
               {selectedBatch && (
@@ -460,22 +447,21 @@ export default function StockAdjustPage() {
                   >
                     Adjustment Reason *
                   </label>
-                  <select
+                  <GlassSelect
                     id="adjust-reason"
                     value={reason}
-                    onChange={(e) =>
-                      setReason(e.target.value as "damage" | "loss" | "recount" | "other")
-                    }
-                    className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
-                  >
-                    <option value="damage">Damage (Physical breakage, leak, spoilt)</option>
-                    <option value="loss">Loss (Shrinkage, missing units)</option>
-                    <option value="recount" disabled={!hasRecountPermission}>
-                      Recount (Audit count variance){" "}
-                      {!hasRecountPermission ? "🔒 Requires Recount Permission" : ""}
-                    </option>
-                    <option value="other">Other (General inventory correction)</option>
-                  </select>
+                    onChange={(val) => setReason(val as "damage" | "loss" | "recount" | "other")}
+                    options={[
+                      { value: "damage", label: "Damage (Physical breakage, leak, spoilt)" },
+                      { value: "loss", label: "Loss (Shrinkage, missing units)" },
+                      {
+                        value: "recount",
+                        label: `Recount (Audit count variance) ${!hasRecountPermission ? "🔒 Requires Recount Permission" : ""}`,
+                        disabled: !hasRecountPermission,
+                      },
+                      { value: "other", label: "Other (General inventory correction)" },
+                    ]}
+                  />
                   {!hasRecountPermission && (
                     <span className="text-[10px] text-amber-400 flex items-center gap-1 mt-0.5">
                       <Lock className="w-3 h-3" /> Recount requires Manager / Owner role permission.

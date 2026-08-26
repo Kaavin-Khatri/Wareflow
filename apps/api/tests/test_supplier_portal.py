@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.core.di import get_supplier_portal_service
@@ -217,7 +218,7 @@ def test_supplier_portal_mark_ready_for_dispatch_flow(
     assert token_repo.get_by_token(token_obj.token) is None
 
     # 3. Subsequent attempt with same token fails
-    with pytest.raises(Exception):
+    with pytest.raises(HTTPException):
         portal_service.mark_ready_for_dispatch(token_obj.token)
 
     # 4. Multi-channel notifications delivered to purchasing staff / owner

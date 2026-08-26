@@ -38,10 +38,16 @@ function computeFssaiStatus(expiryDate: string | null): {
   }
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const expiry = new Date(expiryDate);
+
+  const parts = expiryDate.split("-");
+  const expiry =
+    parts.length === 3
+      ? new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+      : new Date(expiryDate);
   expiry.setHours(0, 0, 0, 0);
+
   const diffMs = expiry.getTime() - today.getTime();
-  const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const days = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
   if (days < 0) {
     return { label: "Expired", variant: "error", daysRemaining: days };

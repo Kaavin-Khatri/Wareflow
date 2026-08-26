@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AppLayout from "@/components/AppLayout";
+import { GlassSelect } from "@/components/glass/GlassSelect";
 import { apiClient } from "@/lib/api-client";
 
 interface AuditLogEntry {
@@ -62,37 +63,18 @@ export default function AdminAuditLogPage() {
   }, []);
 
   useEffect(() => {
-    let ignore = false;
-    async function load() {
-      try {
-        const params = new URLSearchParams();
-        params.set("page", page.toString());
-        params.set("page_size", "25");
-        if (entityFilter) {
-          params.set("entity_type", entityFilter);
-        }
+    loadLogs(page, entityFilter);
 
-        const res = await apiClient.get<AuditLogResponse>(`/admin/audit-log?${params.toString()}`);
-        if (!ignore) {
-          setLogs(res.items);
-          setTotal(res.total);
-          setTotalPages(res.total_pages);
-        }
-      } catch (err: unknown) {
-        if (!ignore) {
-          setError(err instanceof Error ? err.message : "Failed to load audit logs.");
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
-    }
-    load();
-    return () => {
-      ignore = true;
+    const handle2FAVerified = () => {
+      setError(null);
+      loadLogs(page, entityFilter);
     };
-  }, [page, entityFilter]);
+
+    window.addEventListener("wareflow:2fa-verified", handle2FAVerified);
+    return () => {
+      window.removeEventListener("wareflow:2fa-verified", handle2FAVerified);
+    };
+  }, [page, entityFilter, loadLogs]);
 
   const handleFilterChange = (val: string) => {
     setEntityFilter(val);
@@ -188,17 +170,18 @@ export default function AdminAuditLogPage() {
 
           {/* Filter Bar */}
           <div className="flex items-center gap-3">
-            <select
+            <GlassSelect
               value={entityFilter}
-              onChange={(e) => handleFilterChange(e.target.value)}
-              className="bg-zinc-900/80 border border-zinc-800 text-xs text-zinc-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-indigo-500 cursor-pointer"
-            >
-              <option value="">All Entity Types</option>
-              <option value="product">Products (Pricing)</option>
-              <option value="retailer">Retailers (Credit Limits)</option>
-              <option value="role_permissions">Permission Matrix</option>
-              <option value="staff">Staff & Roles</option>
-            </select>
+              onChange={handleFilterChange}
+              options={[
+                { value: "", label: "All Entity Types" },
+                { value: "product", label: "Products (Pricing)" },
+                { value: "retailer", label: "Retailers (Credit Limits)" },
+                { value: "role_permissions", label: "Permission Matrix" },
+                { value: "staff", label: "Staff & Roles" },
+              ]}
+              className="w-56"
+            />
 
             <button
               onClick={() => loadLogs(page, entityFilter)}
@@ -217,18 +200,65 @@ export default function AdminAuditLogPage() {
           </div>
         </div>
 
-        {/* Error Alert */}
-        {error && (
-          <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3">
-            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span>{error}</span>
+        {/* 2FA Verification Alert Banner */}
+        {error && error.toLowerCase().includes("two-factor") && (
+          <div className="p-5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg backdrop-blur-sm animate-fade-in">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/30">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h4 className="text-sm font-semibold text-white">Two-Factor Authentication Required</h4>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Administrative audit logs contain sensitive organizational records. Please verify your 2FA code to view this data.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(
+                  new CustomEvent("wareflow:2fa-required", {
+                    detail: { endpoint: "/admin/audit-log" },
+                  }),
+                );
+              }}
+              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 transition cursor-pointer shrink-0 self-start sm:self-auto"
+            >
+              Verify 2FA Now
+            </button>
+          </div>
+        )}
+
+        {/* General Error Alert */}
+        {error && !error.toLowerCase().includes("two-factor") && (
+          <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>{error}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => loadLogs(page, entityFilter)}
+              className="px-3 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-xs font-medium transition cursor-pointer"
+            >
+              Retry
+            </button>
           </div>
         )}
 

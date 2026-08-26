@@ -6,3 +6,4 @@ export * from "./GlassDropdown";
 export * from "./GlassInput";
 export * from "./GlassBadge";
 export * from "./GlassTiltCard";
+export * from "./GlassSelect";

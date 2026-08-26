@@ -6,15 +6,13 @@ Unit & Integration Tests for Step 16.2 Analytics:
 - Shrinkage (Damage & loss adjustments, dimension rollups)
 """
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime
 
-import pytest
 from fastapi.testclient import TestClient
 
 from app.core.security import get_current_user
 from app.main import app
 from app.models.catalog import Product
-from app.models.inventory import StockMovement, StockMovementTypeEnum
 from app.models.profile import Profile
 from app.models.retailer import Retailer, SalesOrder, SOStatusEnum
 from app.models.returns import PurchaseReturn, PurchaseReturnItem, PurchaseReturnStatusEnum
@@ -73,7 +71,7 @@ class InMemoryPurchaseReturnRepository:
 
 def test_supplier_performance_hand_computed_check():
     """QA Item 1: On-time delivery rate matches a hand-computed check against 3 crafted POs with known expected/actual dates."""
-    now = datetime(2026, 8, 24, 12, 0, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 8, 24, 12, 0, 0, tzinfo=UTC)
     sup = Supplier(id="sup-1", name="Apex FMCG Ltd", is_active=True)
     sup_repo = InMemorySupplierRepository([sup])
 
@@ -86,8 +84,8 @@ def test_supplier_performance_hand_computed_check():
         po_number="PO-001",
         supplier_id="sup-1",
         status=POStatusEnum.RECEIVED,
-        order_date=datetime(2026, 8, 8, 10, 0, 0, tzinfo=timezone.utc),
-        created_at=datetime(2026, 8, 8, 10, 0, 0, tzinfo=timezone.utc),
+        order_date=datetime(2026, 8, 8, 10, 0, 0, tzinfo=UTC),
+        created_at=datetime(2026, 8, 8, 10, 0, 0, tzinfo=UTC),
         expected_date=date(2026, 8, 10),
         total_amount=10000.0,
         items=[PurchaseOrderItem(id="poi-1", po_id="po-1", product_id="p-1", qty_ordered=100.0, qty_received=100.0, unit_cost=100.0)],
@@ -97,8 +95,8 @@ def test_supplier_performance_hand_computed_check():
         po_number="PO-002",
         supplier_id="sup-1",
         status=POStatusEnum.RECEIVED,
-        order_date=datetime(2026, 8, 15, 14, 0, 0, tzinfo=timezone.utc),
-        created_at=datetime(2026, 8, 15, 14, 0, 0, tzinfo=timezone.utc),
+        order_date=datetime(2026, 8, 15, 14, 0, 0, tzinfo=UTC),
+        created_at=datetime(2026, 8, 15, 14, 0, 0, tzinfo=UTC),
         expected_date=date(2026, 8, 15),
         total_amount=15000.0,
         items=[PurchaseOrderItem(id="poi-2", po_id="po-2", product_id="p-1", qty_ordered=150.0, qty_received=150.0, unit_cost=100.0)],
@@ -108,8 +106,8 @@ def test_supplier_performance_hand_computed_check():
         po_number="PO-003",
         supplier_id="sup-1",
         status=POStatusEnum.RECEIVED,
-        order_date=datetime(2026, 8, 20, 11, 0, 0, tzinfo=timezone.utc),
-        created_at=datetime(2026, 8, 20, 11, 0, 0, tzinfo=timezone.utc),
+        order_date=datetime(2026, 8, 20, 11, 0, 0, tzinfo=UTC),
+        created_at=datetime(2026, 8, 20, 11, 0, 0, tzinfo=UTC),
         expected_date=date(2026, 8, 18),
         total_amount=5000.0,
         items=[PurchaseOrderItem(id="poi-3", po_id="po-3", product_id="p-1", qty_ordered=50.0, qty_received=45.0, unit_cost=100.0)],
@@ -139,21 +137,21 @@ def test_supplier_performance_hand_computed_check():
 
 def test_retailer_churn_risk_heuristic_flag():
     """QA Item 2: A retailer manually given a large order-gap correctly surfaces the churn-risk flag."""
-    now = datetime(2026, 8, 24, 12, 0, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 8, 24, 12, 0, 0, tzinfo=UTC)
     ret1 = Retailer(id="ret-active", name="Green Valley Mart", pricing_tier="gold")
     ret2 = Retailer(id="ret-churn", name="Stagnant Stores", pricing_tier="silver")
 
     ret_repo = InMemoryRetailerRepository([ret1, ret2])
 
     # Retailer 1: Active, orders every 10 days, last order 5 days ago (Avg gap: 10d, Days since last: 5d <= 20d -> NO CHURN RISK)
-    so1_1 = SalesOrder(id="so-1", retailer_id="ret-active", order_date=datetime(2026, 8, 4, 10, 0, 0, tzinfo=timezone.utc), total_amount=5000.0, status=SOStatusEnum.DELIVERED)
-    so1_2 = SalesOrder(id="so-2", retailer_id="ret-active", order_date=datetime(2026, 8, 14, 10, 0, 0, tzinfo=timezone.utc), total_amount=6000.0, status=SOStatusEnum.DELIVERED)
-    so1_3 = SalesOrder(id="so-3", retailer_id="ret-active", order_date=datetime(2026, 8, 19, 10, 0, 0, tzinfo=timezone.utc), total_amount=7000.0, status=SOStatusEnum.DELIVERED)
+    so1_1 = SalesOrder(id="so-1", retailer_id="ret-active", order_date=datetime(2026, 8, 4, 10, 0, 0, tzinfo=UTC), total_amount=5000.0, status=SOStatusEnum.DELIVERED)
+    so1_2 = SalesOrder(id="so-2", retailer_id="ret-active", order_date=datetime(2026, 8, 14, 10, 0, 0, tzinfo=UTC), total_amount=6000.0, status=SOStatusEnum.DELIVERED)
+    so1_3 = SalesOrder(id="so-3", retailer_id="ret-active", order_date=datetime(2026, 8, 19, 10, 0, 0, tzinfo=UTC), total_amount=7000.0, status=SOStatusEnum.DELIVERED)
 
     # Retailer 2: Historically ordered every 7 days (June 1, June 8, June 15), but no order since June 15 (70 days ago) -> CHURN RISK
-    so2_1 = SalesOrder(id="so-4", retailer_id="ret-churn", order_date=datetime(2026, 6, 1, 10, 0, 0, tzinfo=timezone.utc), total_amount=4000.0, status=SOStatusEnum.DELIVERED)
-    so2_2 = SalesOrder(id="so-5", retailer_id="ret-churn", order_date=datetime(2026, 6, 8, 10, 0, 0, tzinfo=timezone.utc), total_amount=4000.0, status=SOStatusEnum.DELIVERED)
-    so2_3 = SalesOrder(id="so-6", retailer_id="ret-churn", order_date=datetime(2026, 6, 15, 10, 0, 0, tzinfo=timezone.utc), total_amount=4000.0, status=SOStatusEnum.DELIVERED)
+    so2_1 = SalesOrder(id="so-4", retailer_id="ret-churn", order_date=datetime(2026, 6, 1, 10, 0, 0, tzinfo=UTC), total_amount=4000.0, status=SOStatusEnum.DELIVERED)
+    so2_2 = SalesOrder(id="so-5", retailer_id="ret-churn", order_date=datetime(2026, 6, 8, 10, 0, 0, tzinfo=UTC), total_amount=4000.0, status=SOStatusEnum.DELIVERED)
+    so2_3 = SalesOrder(id="so-6", retailer_id="ret-churn", order_date=datetime(2026, 6, 15, 10, 0, 0, tzinfo=UTC), total_amount=4000.0, status=SOStatusEnum.DELIVERED)
 
     so_repo = InMemorySalesOrderRepository([so1_1, so1_2, so1_3, so2_1, so2_2, so2_3])
 
@@ -171,7 +169,7 @@ def test_retailer_churn_risk_heuristic_flag():
 
 def test_shrinkage_manual_sum_calculation():
     """QA Item 3: Shrinkage total matches a manual sum of damage/loss adjustments for a test period."""
-    now = datetime(2026, 8, 24, 12, 0, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 8, 24, 12, 0, 0, tzinfo=UTC)
     p1 = Product(id="p-1", name="Rice 25kg", sku="RICE-25", cost_price=1000.0, base_uom_id="uom-kg")
     p2 = Product(id="p-2", name="Mustard Oil 1L", sku="OIL-1L", cost_price=150.0, base_uom_id="uom-l")
     prod_repo = InMemoryProductRepository([p1, p2])
@@ -209,7 +207,7 @@ def test_shrinkage_manual_sum_calculation():
 
 def test_warehouse_breakdown_analytics():
     """Test WarehouseAnalyticsService calculations."""
-    now = datetime(2026, 8, 24, 12, 0, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 8, 24, 12, 0, 0, tzinfo=UTC)
     p1 = Product(id="p-1", name="Rice 25kg", sku="RICE-25", cost_price=1000.0)
     p2 = Product(id="p-2", name="Wheat 50kg", sku="WHEAT-50", cost_price=1500.0)
     prod_repo = InMemoryProductRepository([p1, p2])

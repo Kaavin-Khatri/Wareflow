@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import ThemeToggle from "./ThemeToggle";
 import { GlassBadge } from "./glass";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, getAuthToken } from "@/lib/api-client";
 import { db } from "@/lib/firebase-client";
 import { SearchCommandPalette } from "./SearchCommandPalette";
 import { usePwa } from "./pwa/PwaProvider";
@@ -130,11 +130,17 @@ export function Topbar({ onMenuClick }: TopbarProps) {
   // Fetch current user profile
   useEffect(() => {
     async function fetchUser() {
+      const token = await getAuthToken();
+      if (!token) {
+        setProfile(null);
+        return;
+      }
       try {
         const data = await apiClient.get<UserProfile>("/me");
         setProfile(data);
-      } catch (err) {
-        console.warn("Failed to fetch user in Topbar:", err);
+      } catch {
+        // Unauthenticated session or guest state — clean silent fallback
+        setProfile(null);
       }
     }
     fetchUser();
@@ -292,7 +298,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   return (
     <>
-      <header className="h-16 shrink-0 border-b border-[var(--border)] px-4 sm:px-8 flex items-center justify-between glass-panel z-30 select-none">
+      <header className="relative z-50 h-16 shrink-0 border-b border-[var(--border)] px-4 sm:px-8 flex items-center justify-between glass-panel glass-panel-unclipped select-none">
         {/* Left: Mobile Menu Trigger + Workspace Title */}
         <div className="flex items-center gap-3">
           {onMenuClick && (
@@ -398,7 +404,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-[var(--glass-bg-elevated)] border border-[var(--glass-border)] backdrop-blur-2xl shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-200">
+              <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-2xl bg-[var(--glass-bg-elevated)] border border-[var(--glass-border)] backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-4 z-[100] animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-xs text-[var(--text)]">Live Notifications</span>
@@ -492,7 +498,7 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             </button>
 
             {showUserMenu && (
-              <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-[var(--glass-bg-elevated)] border border-[var(--glass-border)] backdrop-blur-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-200 text-xs">
+              <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-[var(--glass-bg-elevated)] border border-[var(--glass-border)] backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-2 z-[100] animate-in fade-in zoom-in-95 duration-200 text-xs">
                 <div className="p-3 border-b border-[var(--border)] mb-1">
                   <div className="font-bold text-[var(--text)] truncate">
                     {profile?.display_name || "Authorized User"}

@@ -9,6 +9,7 @@ import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassInput } from "@/components/glass/GlassInput";
 import { GlassModal } from "@/components/glass/GlassModal";
 import { GlassBadge } from "@/components/glass/GlassBadge";
+import { GlassSelect } from "@/components/glass/GlassSelect";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { apiClient } from "@/lib/api-client";
 import {
@@ -683,15 +684,15 @@ export default function RetailersAdminPage() {
                 <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                   Bulk Pricing Tier <span className="text-rose-400">*</span>
                 </label>
-                <select
+                <GlassSelect
                   value={formData.pricing_tier}
-                  onChange={(e) => setFormData({ ...formData, pricing_tier: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl text-xs bg-[var(--surface)] text-[var(--text)] border border-[var(--border)] focus:outline-none focus:ring-1 focus:ring-purple-500/50 transition-all"
-                >
-                  <option value="standard">Standard Tier (0% Discount)</option>
-                  <option value="silver">Silver Tier (5% Discount)</option>
-                  <option value="gold">Gold Tier (10% Discount)</option>
-                </select>
+                  onChange={(val) => setFormData({ ...formData, pricing_tier: val })}
+                  options={[
+                    { value: "standard", label: "Standard Tier (0% Discount)" },
+                    { value: "silver", label: "Silver Tier (5% Discount)" },
+                    { value: "gold", label: "Gold Tier (10% Discount)" },
+                  ]}
+                />
               </div>
 
               <div>

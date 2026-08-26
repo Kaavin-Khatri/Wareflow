@@ -1,7 +1,7 @@
 """Unit and API integration tests for bulk CSV product import, preview, upsert, and export."""
 
-from decimal import Decimal
 import io
+
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
@@ -10,7 +10,6 @@ from app.core.di import get_product_import_service, get_product_service
 from app.core.security import CurrentUser, get_current_user
 from app.main import app
 from app.repositories.impl.product_repository import InMemoryProductRepository
-from app.schemas.products import ProductCreateRequest
 from app.services.import_service import ProductImportService
 from app.services.product_service import ProductService
 

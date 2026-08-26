@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { GlassModal } from "@/components/glass/GlassModal";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { apiClient } from "@/lib/api-client";
@@ -56,12 +56,46 @@ export function BarcodeScannerModal({
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const isStartingRef = useRef(false);
+  const isMountedRef = useRef(true);
   const scannerContainerId = "wareflow-html5-qr-reader";
+
+  // Safely stop and clear any active scanner instance with transition guards
+  const safeStopScanner = useCallback(async () => {
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+
+    try {
+      // If start() is currently in progress, wait briefly for it to settle
+      if (isStartingRef.current) {
+        for (let i = 0; i < 8 && isStartingRef.current; i++) {
+          await new Promise((r) => setTimeout(r, 60));
+        }
+      }
+
+      // Check if scanner is in active scanning state before stopping
+      if (scanner.isScanning) {
+        await scanner.stop();
+      }
+    } catch (err) {
+      // Suppress state transition collision errors ("Cannot transition to a new state, already under transition")
+      console.debug("Safe scanner stop suppressed transition conflict:", err);
+    } finally {
+      try {
+        scanner.clear();
+      } catch {
+        // Ignore clear errors on unmounted DOM nodes
+      }
+      scannerRef.current = null;
+    }
+  }, []);
 
   // Play a brief positive beep sound on barcode scan
   const playScanBeep = () => {
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         const ctx = new AudioCtx();
         const osc = ctx.createOscillator();
@@ -89,6 +123,7 @@ export function BarcodeScannerModal({
     if (!autoLookupProduct) {
       onScanSuccess(decodedText, null);
       onClose();
+      void safeStopScanner();
       return;
     }
 
@@ -104,8 +139,9 @@ export function BarcodeScannerModal({
       // Brief pause so user sees resolution confirmation before auto closing
       setTimeout(() => {
         onClose();
+        void safeStopScanner();
       }, 900);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn("Product lookup by barcode failed:", err);
       // Still pass scanned code back to form
       onScanSuccess(decodedText, null);
@@ -115,26 +151,35 @@ export function BarcodeScannerModal({
     }
   };
 
-  // Start Html5Qrcode camera
+  // Handle modal close
+  const handleModalClose = () => {
+    onClose();
+    void safeStopScanner();
+  };
+
+  // Start Html5Qrcode camera with transition locks
   useEffect(() => {
+    isMountedRef.current = true;
+
     if (!isOpen || scannerMode !== "camera") {
-      if (scannerRef.current) {
-        scannerRef.current
-          .stop()
-          .catch(() => {})
-          .finally(() => {
-            scannerRef.current?.clear();
-            scannerRef.current = null;
-          });
-      }
+      safeStopScanner();
       return;
     }
 
-    let isMounted = true;
+    let timer: NodeJS.Timeout | null = null;
 
     const startCamera = async () => {
+      if (!isMountedRef.current) return;
+      const container = document.getElementById(scannerContainerId);
+      if (!container) return;
+
       setCameraError(null);
+      await safeStopScanner();
+
+      if (!isMountedRef.current) return;
+
       try {
+        isStartingRef.current = true;
         const scanner = new Html5Qrcode(scannerContainerId);
         scannerRef.current = scanner;
 
@@ -146,7 +191,7 @@ export function BarcodeScannerModal({
             aspectRatio: 1.333,
           },
           (decodedText) => {
-            if (isMounted) {
+            if (isMountedRef.current) {
               handleDecodedText(decodedText);
             }
           },
@@ -154,33 +199,29 @@ export function BarcodeScannerModal({
             // Ignore frame-level scan misses
           },
         );
-      } catch (err: any) {
-        if (isMounted) {
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        // Do not display transient transition errors to users
+        if (isMountedRef.current && !errMsg.includes("transition")) {
           console.warn("Camera start warning:", err);
           setCameraError(
-            err?.message ||
+            errMsg ||
               "Could not access camera. Please check browser camera permissions or try manual entry.",
           );
         }
+      } finally {
+        isStartingRef.current = false;
       }
     };
 
-    const timer = setTimeout(startCamera, 300);
+    timer = setTimeout(startCamera, 300);
 
     return () => {
-      isMounted = false;
-      clearTimeout(timer);
-      if (scannerRef.current) {
-        scannerRef.current
-          .stop()
-          .catch(() => {})
-          .finally(() => {
-            scannerRef.current?.clear();
-            scannerRef.current = null;
-          });
-      }
+      isMountedRef.current = false;
+      if (timer) clearTimeout(timer);
+      safeStopScanner();
     };
-  }, [isOpen, scannerMode, facingMode]);
+  }, [isOpen, scannerMode, facingMode, safeStopScanner]);
 
   // Handle file upload scanning
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -192,9 +233,11 @@ export function BarcodeScannerModal({
       setCameraError(null);
       const scanner = new Html5Qrcode("upload-scanner-temp");
       const decodedText = await scanner.scanFile(file, true);
-      scanner.clear();
+      try {
+        scanner.clear();
+      } catch {}
       await handleDecodedText(decodedText);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn("File scan error:", err);
       setCameraError("No readable barcode or QR code detected in the selected image.");
     } finally {
@@ -212,7 +255,7 @@ export function BarcodeScannerModal({
   return (
     <GlassModal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleModalClose}
       title={title}
       description={description}
       maxWidth="md"
@@ -387,7 +430,7 @@ export function BarcodeScannerModal({
           <span>Supported: EAN-13, UPC, QR, Code-128</span>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleModalClose}
             className="text-[var(--text-muted)] hover:text-[var(--text)] font-sans"
           >
             Cancel

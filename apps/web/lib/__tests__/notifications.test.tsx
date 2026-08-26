@@ -38,6 +38,7 @@ vi.mock("next/navigation", () => ({
 
 // Mock api-client
 vi.mock("@/lib/api-client", () => ({
+  getAuthToken: async () => "test_token",
   apiClient: {
     get: vi.fn(async (url: string) => {
       if (url === "/me") {

@@ -93,6 +93,7 @@ const MOCK_RETAILER_INVOICES = {
 };
 
 vi.mock("@/lib/api-client", () => ({
+  getAuthToken: async () => "test_token",
   apiClient: {
     get: vi.fn().mockImplementation((url: string) => {
       if (url.includes("/ledger")) {

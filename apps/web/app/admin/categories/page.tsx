@@ -7,6 +7,7 @@ import { DataTable, DataTableColumn } from "@/components/DataTable";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassInput } from "@/components/glass/GlassInput";
 import { GlassModal } from "@/components/glass/GlassModal";
+import { GlassSelect } from "@/components/glass/GlassSelect";
 import { apiClient } from "@/lib/api-client";
 import { Plus, Edit2, Trash2, FolderTree, Layers } from "lucide-react";
 
@@ -43,26 +44,16 @@ export default function CategoriesPage() {
   };
 
   useEffect(() => {
-    let ignore = false;
-    async function loadData() {
-      try {
-        const data = await apiClient.get<CategoryItem[]>("/categories");
-        if (!ignore) {
-          setCategories(data);
-        }
-      } catch (err: unknown) {
-        if (!ignore) {
-          setError(err instanceof Error ? err.message : "Failed to load categories.");
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
-    }
-    loadData();
+    fetchCategories();
+
+    const handle2FAVerified = () => {
+      setError(null);
+      fetchCategories();
+    };
+
+    window.addEventListener("wareflow:2fa-verified", handle2FAVerified);
     return () => {
-      ignore = true;
+      window.removeEventListener("wareflow:2fa-verified", handle2FAVerified);
     };
   }, []);
 
@@ -256,20 +247,16 @@ export default function CategoriesPage() {
             <label className="block text-xs font-semibold text-white/70 mb-1.5 uppercase tracking-wider">
               Parent Category (Optional)
             </label>
-            <select
+            <GlassSelect
               value={parentId}
-              onChange={(e) => setParentId(e.target.value)}
-              className="w-full px-3 py-2 bg-neutral-900/80 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-purple-500/50"
-            >
-              <option value="">None (Top-Level Category)</option>
-              {categories
-                .filter((c) => !editingCategory || c.id !== editingCategory.id)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-            </select>
+              onChange={setParentId}
+              options={[
+                { value: "", label: "None (Top-Level Category)" },
+                ...categories
+                  .filter((c) => !editingCategory || c.id !== editingCategory.id)
+                  .map((c) => ({ value: c.id, label: c.name })),
+              ]}
+            />
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/10">

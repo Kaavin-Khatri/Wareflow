@@ -196,8 +196,15 @@ export default function SalesReturnsPage() {
     };
 
     loadInitialData();
+
+    const handle2FAVerified = () => {
+      loadInitialData();
+    };
+
+    window.addEventListener("wareflow:2fa-verified", handle2FAVerified);
     return () => {
       isMounted = false;
+      window.removeEventListener("wareflow:2fa-verified", handle2FAVerified);
     };
   }, []);
 

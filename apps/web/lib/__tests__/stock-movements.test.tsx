@@ -57,6 +57,7 @@ const MOCK_MOVEMENTS_RESPONSE = {
 
 // Mock apiClient
 vi.mock("@/lib/api-client", () => ({
+  getAuthToken: async () => "test_token",
   apiClient: {
     get: vi.fn().mockImplementation((url: string) => {
       if (url.startsWith("/stock/movements")) {

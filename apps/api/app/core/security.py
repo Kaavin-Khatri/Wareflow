@@ -159,6 +159,12 @@ def get_current_user(
         permissions_list = profile_repo.get_role_permissions(profile.role_id)
         role_name = profile.role.name if profile.role else "Unknown"
 
+        # Superuser roles (Owner / Admin / SuperAdmin) hold all permissions
+        if role_name.lower() in {"owner", "admin", "superadmin"}:
+            user_permissions = set(permissions_list) | {"*"}
+        else:
+            user_permissions = set(permissions_list)
+
         required_roles = {"Owner", "Manager", "Accountant"}
         is_2fa_required = role_name in required_roles
         is_2fa_enabled = bool(profile.totp_enabled)
@@ -167,17 +173,21 @@ def get_current_user(
         if not is_2fa_enabled:
             two_fa_verified = True
         else:
-            header_val = request.headers.get("X-2FA-Verified")
+            header_val = request.headers.get("X-2FA-Verified") or request.headers.get("x-2fa-verified")
             cookie_val = request.cookies.get("wareflow_2fa_verified")
             claims_val = claims.get("2fa_verified") or claims.get("is_2fa_verified")
-            if header_val == "true" or cookie_val == "true" or bool(claims_val):
+            if (
+                (header_val and header_val.strip().lower() == "true")
+                or (cookie_val and cookie_val.strip().lower() == "true")
+                or bool(claims_val)
+            ):
                 two_fa_verified = True
 
         return CurrentUser(
             id=profile.id,
             email=profile.email,
             role=role_name,
-            permissions=set(permissions_list),
+            permissions=user_permissions,
             account_type="staff",
             retailer_id=None,
             display_name=profile.display_name,
@@ -256,7 +266,18 @@ def require_permission(permission_code: str):
     def _permission_guard(
         current_user: CurrentUser = Depends(get_current_user),
     ) -> CurrentUser:
-        if current_user.account_type != "staff" or permission_code not in current_user.permissions:
+        if current_user.account_type != "staff":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Staff access only. Retailer accounts cannot access administrative resources.",
+            )
+
+        has_perm = (
+            permission_code in current_user.permissions
+            or "*" in current_user.permissions
+            or current_user.role.lower() in {"owner", "admin", "superadmin"}
+        )
+        if not has_perm:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Missing required permission: {permission_code}",
@@ -277,7 +298,10 @@ def require_role(role_name: str):
     def _role_guard(
         current_user: CurrentUser = Depends(get_current_user),
     ) -> CurrentUser:
-        if current_user.account_type != "staff" or current_user.role != role_name:
+        if current_user.account_type != "staff" or (
+            current_user.role != role_name
+            and current_user.role.lower() not in {"owner", "admin", "superadmin"}
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Requires role: {role_name}",

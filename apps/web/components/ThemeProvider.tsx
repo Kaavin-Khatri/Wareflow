@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useSyncExternalStore } from "react";
 import { AccentId, ACCENT_SWATCHES, ACCENT_LIST, AccentSwatch } from "@/lib/theme-accents";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, getAuthToken } from "@/lib/api-client";
 import { isLowPowerDevice } from "@/lib/device-performance";
 
 type Theme = "light" | "dark" | "system";
@@ -121,6 +121,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [resolvedTheme, currentSwatch]);
 
   const syncBackendPreferences = async (newTheme: Theme, newAccent: AccentId) => {
+    if (!(await getAuthToken())) return;
     try {
       await apiClient.patch("/profiles/preferences", {
         theme_preference: newTheme,

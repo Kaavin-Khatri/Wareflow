@@ -41,6 +41,7 @@ vi.mock("firebase/firestore", () => ({
 
 // Mock API Client
 vi.mock("@/lib/api-client", () => ({
+  getAuthToken: async () => "test_token",
   apiClient: {
     get: vi.fn().mockImplementation((url: string) => {
       if (url === "/me") {

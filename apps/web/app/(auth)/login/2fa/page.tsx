@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { auth } from "@/lib/firebase-client";
+import { setTwoFactorVerified } from "@/lib/api-client";
 
 function TwoFactorChallengeForm() {
   const router = useRouter();
@@ -107,7 +108,8 @@ function TwoFactorChallengeForm() {
         throw new Error(errData.detail || "Invalid verification code. Please try again.");
       }
 
-      // Establish verified session state via server cookie
+      // Establish verified session state in storage and server cookie
+      setTwoFactorVerified(true);
       await fetch("/api/auth/session", { method: "PATCH" });
 
       router.push(from);

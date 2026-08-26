@@ -1,6 +1,8 @@
 """Tests for EAN-13 barcode generation, QR code rendering, and barcode lookup APIs."""
 
 from decimal import Decimal
+from typing import Any
+
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient

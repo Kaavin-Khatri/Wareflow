@@ -10,6 +10,7 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassModal } from "@/components/glass/GlassModal";
 import { GlassBadge } from "@/components/glass/GlassBadge";
+import { GlassSelect } from "@/components/glass/GlassSelect";
 import { apiClient } from "@/lib/api-client";
 
 import {
@@ -149,15 +150,15 @@ export default function SalesOrdersAdminPage() {
   }
 
   useEffect(() => {
-    let ignore = false;
-    async function init() {
-      if (!ignore) {
-        await loadData();
-      }
-    }
-    init();
+    loadData();
+
+    const handle2FAVerified = () => {
+      loadData();
+    };
+
+    window.addEventListener("wareflow:2fa-verified", handle2FAVerified);
     return () => {
-      ignore = true;
+      window.removeEventListener("wareflow:2fa-verified", handle2FAVerified);
     };
   }, []);
 
@@ -675,14 +676,14 @@ export default function SalesOrdersAdminPage() {
                 <label className="block text-xs font-medium text-[var(--text-muted)] mb-1">
                   Buyer Type
                 </label>
-                <select
+                <GlassSelect
                   value={buyerType}
-                  onChange={(e) => setBuyerType(e.target.value as "retailer" | "customer")}
-                  className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
-                >
-                  <option value="retailer">Wholesale Retailer</option>
-                  <option value="customer">Direct Customer</option>
-                </select>
+                  onChange={(val) => setBuyerType(val as "retailer" | "customer")}
+                  options={[
+                    { value: "retailer", label: "Wholesale Retailer" },
+                    { value: "customer", label: "Direct Customer" },
+                  ]}
+                />
               </div>
 
               {buyerType === "retailer" && (
@@ -693,20 +694,16 @@ export default function SalesOrdersAdminPage() {
                   >
                     Select Retailer *
                   </label>
-                  <select
+                  <GlassSelect
                     id="retailer-select"
                     value={selectedRetailerId}
-                    onChange={(e) => setSelectedRetailerId(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
-                  >
-                    <option value="">-- Choose Retailer --</option>
-                    {retailers.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name} ({r.pricing_tier.toUpperCase()} Tier)
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedRetailerId}
+                    placeholder="-- Choose Retailer --"
+                    options={retailers.map((r) => ({
+                      value: r.id,
+                      label: `${r.name} (${r.pricing_tier.toUpperCase()} Tier)`,
+                    }))}
+                  />
                 </div>
               )}
 
@@ -718,19 +715,16 @@ export default function SalesOrdersAdminPage() {
                   >
                     Select Walk-In Customer
                   </label>
-                  <select
+                  <GlassSelect
                     id="customer-select"
                     value={selectedCustomerId}
-                    onChange={(e) => setSelectedCustomerId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
-                  >
-                    <option value="">-- Choose Walk-In Customer (Optional) --</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} {c.phone ? `(${c.phone})` : ""}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedCustomerId}
+                    placeholder="-- Choose Walk-In Customer (Optional) --"
+                    options={customers.map((c) => ({
+                      value: c.id,
+                      label: `${c.name}${c.phone ? ` (${c.phone})` : ""}`,
+                    }))}
+                  />
                 </div>
               )}
             </div>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import AppLayout from "@/components/AppLayout";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, setTwoFactorVerified } from "@/lib/api-client";
 
 interface TwoFactorStatus {
   is_enabled: boolean;
@@ -100,6 +100,8 @@ export default function SecuritySettingsPage() {
       const updatedStatus = await apiClient.post<TwoFactorStatus>("/auth/2fa/verify-enrollment", {
         code: verifyCode.trim(),
       });
+      setTwoFactorVerified(true);
+      await fetch("/api/auth/session", { method: "PATCH" }).catch(() => {});
       setStatus(updatedStatus);
       setIsEnrolling(false);
       setEnrollData(null);
@@ -122,6 +124,8 @@ export default function SecuritySettingsPage() {
       const updatedStatus = await apiClient.post<TwoFactorStatus>("/auth/2fa/disable", {
         code: disableCode.trim(),
       });
+      setTwoFactorVerified(false);
+      await fetch("/api/auth/session", { method: "DELETE" }).catch(() => {});
       setStatus(updatedStatus);
       setIsDisabling(false);
       setDisableCode("");

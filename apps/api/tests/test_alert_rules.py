@@ -1,7 +1,7 @@
 """Unit and integration tests for Step 13.2 Smart Alert Rules & Engine."""
 
 import uuid
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -58,7 +58,7 @@ def test_low_stock_rule_triggers_with_suggested_reorder_qty():
         warehouse_id=wh.id,
         batch_no="B-2026-01",
         quantity=60.0,
-        expiry_date=date.today() + timedelta(days=180),
+        expiry_date=datetime.now(UTC).date() + timedelta(days=180),
     )
     stock_repo = InMemoryStockRepository(warehouses=[wh], products=[prod_data], batches=[batch])
 
@@ -115,7 +115,7 @@ def test_expiring_batch_rule_triggers_within_30_day_window():
     product_repo.create_product(prod_data)
 
     wh = Warehouse(id="wh-1", name="Vashi Cold Storage", is_active=True)
-    exp_date = date.today() + timedelta(days=12)
+    exp_date = datetime.now(UTC).date() + timedelta(days=12)
     batch = StockBatch(
         id="b-exp-1",
         product_id="prod-milk-1",
@@ -226,7 +226,7 @@ def test_24_hour_deduplication_guard_prevents_alert_spam():
         warehouse_id=wh.id,
         batch_no="SUG-2026",
         quantity=150.0,  # Below reorder point 200
-        expiry_date=date.today() + timedelta(days=365),
+        expiry_date=datetime.now(UTC).date() + timedelta(days=365),
     )
     stock_repo = InMemoryStockRepository(warehouses=[wh], products=[prod_data], batches=[batch])
 
@@ -283,7 +283,7 @@ def test_sales_order_confirmation_inline_triggers_low_stock_alert_instantly(mock
         warehouse_id=wh.id,
         batch_no="TEA-LOT-1",
         quantity=150.0,  # Initially above reorder point (150 > 100)
-        expiry_date=date.today() + timedelta(days=200),
+        expiry_date=datetime.now(UTC).date() + timedelta(days=200),
     )
     stock_repo = InMemoryStockRepository(warehouses=[wh], products=[prod_data], batches=[batch])
 

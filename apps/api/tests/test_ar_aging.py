@@ -5,7 +5,6 @@ zero-balance handling, and the GET /analytics/ar-aging endpoint.
 """
 
 from datetime import UTC, date, datetime
-from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient

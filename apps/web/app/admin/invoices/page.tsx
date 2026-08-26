@@ -502,10 +502,16 @@ export default function InvoicesPage() {
     try {
       setScanningOverdue(true);
       setError(null);
-      const res = await apiClient.post<{ transitioned_count: number; message: string }>(
-        "/invoices/detect-overdue?due_days=30",
+      const res = await apiClient.post<{
+        due_window_days: number;
+        scanned_count: number;
+        overdue_count: number;
+        message?: string;
+      }>("/invoices/detect-overdue?due_days=30");
+      setSuccess(
+        res.message ||
+          `Overdue scan complete: ${res.scanned_count ?? 0} invoices analyzed, ${res.overdue_count ?? 0} marked as overdue.`,
       );
-      setSuccess(res.message);
       await fetchInvoices();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to execute overdue scan.");
@@ -633,9 +639,11 @@ export default function InvoicesPage() {
             size="sm"
             onClick={async () => {
               try {
-                await apiClient.downloadBlob(`/invoices/${inv.id}/pdf`, `${inv.invoice_no}.pdf`);
+                const safeName = (inv.invoice_no || `Invoice_${inv.id}`).replace(/[\\/]/g, "_");
+                await apiClient.downloadBlob(`/invoices/${inv.id}/pdf`, `${safeName}.pdf`);
               } catch (err) {
                 console.error("Invoice PDF download failed:", err);
+                setError(err instanceof Error ? err.message : "Failed to download Invoice PDF.");
               }
             }}
             className="text-xs h-7 px-2 border-sky-500/30 text-sky-300 hover:bg-sky-500/20"
@@ -1193,12 +1201,18 @@ export default function InvoicesPage() {
                     size="sm"
                     onClick={async () => {
                       try {
+                        const safeName = (
+                          selectedInvoice.invoice_no || `Invoice_${selectedInvoice.id}`
+                        ).replace(/[\\/]/g, "_");
                         await apiClient.downloadBlob(
                           `/invoices/${selectedInvoice.id}/pdf`,
-                          `${selectedInvoice.invoice_no}.pdf`,
+                          `${safeName}.pdf`,
                         );
                       } catch (err) {
                         console.error("Invoice PDF download failed:", err);
+                        setError(
+                          err instanceof Error ? err.message : "Failed to download Invoice PDF.",
+                        );
                       }
                     }}
                     className="border-sky-500/30 text-sky-300 hover:bg-sky-500/20"

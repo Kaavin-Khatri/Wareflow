@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useId } from "react";
+import React, { useEffect, useId, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { SPRING_PRESETS } from "../motion/MotionProvider";
@@ -32,8 +33,13 @@ export function GlassModal({
   className,
   maxWidth = "lg",
 }: GlassModalProps) {
+  const [mounted, setMounted] = useState(() => typeof window !== "undefined");
   const titleId = useId();
   const descId = useId();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -43,10 +49,25 @@ export function GlassModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
-  return (
+  // Lock background body scroll when modal is active
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          data-testid="glass-modal-portal"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+        >
           {/* Backdrop Blur Layer */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -55,7 +76,7 @@ export function GlassModal({
             transition={{ duration: 0.2 }}
             onClick={onClose}
             aria-hidden="true"
-            className="fixed inset-0 bg-black/60 backdrop-blur-md cursor-pointer"
+            className="fixed inset-0 bg-black/75 backdrop-blur-md cursor-pointer z-0"
           />
 
           {/* Modal Dialog Card with Specular Refraction */}
@@ -69,7 +90,7 @@ export function GlassModal({
             aria-labelledby={titleId}
             aria-describedby={description ? descId : undefined}
             className={cn(
-              "relative w-full rounded-3xl bg-[var(--glass-bg-elevated)] backdrop-blur-2xl border border-[var(--glass-border)] shadow-2xl p-6 space-y-5 overflow-hidden z-10",
+              "relative w-full rounded-3xl bg-[var(--surface-elevated)] backdrop-blur-2xl border border-[var(--glass-border)] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] p-6 space-y-5 my-auto z-10 max-h-[90vh] overflow-y-auto",
               maxWidthMap[maxWidth],
               className,
             )}
@@ -96,7 +117,7 @@ export function GlassModal({
                 type="button"
                 onClick={onClose}
                 aria-label="Close dialog"
-                className="w-7 h-7 rounded-lg glass-button-secondary flex items-center justify-center text-xs text-[var(--text-muted)] hover:text-[var(--text)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none cursor-pointer"
+                className="w-7 h-7 rounded-lg glass-button-secondary flex items-center justify-center text-xs text-[var(--text-muted)] hover:text-[var(--text)] focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:outline-none cursor-pointer transition-colors"
               >
                 ✕
               </button>
@@ -109,4 +130,9 @@ export function GlassModal({
       )}
     </AnimatePresence>
   );
+
+  if (process.env.NODE_ENV !== "test" && typeof document !== "undefined" && document.body) {
+    return createPortal(modalContent, document.body);
+  }
+  return modalContent;
 }

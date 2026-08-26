@@ -1,14 +1,13 @@
 """Unit and Integration Tests for Step 15.3: Excel & PDF Document Export."""
 
+import io
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from unittest.mock import MagicMock
-import io
-import openpyxl
 
-from fastapi.testclient import TestClient
-from reportlab.pdfgen import canvas
+import openpyxl
 import pytest
+from fastapi.testclient import TestClient
 
 from app.core.security import CurrentUser, get_current_user, require_permission
 from app.main import app
@@ -19,7 +18,6 @@ from app.models.retailer import Retailer, SalesOrder, SalesOrderItem, SOStatusEn
 from app.models.supplier import POStatusEnum, PurchaseOrder, PurchaseOrderItem, Supplier
 from app.models.uom import UnitOfMeasure
 from app.services.export_service import ExportService
-from app.services.ar_aging_service import ARAgingService
 
 
 @pytest.fixture

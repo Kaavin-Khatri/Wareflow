@@ -10,6 +10,45 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider, appleProvider } from "@/lib/firebase-client";
 
+/**
+ * Firebase reports a missing/incorrect NEXT_PUBLIC_FIREBASE_API_KEY as
+ * `auth/api-key-not-valid.-please-pass-a-valid-api-key.`, which reads like a bug
+ * to users. Name the actual cause instead.
+ */
+function friendlyAuthMessage(err: AuthError, fallback: string): string {
+  const code = err.code || "";
+  const msg = err.message || "";
+  if (code.includes("api-key-not-valid") || code.includes("invalid-api-key")) {
+    return "Sign-in is unavailable: this deployment is missing a valid Firebase API key (NEXT_PUBLIC_FIREBASE_API_KEY). Contact your administrator.";
+  }
+  if (
+    code.includes("requests-to-this-api") ||
+    code.includes("blocked") ||
+    msg.includes("identitytoolkit")
+  ) {
+    return "Firebase Authentication is blocked on this API key (Identity Toolkit API not enabled on key). Please enable 'Identity Toolkit API' in Google Cloud Console or use the Firebase Web API Key.";
+  }
+  if (code.includes("operation-not-allowed") || msg.includes("operation-not-allowed")) {
+    return "Sign-in with Apple is currently not enabled in your Firebase project. Please enable Apple under Firebase Console > Authentication > Sign-in method, or continue with Google / Email.";
+  }
+  if (code.includes("unauthorized-domain") || msg.includes("unauthorized-domain")) {
+    return "This domain (localhost) is not in the list of authorized domains in Firebase Console > Authentication > Settings > Authorized domains.";
+  }
+  if (code.includes("user-not-found") || code.includes("wrong-password") || code.includes("invalid-credential")) {
+    return "Invalid email or password. Please verify your credentials or create a new account.";
+  }
+  if (code.includes("email-already-in-use")) {
+    return "An account with this email address already exists. Please switch to Sign In.";
+  }
+  if (code.includes("weak-password")) {
+    return "Password is too weak. Please use at least 6 characters.";
+  }
+  if (code.includes("popup-blocked")) {
+    return "The sign-in popup was blocked by your browser. Please allow popups for this site and try again.";
+  }
+  return err.message || fallback;
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -25,12 +64,14 @@ function LoginForm() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const syncSessionAndBootstrap = async (idToken: string): Promise<boolean> => {
+    if (!idToken) return false;
+
     // 1. Establish httpOnly session cookie
     await fetch("/api/auth/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ idToken }),
-    });
+    }).catch(() => {});
 
     // 2. Call backend /profiles/bootstrap to ensure profile row + role exists
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -51,7 +92,6 @@ function LoginForm() {
       if (err instanceof Error && err.message.includes("invitation only")) {
         throw err;
       }
-      console.warn("Backend bootstrap warning:", err);
     }
 
     // 3. Check 2FA status
@@ -65,8 +105,8 @@ function LoginForm() {
           return true;
         }
       }
-    } catch (err) {
-      console.warn("2FA status check warning:", err);
+    } catch {
+      // Quiet 2FA check
     }
 
     return false;
@@ -93,7 +133,10 @@ function LoginForm() {
         setErrorMessage("Only one sign-in window can be open at a time.");
       } else {
         setErrorMessage(
-          authErr.message || "Failed to sign in with Google. Please check your connection.",
+          friendlyAuthMessage(
+            authErr,
+            "Failed to sign in with Google. Please check your connection.",
+          ),
         );
       }
     } finally {
@@ -122,7 +165,10 @@ function LoginForm() {
         setErrorMessage("Only one sign-in window can be open at a time.");
       } else {
         setErrorMessage(
-          authErr.message || "Failed to sign in with Apple. Please check your connection.",
+          friendlyAuthMessage(
+            authErr,
+            "Failed to sign in with Apple. Please check your connection.",
+          ),
         );
       }
     } finally {
@@ -174,7 +220,7 @@ function LoginForm() {
           setErrorMessage("Please provide a valid email address.");
           break;
         default:
-          setErrorMessage(authErr.message || "Authentication failed. Please try again.");
+          setErrorMessage(friendlyAuthMessage(authErr, "Authentication failed. Please try again."));
       }
     } finally {
       setIsLoading(false);

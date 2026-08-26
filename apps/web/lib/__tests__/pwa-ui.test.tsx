@@ -22,6 +22,7 @@ vi.mock("@/lib/firebase-client", () => ({
 
 // Mock apiClient
 vi.mock("@/lib/api-client", () => ({
+  getAuthToken: async () => "test_token",
   apiClient: {
     get: vi.fn().mockResolvedValue({}),
     patch: vi.fn().mockResolvedValue({}),

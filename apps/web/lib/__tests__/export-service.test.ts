@@ -26,7 +26,10 @@ describe("apiClient.downloadBlob (Excel / PDF Document Export)", () => {
 
     await apiClient.downloadBlob("/purchase-orders/po-1/pdf", "PO-2026-0001.pdf");
 
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining("/purchase-orders/po-1/pdf"));
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/purchase-orders/po-1/pdf"),
+      expect.anything(),
+    );
     expect(window.URL.createObjectURL).toHaveBeenCalledWith(mockBlob);
     expect(appendChildSpy).toHaveBeenCalled();
     expect(removeChildSpy).toHaveBeenCalled();
@@ -47,7 +50,10 @@ describe("apiClient.downloadBlob (Excel / PDF Document Export)", () => {
 
     await apiClient.downloadBlob("/stock/overview.xlsx", "Stock_Overview.xlsx");
 
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining("/stock/overview.xlsx"));
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/stock/overview.xlsx"),
+      expect.anything(),
+    );
     expect(window.URL.createObjectURL).toHaveBeenCalledWith(mockBlob);
     expect(window.URL.revokeObjectURL).toHaveBeenCalledWith("blob:mock-url-123");
   });
@@ -66,7 +72,10 @@ describe("apiClient.downloadBlob (Excel / PDF Document Export)", () => {
 
     await apiClient.downloadBlob("/analytics/ar-aging.xlsx", "Wareflow_AR_Aging_Report_today.xlsx");
 
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining("/analytics/ar-aging.xlsx"));
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/analytics/ar-aging.xlsx"),
+      expect.anything(),
+    );
     expect(window.URL.createObjectURL).toHaveBeenCalledWith(mockBlob);
   });
 

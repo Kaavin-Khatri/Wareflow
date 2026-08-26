@@ -14,18 +14,23 @@ describe("Dynamic Navigation & RBAC Filtering", () => {
     const warehousePerms = ["inventory:view", "orders:view"];
     const visible = filterNavSections(NAVIGATION_SECTIONS, warehousePerms, "Warehouse Staff");
 
-    // Organization & Admin section should be completely omitted because no admin perms are held
+    // Organization & Admin section and Finance & Billing section should be omitted
     const sectionTitles = visible.map((s) => s.title);
     expect(sectionTitles).toContain("Overview");
-    expect(sectionTitles).toContain("Wholesale Operations");
+    expect(sectionTitles).toContain("Inventory & Catalog");
+    expect(sectionTitles).toContain("Sales & CRM");
     expect(sectionTitles).not.toContain("Organization & Admin");
+    expect(sectionTitles).not.toContain("Finance & Billing");
 
-    // Inside Wholesale Operations, GST Invoices (invoices:view) should not appear
-    const opsSection = visible.find((s) => s.title === "Wholesale Operations");
-    const itemNames = opsSection?.items.map((i) => i.name);
-    expect(itemNames).toContain("Inventory & Stock");
-    expect(itemNames).toContain("Orders & Dispatch");
-    expect(itemNames).not.toContain("GST Invoices");
+    // Inside Inventory & Catalog, Inventory & Stock appears
+    const invSection = visible.find((s) => s.title === "Inventory & Catalog");
+    const invItems = invSection?.items.map((i) => i.name);
+    expect(invItems).toContain("Inventory & Stock");
+
+    // Inside Sales & CRM, Orders & Dispatch appears
+    const salesSection = visible.find((s) => s.title === "Sales & CRM");
+    const salesItems = salesSection?.items.map((i) => i.name);
+    expect(salesItems).toContain("Orders & Dispatch");
   });
 
   it("User with zero permissions only sees the public Dashboard", () => {

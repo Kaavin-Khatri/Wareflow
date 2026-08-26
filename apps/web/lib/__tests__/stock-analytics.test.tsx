@@ -15,6 +15,7 @@ vi.mock("next/navigation", () => ({
 
 // Mock apiClient
 vi.mock("@/lib/api-client", () => ({
+  getAuthToken: async () => "test_token",
   apiClient: {
     get: vi.fn(),
   },

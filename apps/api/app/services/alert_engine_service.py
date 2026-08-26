@@ -1,5 +1,4 @@
-"""Smart Alert Rule Engine and Compliance Monitoring Service (Step 7.4 & Step 13.2)."""
-
+import contextlib
 import logging
 from datetime import date
 from typing import Any, Protocol, runtime_checkable
@@ -279,6 +278,21 @@ class AlertEngineService:
             notification_service=self.notification_service,
         )
 
+    def _rollback_session(self) -> None:
+        """Rollback active DB session if an evaluation error occurs to prevent transaction abort states."""
+        for repo in [
+            self.product_repo,
+            self.stock_repo,
+            self.invoice_repo,
+            self.retailer_repo,
+            self._supplier_repo,
+            self.alert_log_repo,
+            self.stock_subscription_repo,
+        ]:
+            if repo and hasattr(repo, "_session"):
+                with contextlib.suppress(Exception):
+                    repo._session.rollback()
+
     def evaluate_all(self, reference_date: date | None = None) -> list[Any]:
         """
         Execute all registered alert rules and aggregate results.
@@ -300,6 +314,7 @@ class AlertEngineService:
                     all_alerts.extend(results)
             except Exception as exc:
                 logger.error("Error evaluating alert rule %s: %s", getattr(rule, "rule_name", rule), exc)
+                self._rollback_session()
 
         return all_alerts
 
@@ -317,6 +332,7 @@ class AlertEngineService:
                         fired_alerts.append(res)
             except Exception as exc:
                 logger.error("Error evaluating inline stock rule for product %s: %s", product_id, exc)
+                self._rollback_session()
 
         return fired_alerts
 

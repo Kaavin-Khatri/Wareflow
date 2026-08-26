@@ -6,6 +6,7 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassBadge } from "@/components/glass/GlassBadge";
 import { GlassModal } from "@/components/glass/GlassModal";
+import { GlassSelect } from "@/components/glass/GlassSelect";
 import { apiClient } from "@/lib/api-client";
 import {
   Truck,
@@ -355,18 +356,15 @@ export default function DeliveriesPage() {
             />
           </div>
 
-          <select
+          <GlassSelect
             value={driverFilter}
-            onChange={(e) => setDriverFilter(e.target.value)}
-            className="w-full sm:w-56 px-3 py-2 rounded-xl bg-slate-900 border border-white/10 text-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-          >
-            <option value="">All Drivers</option>
-            {driverOptions.map((d) => (
-              <option key={d} value={d}>
-                Driver: {d}
-              </option>
-            ))}
-          </select>
+            onChange={setDriverFilter}
+            options={[
+              { value: "", label: "All Drivers" },
+              ...driverOptions.map((d) => ({ value: d, label: `Driver: ${d}` })),
+            ]}
+            className="w-full sm:w-56"
+          />
         </div>
 
         {/* Kanban Board Columns */}
@@ -521,21 +519,16 @@ export default function DeliveriesPage() {
               >
                 Select Packed Sales Order *
               </label>
-              <select
+              <GlassSelect
                 id="so-select"
                 value={selectedOrderId}
-                onChange={(e) => setSelectedOrderId(e.target.value)}
-                required
-                className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-white text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-              >
-                <option value="">-- Choose Packed Sales Order --</option>
-                {packedOrders.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.so_number} - {o.buyer_name || o.retailer_name || "Buyer"} (₹
-                    {o.total_amount?.toLocaleString("en-IN")})
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedOrderId}
+                placeholder="-- Choose Packed Sales Order --"
+                options={packedOrders.map((o) => ({
+                  value: o.id,
+                  label: `${o.so_number} - ${o.buyer_name || o.retailer_name || "Buyer"} (₹${o.total_amount?.toLocaleString("en-IN")})`,
+                }))}
+              />
               {packedOrders.length === 0 && (
                 <p className="text-[11px] text-amber-400 mt-1">
                   No orders currently in &quot;packed&quot; status. Pack an order in Orders &

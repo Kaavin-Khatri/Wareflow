@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AppLayout from "../../../../components/AppLayout";
+import { GlassSelect } from "../../../../components/glass/GlassSelect";
 import { apiClient } from "../../../../lib/api-client";
 
 interface RoleSummary {
@@ -214,17 +215,12 @@ export default function StaffSettingsPage() {
               <label className="block text-xs font-medium text-zinc-300 mb-1.5">
                 Role Assignment *
               </label>
-              <select
+              <GlassSelect
                 value={selectedRoleId}
-                onChange={(e) => setSelectedRoleId(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-sm text-white focus:outline-none focus:border-indigo-500"
-              >
-                {roles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedRoleId}
+                placeholder="Select a role..."
+                options={roles.map((r) => ({ value: r.id, label: r.name }))}
+              />
             </div>
 
             <div>
@@ -289,17 +285,12 @@ export default function StaffSettingsPage() {
                       </td>
 
                       <td className="py-4 px-6">
-                        <select
+                        <GlassSelect
                           value={member.role_id}
-                          onChange={(e) => handleRoleChange(member.id, e.target.value)}
-                          className="px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs font-medium text-zinc-200 focus:outline-none focus:border-indigo-500"
-                        >
-                          {roles.map((r) => (
-                            <option key={r.id} value={r.id}>
-                              {r.name}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(val) => handleRoleChange(member.id, val)}
+                          options={roles.map((r) => ({ value: r.id, label: r.name }))}
+                          className="min-w-[140px]"
+                        />
                       </td>
 
                       <td className="py-4 px-6">

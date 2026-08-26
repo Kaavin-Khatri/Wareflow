@@ -19,6 +19,15 @@ class StockRepositoryInterface(Protocol):
         """Retrieve active stock batches for a product, ordered by FIFO (expiry/received date)."""
         ...
 
+    def list_all_batches(
+        self,
+        product_id: str | None = None,
+        warehouse_id: str | None = None,
+        min_quantity: float = 0.0,
+    ) -> list[StockBatch]:
+        """Retrieve active stock batches with quantity > min_quantity across products and warehouses."""
+        ...
+
     def get_batches_expiring_soon(
         self, days: int = 30, warehouse_id: str | None = None
     ) -> list[StockBatch]:

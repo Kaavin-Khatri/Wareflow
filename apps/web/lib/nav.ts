@@ -31,7 +31,7 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
     ],
   },
   {
-    title: "Wholesale Operations",
+    title: "Inventory & Catalog",
     items: [
       {
         name: "Product Catalog",
@@ -75,14 +75,34 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         icon: "ShieldAlert",
         requiredPermission: "inventory:manage",
       },
-
+    ],
+  },
+  {
+    title: "Purchasing & Inward",
+    items: [
       {
         name: "Suppliers & Vendors",
-
         href: "/admin/suppliers",
         icon: "Truck",
         requiredPermission: "inventory:view",
       },
+      {
+        name: "Purchase Orders",
+        href: "/admin/purchase-orders",
+        icon: "FileSpreadsheet",
+        requiredPermission: "inventory:view",
+      },
+      {
+        name: "Supplier Returns",
+        href: "/admin/purchase-returns",
+        icon: "Undo2",
+        requiredPermission: "inventory:view",
+      },
+    ],
+  },
+  {
+    title: "Sales & CRM",
+    items: [
       {
         name: "Retailers & B2B",
         href: "/admin/retailers",
@@ -96,68 +116,22 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         requiredPermission: "inventory:view",
       },
       {
-        name: "Lead Discovery Map",
-        href: "/admin/leads/map",
-        icon: "MapPin",
-        requiredPermission: "inventory:view",
-      },
-      {
-        name: "Purchase Orders",
-
-        href: "/admin/purchase-orders",
-        icon: "FileSpreadsheet",
-        requiredPermission: "inventory:view",
-      },
-      {
-        name: "Supplier Returns",
-        href: "/admin/purchase-returns",
-        icon: "Undo2",
-        requiredPermission: "inventory:view",
-      },
-
-      {
-        name: "Stock Analytics",
-        href: "/admin/analytics/stock",
-        icon: "BarChart3",
-        requiredPermission: "inventory:view",
-      },
-      {
-        name: "Profitability",
-        href: "/admin/analytics/profitability",
-        icon: "TrendingUp",
-        requiredPermission: "inventory:view",
-      },
-      {
-        name: "Inventory Turnover",
-        href: "/admin/analytics/turnover",
-        icon: "Activity",
-        requiredPermission: "inventory:view",
-      },
-      {
         name: "Orders & Dispatch",
         href: "/admin/sales-orders",
         icon: "ShoppingBag",
         requiredPermission: "inventory:view",
       },
-
-      {
-        name: "GST Invoices",
-        href: "/admin/invoices",
-        icon: "ReceiptText",
-        requiredPermission: "invoices:view",
-      },
-      {
-        name: "AR Aging Report",
-        href: "/admin/analytics/ar-aging",
-        icon: "Clock",
-        requiredPermission: "invoices:view",
-      },
-
       {
         name: "Returns & RMA",
         href: "/admin/sales-returns",
         icon: "RotateCcw",
         requiredPermission: "orders:view",
+      },
+      {
+        name: "Lead Discovery Map",
+        href: "/admin/leads/map",
+        icon: "MapPin",
+        requiredPermission: "inventory:view",
       },
       {
         name: "Product Inquiries",
@@ -174,10 +148,27 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: "Finance & Billing",
+    items: [
+      {
+        name: "GST Invoices",
+        href: "/admin/invoices",
+        icon: "ReceiptText",
+        requiredPermission: "invoices:view",
+      },
+      {
+        name: "AR Aging Report",
+        href: "/admin/analytics/ar-aging",
+        icon: "Clock",
+        requiredPermission: "invoices:view",
+      },
+    ],
+  },
+  {
     title: "Analytics & Intelligence",
     items: [
       {
-        name: "Stock Valuation",
+        name: "Stock Analytics",
         href: "/admin/analytics/stock",
         icon: "BarChart3",
         requiredPermission: "inventory:view",
@@ -193,12 +184,6 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         href: "/admin/analytics/turnover",
         icon: "Activity",
         requiredPermission: "inventory:view",
-      },
-      {
-        name: "AR Aging Report",
-        href: "/admin/analytics/ar-aging",
-        icon: "Clock",
-        requiredPermission: "invoices:view",
       },
       {
         name: "Supplier Reliability",
@@ -259,7 +244,6 @@ export const NAVIGATION_SECTIONS: NavSection[] = [
         icon: "Sparkles",
         requiredPermission: "settings:manage",
       },
-
       {
         name: "Business Settings",
         href: "/admin/settings/business",

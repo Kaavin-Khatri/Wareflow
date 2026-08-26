@@ -20,6 +20,25 @@ async def test_health_endpoint():
 
 
 @pytest.mark.asyncio
+async def test_root_endpoint():
+    """Verify / root endpoint returns API overview and health status."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert data["docs"] == "/docs"
+
+
+@pytest.mark.asyncio
+async def test_favicon_endpoint():
+    """Verify /favicon.ico returns 204 No Content."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/favicon.ico")
+        assert response.status_code == 204
+
+
+@pytest.mark.asyncio
 async def test_db_health_endpoint():
     """Verify /health/db executes SELECT 1 and returns connected."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -36,7 +55,7 @@ def test_dip_swappable_repository_zero_service_change():
     """
 
     # Custom mock implementation
-    class MockCustomRepository(ProductRepositoryInterface):
+    class MockCustomRepository(InMemoryProductRepository):
         def get_by_id(self, product_id: str) -> dict[str, str] | None:
             return {"id": product_id, "name": "Mock Widget", "price": "19.99"}
 

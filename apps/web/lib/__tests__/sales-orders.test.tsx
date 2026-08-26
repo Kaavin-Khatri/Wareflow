@@ -121,6 +121,7 @@ const mockProducts = [
 ];
 
 vi.mock("@/lib/api-client", () => ({
+  getAuthToken: async () => "test_token",
   apiClient: {
     get: vi.fn().mockImplementation((url: string) => {
       if (url === "/sales-orders") return Promise.resolve(mockSalesOrders);

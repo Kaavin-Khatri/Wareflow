@@ -5,6 +5,7 @@ import Link from "next/link";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassBadge } from "@/components/glass/GlassBadge";
+import { GlassSelect } from "@/components/glass/GlassSelect";
 import { DataTable, DataTableColumn } from "@/components/DataTable";
 import { apiClient } from "@/lib/api-client";
 import {
@@ -474,20 +475,16 @@ export default function StockTransferPage() {
                       <span>Scan Barcode</span>
                     </button>
                   </div>
-                  <select
+                  <GlassSelect
                     id="trf-product"
                     value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
-                  >
-                    <option value="">-- Choose Product --</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.sku})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setSelectedProductId}
+                    placeholder="-- Choose Product --"
+                    options={products.map((p) => ({
+                      value: p.id,
+                      label: `${p.name} (${p.sku})`,
+                    }))}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -499,20 +496,16 @@ export default function StockTransferPage() {
                     >
                       Source Warehouse (Dispatch) *
                     </label>
-                    <select
+                    <GlassSelect
                       id="trf-from-wh"
                       value={selectedFromWhId}
-                      onChange={(e) => setSelectedFromWhId(e.target.value)}
-                      required
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
-                    >
-                      <option value="">-- Source Warehouse --</option>
-                      {warehouses.map((w) => (
-                        <option key={w.id} value={w.id}>
-                          {w.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setSelectedFromWhId}
+                      placeholder="-- Source Warehouse --"
+                      options={warehouses.map((w) => ({
+                        value: w.id,
+                        label: w.name,
+                      }))}
+                    />
                   </div>
 
                   {/* Destination Warehouse */}
@@ -523,22 +516,18 @@ export default function StockTransferPage() {
                     >
                       Destination Warehouse (Receive) *
                     </label>
-                    <select
+                    <GlassSelect
                       id="trf-to-wh"
                       value={selectedToWhId}
-                      onChange={(e) => setSelectedToWhId(e.target.value)}
-                      required
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
-                    >
-                      <option value="">-- Destination Warehouse --</option>
-                      {warehouses
+                      onChange={setSelectedToWhId}
+                      placeholder="-- Destination Warehouse --"
+                      options={warehouses
                         .filter((w) => w.id !== selectedFromWhId)
-                        .map((w) => (
-                          <option key={w.id} value={w.id}>
-                            {w.name}
-                          </option>
-                        ))}
-                    </select>
+                        .map((w) => ({
+                          value: w.id,
+                          label: w.name,
+                        }))}
+                    />
                   </div>
                 </div>
 
@@ -550,31 +539,25 @@ export default function StockTransferPage() {
                   >
                     Source Stock Batch *
                   </label>
-                  <select
+                  <GlassSelect
                     id="trf-batch"
                     value={selectedBatchId}
-                    onChange={(e) => setSelectedBatchId(e.target.value)}
-                    required
+                    onChange={setSelectedBatchId}
                     disabled={sourceBatches.length === 0}
-                    className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500 disabled:opacity-50"
-                  >
-                    {sourceBatches.length === 0 ? (
-                      <option value="">
-                        {selectedProductId
+                    placeholder={
+                      sourceBatches.length === 0
+                        ? selectedProductId
                           ? "No active batches in source warehouse"
-                          : "Select product and warehouse first"}
-                      </option>
-                    ) : (
-                      sourceBatches.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          Batch: {b.batch_no} — Available: {Number(b.quantity).toFixed(2)} units{" "}
-                          {b.expiry_date
-                            ? `(Exp: ${new Date(b.expiry_date).toLocaleDateString()})`
-                            : ""}
-                        </option>
-                      ))
-                    )}
-                  </select>
+                          : "Select product and warehouse first"
+                        : "-- Select Stock Batch --"
+                    }
+                    options={sourceBatches.map((b) => ({
+                      value: b.id,
+                      label: `Batch: ${b.batch_no} — Available: ${Number(b.quantity).toFixed(2)} units ${
+                        b.expiry_date ? `(Exp: ${new Date(b.expiry_date).toLocaleDateString()})` : ""
+                      }`,
+                    }))}
+                  />
                 </div>
               </GlassCard>
 

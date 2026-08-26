@@ -1,5 +1,6 @@
 """SQLAlchemy ORM models package."""
 
+from app.db.base import Base
 from app.models.audit_and_settings import AdminAuditLog, BusinessSettings
 from app.models.auth_rbac import Permission, Role, RolePermission
 from app.models.billing import Invoice, InvoiceItem, InvoiceStatusEnum, Payment, PaymentMethodEnum
@@ -41,6 +42,7 @@ from app.models.uom import ProductUOMConversion, UnitOfMeasure
 from app.models.warehouse import StockBatch, Warehouse
 
 __all__ = [
+    "Base",
     # Auth & Profiles
     "Profile",
     # Catalog & UOM

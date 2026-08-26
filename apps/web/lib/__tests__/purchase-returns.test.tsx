@@ -26,6 +26,7 @@ vi.mock("@/components/AppLayout", () => ({
 
 // Mock apiClient
 vi.mock("@/lib/api-client", () => ({
+  getAuthToken: async () => "test_token",
   apiClient: {
     get: vi.fn(),
     post: vi.fn(),
@@ -270,4 +271,38 @@ describe("PurchaseReturnsPage Frontend Component (Step 7.3)", () => {
       );
     });
   });
+
+  it("should display 2FA challenge banner when 2FA error occurs and auto-reload on 2FA verified event", async () => {
+    vi.mocked(apiClient.get).mockImplementationOnce((path: string) => {
+      if (path.startsWith("/purchase-returns")) {
+        return Promise.reject(new Error("Two-factor authentication required for sensitive operations."));
+      }
+      return Promise.resolve([]);
+    });
+
+    renderComponent();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Two-factor authentication required/i)).toBeDefined();
+      expect(screen.getByText("Verify 2FA Now")).toBeDefined();
+    });
+
+    // Reset mock to return valid data upon re-fetch
+    vi.mocked(apiClient.get).mockImplementation((path: string) => {
+      if (path.startsWith("/purchase-returns")) return Promise.resolve(mockReturns);
+      if (path.startsWith("/purchase-orders")) return Promise.resolve(mockPurchaseOrders);
+      if (path.startsWith("/stock/batches")) return Promise.resolve(mockBatches);
+      if (path.startsWith("/suppliers")) return Promise.resolve(mockSuppliers);
+      return Promise.resolve([]);
+    });
+
+    // Dispatch 2fa verified event
+    window.dispatchEvent(new CustomEvent("wareflow:2fa-verified"));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Two-factor authentication required/i)).toBeNull();
+      expect(screen.getAllByText("PO-202608-0001").length).toBeGreaterThanOrEqual(1);
+    });
+  });
 });
+

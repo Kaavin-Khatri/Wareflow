@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="WareFlow">
+  <defs>
+    <linearGradient id="wf" x1="0" y1="512" x2="512" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#10b981"/>
+      <stop offset="1" stop-color="#2dd4bf"/>
+    </linearGradient>
+  </defs>
+  <!-- Full-bleed for `purpose: maskable` — glyph kept inside the 80% safe zone -->
+  <rect width="512" height="512" fill="url(#wf)"/>
+  <path d="M168 200 L210 320 L256 248 L302 320 L344 200" fill="none" stroke="#020617"
+        stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

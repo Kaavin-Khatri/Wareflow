@@ -5,6 +5,7 @@ import Link from "next/link";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassBadge } from "@/components/glass/GlassBadge";
+import { GlassSelect } from "@/components/glass/GlassSelect";
 import { DataTable, DataTableColumn } from "@/components/DataTable";
 import { apiClient } from "@/lib/api-client";
 import {
@@ -676,28 +677,30 @@ export default function BatchRecallsPage() {
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
             {/* Status Filter */}
-            <select
+            <GlassSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none"
-            >
-              <option value="all">All Statuses</option>
-              <option value="initiated">Initiated</option>
-              <option value="notifying">Notifying</option>
-              <option value="resolved">Resolved</option>
-            </select>
+              onChange={setStatusFilter}
+              options={[
+                { value: "all", label: "All Statuses" },
+                { value: "initiated", label: "Initiated" },
+                { value: "notifying", label: "Notifying" },
+                { value: "resolved", label: "Resolved" },
+              ]}
+              className="w-36"
+            />
 
             {/* Severity Filter */}
-            <select
+            <GlassSelect
               value={severityFilter}
-              onChange={(e) => setSeverityFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none"
-            >
-              <option value="all">All Severities</option>
-              <option value="critical">Critical</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
+              onChange={setSeverityFilter}
+              options={[
+                { value: "all", label: "All Severities" },
+                { value: "critical", label: "Critical" },
+                { value: "medium", label: "Medium" },
+                { value: "low", label: "Low" },
+              ]}
+              className="w-36"
+            />
           </div>
         </GlassCard>
 
@@ -740,20 +743,16 @@ export default function BatchRecallsPage() {
                     >
                       Product to Recall *
                     </label>
-                    <select
+                    <GlassSelect
                       id="recall-prod"
                       value={selectedProductId}
-                      onChange={(e) => setSelectedProductId(e.target.value)}
-                      required
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
-                    >
-                      <option value="">-- Select Product --</option>
-                      {products.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} ({p.sku})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setSelectedProductId}
+                      placeholder="-- Select Product --"
+                      options={products.map((p) => ({
+                        value: p.id,
+                        label: `${p.name} (${p.sku})`,
+                      }))}
+                    />
                   </div>
 
                   {/* Batch Picker */}
@@ -764,26 +763,23 @@ export default function BatchRecallsPage() {
                     >
                       Defective Stock Batch *
                     </label>
-                    <select
+                    <GlassSelect
                       id="recall-batch"
                       value={selectedBatchId}
-                      onChange={(e) => setSelectedBatchId(e.target.value)}
-                      required
+                      onChange={setSelectedBatchId}
                       disabled={batches.length === 0}
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500 disabled:opacity-50"
-                    >
-                      {batches.length === 0 ? (
-                        <option value="">
-                          {selectedProductId ? "No active batches found" : "Select product first"}
-                        </option>
-                      ) : (
-                        batches.map((b) => (
-                          <option key={b.id} value={b.id}>
-                            Batch {b.batch_no} — On Hand: {Number(b.quantity).toFixed(2)} units
-                          </option>
-                        ))
-                      )}
-                    </select>
+                      placeholder={
+                        batches.length === 0
+                          ? selectedProductId
+                            ? "No active batches found"
+                            : "Select product first"
+                          : "-- Choose Stock Batch --"
+                      }
+                      options={batches.map((b) => ({
+                        value: b.id,
+                        label: `Batch ${b.batch_no} — On Hand: ${Number(b.quantity).toFixed(2)} units`,
+                      }))}
+                    />
                   </div>
 
                   {/* Severity */}
@@ -794,18 +790,25 @@ export default function BatchRecallsPage() {
                     >
                       Recall Severity Classification *
                     </label>
-                    <select
+                    <GlassSelect
                       id="recall-severity"
                       value={severity}
-                      onChange={(e) => setSeverity(e.target.value as "low" | "medium" | "critical")}
-                      className="w-full px-3 py-2 rounded-xl bg-[var(--surface)] border border-[var(--glass-border)] text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
-                    >
-                      <option value="critical">
-                        Critical — Immediate Safety Hazard / Contamination
-                      </option>
-                      <option value="medium">Medium — Quality / Packaging Defect</option>
-                      <option value="low">Low — Minor Labeling / Spec Deviation</option>
-                    </select>
+                      onChange={(val) => setSeverity(val as "low" | "medium" | "critical")}
+                      options={[
+                        {
+                          value: "critical",
+                          label: "Critical — Immediate Safety Hazard / Contamination",
+                        },
+                        {
+                          value: "medium",
+                          label: "Medium — Quality / Packaging Defect",
+                        },
+                        {
+                          value: "low",
+                          label: "Low — Minor Labeling / Spec Deviation",
+                        },
+                      ]}
+                    />
                   </div>
 
                   {/* Reason Textarea */}

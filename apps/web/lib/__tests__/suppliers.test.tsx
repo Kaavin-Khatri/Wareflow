@@ -25,6 +25,7 @@ vi.mock("@/components/AppLayout", () => ({
 
 // Mock apiClient
 vi.mock("@/lib/api-client", () => ({
+  getAuthToken: async () => "test_token",
   apiClient: {
     get: vi.fn(),
     post: vi.fn(),

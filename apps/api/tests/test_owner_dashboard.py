@@ -1,20 +1,15 @@
 """Unit and integration tests for Step 15.1: Owner Analytics Dashboard (KPIs + Charts)."""
 
 from datetime import UTC, date, datetime, timedelta
-import uuid
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.core.di import get_owner_dashboard_service
 from app.main import app
-from app.models.auth_rbac import Role
-from app.models.billing import Invoice, InvoiceItem, InvoiceStatusEnum, Payment, PaymentMethodEnum
-from app.models.catalog import Product
-from app.models.profile import Profile
-from app.models.retailer import Retailer, SalesOrder, SalesOrderItem, SOStatusEnum
-from app.models.supplier import POStatusEnum, PurchaseOrder, Supplier
-from app.models.warehouse import StockBatch, Warehouse
+from app.models.billing import Invoice, InvoiceStatusEnum, Payment, PaymentMethodEnum
+from app.models.retailer import SalesOrder, SalesOrderItem, SOStatusEnum
+from app.models.supplier import POStatusEnum
 from app.repositories.impl.forecast_repository import InMemoryForecastRepository
 from app.repositories.impl.invoice_repository import InMemoryInvoiceRepository
 from app.repositories.impl.product_repository import InMemoryProductRepository
@@ -23,7 +18,6 @@ from app.repositories.impl.sales_order_repository import InMemorySalesOrderRepos
 from app.repositories.impl.stock_repository import InMemoryStockRepository
 from app.repositories.impl.supplier_repository import InMemorySupplierRepository
 from app.services.dead_stock_service import DeadStockService
-from app.services.forecasting.exponential_smoothing import ExponentialSmoothingForecast
 from app.services.forecasting.moving_average import MovingAverageForecast
 from app.services.forecasting_service import ForecastingService
 from app.services.insight_narrator import InsightNarratorService
@@ -137,7 +131,7 @@ def test_owner_dashboard_kpis_and_aggregations(mock_owner_env):
     service: OwnerDashboardService = env["dashboard_service"]
 
     # 1. Add Supplier & Products
-    supp = supplier_repo.create_supplier(
+    supplier_repo.create_supplier(
         {
             "id": "supp-1",
             "name": "Agro Prime Commodities Ltd",

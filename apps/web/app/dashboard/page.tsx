@@ -24,7 +24,7 @@ import {
 } from "@/components/glass";
 import { AnimatedNumber } from "@/components/motion/AnimatedNumber";
 import { EmptyState } from "@/components/EmptyState";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, getAuthToken } from "@/lib/api-client";
 import {
   TrendingUp,
   Truck,
@@ -243,11 +243,24 @@ export default function DashboardPage() {
 
   async function fetchDashboard() {
     setLoadingDashboard(true);
+    const token = await getAuthToken();
+    if (!token) {
+      setDashboard({
+        kpi_metrics: DEFAULT_KPIS,
+        top_fastest_moving: [],
+        top_dead_stock: [],
+        movement_trend_30d: [],
+        low_stock_quick_list: [],
+        overdue_invoices_quick_list: [],
+        is_empty_state: true,
+      });
+      setLoadingDashboard(false);
+      return;
+    }
     try {
       const data = await apiClient.get<OwnerDashboardResponse>("/analytics/dashboard");
       setDashboard(data);
-    } catch (err) {
-      console.warn("Owner dashboard API unavailable:", err);
+    } catch {
       setDashboard({
         kpi_metrics: DEFAULT_KPIS,
         top_fastest_moving: [],
@@ -263,6 +276,11 @@ export default function DashboardPage() {
   }
 
   async function fetchWeeklyInsight(forceRefresh = false) {
+    const token = await getAuthToken();
+    if (!token) {
+      setLoadingInsight(false);
+      return;
+    }
     setLoadingInsight(true);
     try {
       const url = forceRefresh
@@ -270,8 +288,8 @@ export default function DashboardPage() {
         : "/analytics/weekly-insight";
       const data = await apiClient.get<WeeklyInsight>(url);
       setInsight(data);
-    } catch (err) {
-      console.warn("Weekly insight unavailable or API unconfigured:", err);
+    } catch {
+      // Quiet fallback when unconfigured or unauthenticated
     } finally {
       setLoadingInsight(false);
     }
