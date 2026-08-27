@@ -183,7 +183,7 @@ export default function StaffSettingsPage() {
         )}
 
         {/* Invite Form Card */}
-        <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-sm">
+        <div className="p-6 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 backdrop-blur-sm relative z-30">
           <h2 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
             <span>➕</span> Invite New Staff Member
           </h2>
@@ -236,7 +236,7 @@ export default function StaffSettingsPage() {
         </div>
 
         {/* Staff Table */}
-        <div className="rounded-2xl bg-zinc-900/60 border border-zinc-800/80 overflow-hidden backdrop-blur-sm">
+        <div className="rounded-2xl bg-zinc-900/60 border border-zinc-800/80 overflow-visible backdrop-blur-sm relative z-10">
           <div className="p-5 border-b border-zinc-800/80 flex items-center justify-between">
             <h2 className="text-base font-semibold text-white">Active Team ({staff.length})</h2>
             <button

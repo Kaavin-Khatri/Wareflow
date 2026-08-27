@@ -171,6 +171,9 @@ describe("Retailer Accounts-Receivable Ledger UI", () => {
       expect(screen.getByText(/Payment Amount/i)).toBeDefined();
     });
 
+    // Select invoice
+    fireEvent.change(screen.getAllByRole("combobox")[0], { target: { value: "inv-2" } });
+
     // Submit form
     fireEvent.click(screen.getByRole("button", { name: /Record & Post Payment/i }));
 

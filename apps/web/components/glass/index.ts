@@ -7,3 +7,4 @@ export * from "./GlassInput";
 export * from "./GlassBadge";
 export * from "./GlassTiltCard";
 export * from "./GlassSelect";
+export * from "./GlassDatePicker";

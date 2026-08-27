@@ -6,15 +6,17 @@ import { cn } from "@/lib/utils";
 export interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
   hoverable?: boolean;
   glow?: boolean;
+  overflowVisible?: boolean;
 }
 
 export const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
-  ({ className, hoverable = false, glow = false, children, ...props }, ref) => {
+  ({ className, hoverable = false, glow = false, overflowVisible = false, children, ...props }, ref) => {
     return (
       <div
         ref={ref}
         className={cn(
-          "relative rounded-3xl bg-[var(--glass-bg)] backdrop-blur-xl border border-[var(--glass-border)] shadow-[var(--glass-shadow)] transition-all duration-300 overflow-hidden",
+          "relative rounded-3xl bg-[var(--glass-bg)] backdrop-blur-xl border border-[var(--glass-border)] shadow-[var(--glass-shadow)] transition-all duration-300",
+          overflowVisible ? "overflow-visible" : "overflow-hidden",
           hoverable &&
             "hover:border-[var(--border-strong)] hover:shadow-xl hover:-translate-y-0.5 group",
           glow && "shadow-[0_0_30px_-8px_var(--accent-glow)] border-[var(--accent-border)]",

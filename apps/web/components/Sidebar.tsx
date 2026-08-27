@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import { apiClient, getAuthToken } from "@/lib/api-client";
+import { apiClient, getAuthToken, clearAuthSession } from "@/lib/api-client";
 import { filterNavSections, NAVIGATION_SECTIONS, NavItem, NavSection } from "@/lib/nav";
 import { SPRING_PRESETS } from "./motion/MotionProvider";
 import {
@@ -170,10 +170,12 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
+      clearAuthSession();
       await fetch("/api/auth/session", { method: "DELETE" });
       router.push("/login");
       router.refresh();
     } catch {
+      clearAuthSession();
       router.push("/login");
     }
   };

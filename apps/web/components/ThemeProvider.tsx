@@ -2,6 +2,16 @@
 
 import React, { createContext, useContext, useEffect, useSyncExternalStore } from "react";
 import { AccentId, ACCENT_SWATCHES, ACCENT_LIST, AccentSwatch } from "@/lib/theme-accents";
+import {
+  BackdropStyleId,
+  BACKDROP_PRESETS,
+  BACKDROP_LIST,
+  BackdropPreset,
+  WallpaperId,
+  WALLPAPER_PRESETS,
+  WALLPAPER_LIST,
+  WallpaperPreset,
+} from "@/lib/theme-backdrops";
 import { apiClient, getAuthToken } from "@/lib/api-client";
 import { isLowPowerDevice } from "@/lib/device-performance";
 
@@ -14,9 +24,19 @@ interface ThemeContextType {
   accent: AccentId;
   currentSwatch: AccentSwatch;
   availableAccents: AccentSwatch[];
+  backdropStyle: BackdropStyleId;
+  currentBackdrop: BackdropPreset;
+  availableBackdrops: BackdropPreset[];
+  wallpaper: WallpaperId;
+  wallpaperOpacity: number;
+  currentWallpaper: WallpaperPreset;
+  availableWallpapers: WallpaperPreset[];
   isLowPower: boolean;
   setTheme: (theme: Theme) => void;
   setAccent: (accent: AccentId) => void;
+  setBackdropStyle: (backdrop: BackdropStyleId) => void;
+  setWallpaper: (wallpaper: WallpaperId) => void;
+  setWallpaperOpacity: (opacity: number) => void;
   toggleTheme: () => void;
   toggleLowPower: () => void;
 }
@@ -25,6 +45,9 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = "wareflow-theme";
 const ACCENT_STORAGE_KEY = "wareflow-accent";
+const BACKDROP_STORAGE_KEY = "wareflow-backdrop";
+const WALLPAPER_STORAGE_KEY = "wareflow-wallpaper";
+const WALLPAPER_OPACITY_STORAGE_KEY = "wareflow-wallpaper-opacity";
 const LOW_POWER_STORAGE_KEY = "wareflow-low-power";
 
 // Helper for subscribing to localStorage and system media queries
@@ -62,6 +85,40 @@ function getStoredAccent(): AccentId {
   }
 }
 
+function getStoredBackdrop(): BackdropStyleId {
+  if (typeof window === "undefined") return "midnight";
+  try {
+    const saved = localStorage.getItem(BACKDROP_STORAGE_KEY) as BackdropStyleId;
+    return saved && BACKDROP_PRESETS[saved] ? saved : "midnight";
+  } catch {
+    return "midnight";
+  }
+}
+
+function getStoredWallpaper(): WallpaperId {
+  if (typeof window === "undefined") return "none";
+  try {
+    const saved = localStorage.getItem(WALLPAPER_STORAGE_KEY) as WallpaperId;
+    return saved && WALLPAPER_PRESETS[saved] ? saved : "none";
+  } catch {
+    return "none";
+  }
+}
+
+function getStoredWallpaperOpacity(): number {
+  if (typeof window === "undefined") return 35;
+  try {
+    const saved = localStorage.getItem(WALLPAPER_OPACITY_STORAGE_KEY);
+    if (saved !== null) {
+      const parsed = Number(saved);
+      if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) return parsed;
+    }
+    return 35;
+  } catch {
+    return 35;
+  }
+}
+
 function getStoredLowPower(): boolean {
   if (typeof window === "undefined") return false;
   try {
@@ -81,12 +138,29 @@ function getSystemPrefersDark(): boolean {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useSyncExternalStore(subscribe, getStoredTheme, () => "system" as Theme);
   const accent = useSyncExternalStore(subscribe, getStoredAccent, () => "violet" as AccentId);
+  const backdropStyle = useSyncExternalStore(
+    subscribe,
+    getStoredBackdrop,
+    () => "midnight" as BackdropStyleId
+  );
+  const wallpaper = useSyncExternalStore(
+    subscribe,
+    getStoredWallpaper,
+    () => "none" as WallpaperId
+  );
+  const wallpaperOpacity = useSyncExternalStore(
+    subscribe,
+    getStoredWallpaperOpacity,
+    () => 35
+  );
   const systemDark = useSyncExternalStore(subscribe, getSystemPrefersDark, () => true);
   const isLowPower = useSyncExternalStore(subscribe, getStoredLowPower, () => false);
 
   const resolvedTheme: ResolvedTheme = theme === "system" ? (systemDark ? "dark" : "light") : theme;
 
   const currentSwatch = ACCENT_SWATCHES[accent] || ACCENT_SWATCHES.violet;
+  const currentBackdrop = BACKDROP_PRESETS[backdropStyle] || BACKDROP_PRESETS.midnight;
+  const currentWallpaper = WALLPAPER_PRESETS[wallpaper] || WALLPAPER_PRESETS.none;
 
   // Synchronize low-power class on root DOM
   useEffect(() => {
@@ -152,6 +226,34 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const setBackdropStyle = (newBackdrop: BackdropStyleId) => {
+    try {
+      localStorage.setItem(BACKDROP_STORAGE_KEY, newBackdrop);
+      window.dispatchEvent(new Event("storage"));
+    } catch {
+      // LocalStorage access fallback
+    }
+  };
+
+  const setWallpaper = (newWallpaper: WallpaperId) => {
+    try {
+      localStorage.setItem(WALLPAPER_STORAGE_KEY, newWallpaper);
+      window.dispatchEvent(new Event("storage"));
+    } catch {
+      // LocalStorage access fallback
+    }
+  };
+
+  const setWallpaperOpacity = (newOpacity: number) => {
+    try {
+      const clamped = Math.max(0, Math.min(100, Math.round(newOpacity)));
+      localStorage.setItem(WALLPAPER_OPACITY_STORAGE_KEY, String(clamped));
+      window.dispatchEvent(new Event("storage"));
+    } catch {
+      // LocalStorage access fallback
+    }
+  };
+
   const toggleTheme = () => {
     const next = resolvedTheme === "dark" ? "light" : "dark";
     setTheme(next);
@@ -175,9 +277,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         accent,
         currentSwatch,
         availableAccents: ACCENT_LIST,
+        backdropStyle,
+        currentBackdrop,
+        availableBackdrops: BACKDROP_LIST,
+        wallpaper,
+        wallpaperOpacity,
+        currentWallpaper,
+        availableWallpapers: WALLPAPER_LIST,
         isLowPower,
         setTheme,
         setAccent,
+        setBackdropStyle,
+        setWallpaper,
+        setWallpaperOpacity,
         toggleTheme,
         toggleLowPower,
       }}

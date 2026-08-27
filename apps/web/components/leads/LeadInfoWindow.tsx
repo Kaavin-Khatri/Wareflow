@@ -30,12 +30,16 @@ export interface LeadItem {
   lat?: number | null;
   lng?: number | null;
   phone?: string | null;
+  rating?: number | null;
+  user_ratings_total?: number | null;
   google_maps_url?: string | null;
   first_seen_at?: string | null;
   is_new: boolean;
   contacted: boolean;
+  notes?: string | null;
   contact_notes?: string | null;
   converted_retailer_id?: string | null;
+  created_at?: string | null;
 }
 
 export interface LeadInfoWindowProps {

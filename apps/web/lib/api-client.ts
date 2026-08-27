@@ -23,6 +23,8 @@ const getBaseUrl = (): string => {
   return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 };
 
+const AUTH_TOKEN_STORAGE_KEY = "wareflow_auth_token";
+
 /**
  * Firebase ID token for the signed-in user, or null when signed out.
  *
@@ -41,10 +43,42 @@ export async function getAuthToken(): Promise<string | null> {
     if (typeof auth?.authStateReady === "function") {
       await auth.authStateReady();
     }
-    return auth?.currentUser ? await auth.currentUser.getIdToken() : null;
-  } catch {
+    if (auth?.currentUser) {
+      const token = await auth.currentUser.getIdToken();
+      if (token) {
+        try {
+          localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+        } catch {}
+        return token;
+      }
+    }
+    // Fallback: check cached token if Firebase is rehydrating in background
+    try {
+      const cached = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+      if (cached) return cached;
+    } catch {}
     return null;
+  } catch {
+    try {
+      return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    } catch {
+      return null;
+    }
   }
+}
+
+/**
+ * Clears all cached tokens and 2FA verification keys upon user logout.
+ */
+export function clearAuthSession(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    localStorage.removeItem(TWO_FACTOR_STORAGE_KEY);
+    if (typeof document !== "undefined") {
+      document.cookie = "wareflow_2fa_verified=; path=/; max-age=0; SameSite=Lax";
+    }
+  } catch {}
 }
 
 const TWO_FACTOR_STORAGE_KEY = "wareflow_2fa_verified";
@@ -58,15 +92,20 @@ export function isTwoFactorVerified(): boolean {
   if (typeof window === "undefined") return false;
   try {
     const stored = localStorage.getItem(TWO_FACTOR_STORAGE_KEY);
-    if (!stored) return false;
-    if (stored === "true") return true;
-    const ts = parseInt(stored, 10);
-    if (!isNaN(ts)) {
-      const elapsedHours = (Date.now() - ts) / (1000 * 60 * 60);
-      if (elapsedHours < TWO_FACTOR_TTL_HOURS) {
-        return true;
+    if (stored) {
+      if (stored === "true") return true;
+      const ts = parseInt(stored, 10);
+      if (!isNaN(ts)) {
+        const elapsedHours = (Date.now() - ts) / (1000 * 60 * 60);
+        if (elapsedHours < TWO_FACTOR_TTL_HOURS) {
+          return true;
+        }
+        localStorage.removeItem(TWO_FACTOR_STORAGE_KEY);
       }
-      localStorage.removeItem(TWO_FACTOR_STORAGE_KEY);
+    }
+    // Fallback: check cookie
+    if (typeof document !== "undefined" && document.cookie.includes("wareflow_2fa_verified=true")) {
+      return true;
     }
     return false;
   } catch {
@@ -75,15 +114,21 @@ export function isTwoFactorVerified(): boolean {
 }
 
 /**
- * Updates the 2FA verification state in client storage.
+ * Updates the 2FA verification state in client storage and browser cookies.
  */
 export function setTwoFactorVerified(verified: boolean): void {
   if (typeof window === "undefined") return;
   try {
     if (verified) {
       localStorage.setItem(TWO_FACTOR_STORAGE_KEY, String(Date.now()));
+      if (typeof document !== "undefined") {
+        document.cookie = "wareflow_2fa_verified=true; path=/; max-age=43200; SameSite=Lax";
+      }
     } else {
       localStorage.removeItem(TWO_FACTOR_STORAGE_KEY);
+      if (typeof document !== "undefined") {
+        document.cookie = "wareflow_2fa_verified=; path=/; max-age=0; SameSite=Lax";
+      }
     }
   } catch {
     // Ignore storage quota or access errors in restricted browser contexts
@@ -132,18 +177,19 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
       // Body wasn't JSON, fallback to statusText
     }
 
-    // If 2FA is required by the backend, notify UI listeners
+    // If 2FA is required by the backend, notify UI listeners ONLY if not already verified
     if (
       response.status === 403 &&
       typeof window !== "undefined" &&
       serverMessage.toLowerCase().includes("two-factor")
     ) {
-      setTwoFactorVerified(false);
-      window.dispatchEvent(
-        new CustomEvent("wareflow:2fa-required", {
-          detail: { endpoint, serverMessage },
-        })
-      );
+      if (!isTwoFactorVerified()) {
+        window.dispatchEvent(
+          new CustomEvent("wareflow:2fa-required", {
+            detail: { endpoint, serverMessage },
+          })
+        );
+      }
     }
 
     throw new ApiError(response.status, serverMessage, data);

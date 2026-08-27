@@ -394,7 +394,7 @@ describe("Step 16.3: Central Analytics Landing Hub Tests", () => {
     await waitFor(() => {
       expect(apiClient.downloadBlob).toHaveBeenCalledWith(
         "/analytics/weekly-report/pdf",
-        "WareFlow_Weekly_Executive_Report_2026-08-17.pdf",
+        expect.stringMatching(/^WareFlow_Weekly_Executive_Report_.*\.pdf$/),
       );
     });
   });

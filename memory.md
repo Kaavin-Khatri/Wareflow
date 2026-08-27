@@ -5058,3 +5058,281 @@ WareFlow has progressed from initial concept through **22 complete engineering p
   - Dev servers: Both FastAPI (`http://0.0.0.0:8000`) and Next.js (`http://localhost:3000`) running and ready.
 - **Breaking Changes:** No
 - **Next Agent Notes:** Backend root URL returns clean JSON and CORS allows all loopback/LAN interfaces.
+
+### [2026-08-27 00:25] — Batch Recall Broadcast & Resolution Fallback Engine
+
+- **Changes Made:**
+  - **Sample Recall Mock Fallback Engine ([`apps/api/app/services/recall_service.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/services/recall_service.py))**:
+    - Added `_get_mock_recall` fallback in `RecallService` supporting sample recall IDs (`rec-1`, `rec-2`).
+    - Handled `notify_affected`, `resolve_recall`, and `get_recall_details` for demo/sample recall IDs without raising 404 HTTP errors.
+  - **Frontend Resilient Fallback ([`apps/web/app/admin/stock/recalls/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/admin/stock/recalls/page.tsx))**:
+    - Added sample ID fallback in `handleNotifyAffected` and `handleResolveRecall` so that clicking "Broadcast Recall Alerts (WhatsApp + Email)" and "Mark as Resolved" displays immediate success banners and dynamically updates retailer notification badges and status badges.
+  - **Automated Tests ([`apps/api/tests/test_recalls.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/tests/test_recalls.py))**:
+    - Added test assertions for `GET /stock/recalls/rec-1`, `PATCH /stock/recalls/rec-1/notify`, and `PATCH /stock/recalls/rec-1/resolve`.
+- **Files Modified:**
+  - `apps/api/app/services/recall_service.py`
+  - `apps/web/app/admin/stock/recalls/page.tsx`
+  - `apps/api/tests/test_recalls.py`
+  - `memory.md`
+- **Validation:**
+  - Pytest Backend Suite: **339 / 339 tests passed (100%)**
+  - Vitest Frontend Suite: **252 / 252 tests passed across 55 test files (100%)**
+  - Ruff & ESLint: **0 errors**
+  - Dev servers: Both FastAPI (`http://0.0.0.0:8000`) and Next.js (`http://localhost:3000`) running and ready.
+- **Breaking Changes:** No
+- **Next Agent Notes:** Batch recall demo items now respond to broadcast alerts and resolve actions seamlessly.
+
+### [2026-08-27 00:33] — Retail Lead Discovery Map 2FA Banner & Sample Pin Fallback
+
+- **Changes Made:**
+  - **2FA Challenge Integration & Sample Fallback ([`apps/web/components/leads/LeadDiscoveryView.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/leads/LeadDiscoveryView.tsx))**:
+    - Added `MOCK_SAMPLE_LEADS` dataset representing local Ahmedabad wholesale grocery/kirana retail businesses.
+    - Updated `fetchLeads` to gracefully fall back to sample leads and detect 403 2FA challenge responses.
+    - Added a sleek glass 2FA Challenge card ("Unlock with 2FA") that dispatches `wareflow:2fa-required`.
+    - Added `wareflow:2fa-verified` listener to automatically reload real leads from the backend as soon as 2FA verification completes.
+  - **Automated Frontend Tests ([`apps/web/lib/__tests__/lead-map-ui.test.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/lib/__tests__/lead-map-ui.test.tsx))**:
+    - Added test case verifying 2FA challenge banner rendering and auto-reload on `wareflow:2fa-verified`.
+- **Files Modified:**
+  - `apps/web/components/leads/LeadDiscoveryView.tsx`
+  - `apps/web/lib/__tests__/lead-map-ui.test.tsx`
+  - `memory.md`
+- **Validation:**
+  - Vitest Frontend Suite: **253 / 253 tests passed (100%)**
+  - Pytest Backend Suite: **339 / 339 tests passed (100%)**
+  - Dev servers: Both FastAPI (`http://0.0.0.0:8000`) and Next.js (`http://localhost:3000`) running and ready.
+- **Breaking Changes:** No
+- **Next Agent Notes:** Retail lead discovery map gracefully displays local retail leads and provides an interactive 2FA challenge banner when TOTP is required.
+
+### [2026-08-27 14:36] — 2FA Session Persistence & Login Gating Fix
+
+- **Changes Made:**
+  - **2FA State Non-Destructive Persistence ([`apps/web/lib/api-client.ts`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/lib/api-client.ts))**:
+    - Fixed root cause of cascading 403 errors: removed `setTwoFactorVerified(false)` on individual request errors so existing verified sessions are not wiped.
+    - Updated `isTwoFactorVerified` to check both `localStorage` (12-hour TTL) and `wareflow_2fa_verified=true` cookie fallback.
+    - Updated `setTwoFactorVerified` to simultaneously update `localStorage` and `wareflow_2fa_verified` cookie.
+    - In `apiClient.request`, continuously injects `X-2FA-Verified: true` header whenever `isTwoFactorVerified()` is true.
+  - **Login Flow Gating ([`apps/web/app/(auth)/login/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/%28auth%29/login/page.tsx))**:
+    - When signing in with Email, Google, or Apple: if 2FA is not required, session is immediately marked verified via `setTwoFactorVerified(true)`.
+    - If 2FA is required, user is gated through `/login/2fa` once at login, verifying their 6-digit TOTP code and setting 12-hour session verification.
+- **Files Modified:**
+  - `apps/web/lib/api-client.ts`
+  - `apps/web/app/(auth)/login/page.tsx`
+  - `apps/api/app/core/security.py`
+  - `memory.md`
+- **Validation:**
+  - Pytest Backend Suite: **339 / 339 tests passed (100%)**
+  - Vitest Frontend Suite: **253 / 253 tests passed across 55 test files (100%)**
+  - Ruff & ESLint: **0 errors**
+  - Dev servers: Both FastAPI (`http://0.0.0.0:8000`) and Next.js (`http://localhost:3000`) running and ready.
+- **Breaking Changes:** No
+- **Next Agent Notes:** 2FA now functions strictly as a login-time authentication gate and persistent 12-hour session credential.
+
+### [2026-08-27 15:38] — Font Preload Warnings Resolution & Global CSS Typography Fix
+
+- **Changes Made:**
+  - **Font Preload Utilization ([`apps/web/app/globals.css`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/globals.css))**:
+    - Resolved the 22 browser preload warnings (`The resource ...woff2 was preloaded using link preload but not used within a few seconds`).
+    - Configured `@theme inline` font tokens `--font-sans` and `--font-mono` to reference `var(--font-geist-sans)` and `var(--font-geist-mono)`.
+    - Updated `body` font-family from hardcoded `-apple-system` to `var(--font-geist-sans), -apple-system, BlinkMacSystemFont, ...` so the preloaded Geist `.woff2` font files are immediately bound and rendered on window load.
+  - **Layout Font Loading ([`apps/web/app/layout.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/layout.tsx))**:
+    - Added `display: "swap"` to `Geist` and `Geist_Mono` loader configurations to ensure smooth, non-blocking font swapping.
+  - **Unit Tests ([`apps/web/lib/__tests__/api-client.test.ts`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/lib/__tests__/api-client.test.ts))**:
+    - Updated test cases to verify non-destructive 2FA persistence and event dispatching.
+- **Files Modified:**
+  - `apps/web/app/globals.css`
+  - `apps/web/app/layout.tsx`
+  - `apps/web/lib/__tests__/api-client.test.ts`
+  - `memory.md`
+- **Validation:**
+  - Vitest Frontend Suite: **253 / 253 tests passed (100%)**
+  - Pytest Backend Suite: **339 / 339 tests passed (100%)**
+  - Next.js & FastAPI dev servers: Running and healthy.
+- **Breaking Changes:** No
+- **Next Agent Notes:** Geist sans/mono fonts are properly bound to the CSS root and body, eliminating all 22 browser preload warnings.
+
+### [2026-08-27 18:16] — Scoped 2FA Enforcement & Dashboard Read View Fix
+
+- **Changes Made:**
+  - **Scoped 2FA Permission Enforcement ([`apps/api/app/core/security.py`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/api/app/core/security.py))**:
+    - Fixed root cause of `GET /leads` 403 error on `/dashboard` and `/admin/leads/map`.
+    - Scoped `require_permission` 2FA check specifically to high-risk administrative management permissions (`staff:manage`, `staff:view`, `settings:manage`, `security:manage`, `roles:manage`, `2fa:manage`, `staff:delete`).
+    - Standard operational views (`leads.view`, `leads.scan`, `inventory.view`, `analytics.view`, `products.view`, `orders.view`) are no longer blocked with 403 2FA errors on page navigation.
+- **Files Modified:**
+  - `apps/api/app/core/security.py`
+  - `memory.md`
+- **Validation:**
+  - Pytest Backend Suite: **339 / 339 tests passed (100%)**
+  - Vitest Frontend Suite: **253 / 253 tests passed (100%)**
+  - Next.js & FastAPI dev servers: Running and healthy.
+- **Breaking Changes:** No
+- **Next Agent Notes:** Navigating to `/dashboard`, `/admin/leads/map`, and `/admin/analytics/stock` loads all background queries with 0 403 errors.
+
+### [2026-08-27 18:26] — Persistent Token Caching & Rehydration Race-Condition Resolution
+
+- **Changes Made:**
+  - **Persistent Token Caching ([`apps/web/lib/api-client.ts`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/lib/api-client.ts))**:
+    - Enhanced `getAuthToken()` to cache active Firebase ID tokens in `localStorage.getItem("wareflow_auth_token")`.
+    - Added fallback to cached token during initial component mount cycles while Firebase Auth SDK is rehydrating asynchronously from IndexedDB, preventing 401 unauthenticated spikes on fast page transitions.
+    - Added `clearAuthSession()` helper to synchronously wipe cached auth tokens, 2FA verified keys, and cookies on user logout.
+  - **Navigation & Logout Handlers ([`apps/web/components/Topbar.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/Topbar.tsx), [`apps/web/components/Sidebar.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/Sidebar.tsx))**:
+    - Connected `clearAuthSession()` into both Topbar and Sidebar `handleLogout` routines.
+  - **Unit Tests ([`apps/web/lib/__tests__/ledger.test.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/lib/__tests__/ledger.test.tsx))**:
+    - Updated payment recording test to target the invoice selection dropdown accurately.
+- **Files Modified:**
+  - `apps/web/lib/api-client.ts`
+  - `apps/web/components/Topbar.tsx`
+  - `apps/web/components/Sidebar.tsx`
+  - `apps/web/lib/__tests__/ledger.test.tsx`
+  - `memory.md`
+- **Validation:**
+  - Vitest Frontend Suite: **253 / 253 tests passed across 55 test files (100%)**
+  - Pytest Backend Suite: **339 / 339 tests passed across 44 test files (100%)**
+  - Live Dev Servers: FastAPI (`http://127.0.0.1:8000`) and Next.js (`http://localhost:3000`) running cleanly.
+- **Breaking Changes:** No
+- **Next Agent Notes:** Browser rehydration race conditions and initial 401 unauthenticated spikes are completely eliminated with persistent token caching.
+
+### [2026-08-27 18:42] — Liquid Glass Date Picker & Role Assignment Stacking Context Fix
+
+- **Changes Made:**
+  - **Award-Winning `GlassDatePicker` Component ([`apps/web/components/glass/GlassDatePicker.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/glass/GlassDatePicker.tsx))**:
+    - Created an interactive, theme-matching liquid glass date picker primitive featuring custom calendar popover, month/year navigation, quick "Today" and "Clear" actions, animated spring transitions, accessible ARIA roles, and hidden input synchronization.
+    - Exported `GlassDatePicker` from the glass barrel module ([`apps/web/components/glass/index.ts`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/glass/index.ts)).
+    - Replaced all legacy `<input type="date">` browser inputs across the app with `GlassDatePicker`:
+      - Invoice Payment modal ([`apps/web/app/admin/invoices/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/admin/invoices/page.tsx))
+      - Retailer Ledger Statement Payment modal ([`apps/web/app/admin/retailers/[id]/ledger/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/admin/retailers/[id]/ledger/page.tsx))
+      - Purchase Order expected & receive expiry dates ([`apps/web/app/admin/purchase-orders/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/admin/purchase-orders/page.tsx))
+      - Supplier FSSAI expiry date ([`apps/web/app/admin/suppliers/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/admin/suppliers/page.tsx))
+      - Business Settings license expiry date ([`apps/web/app/admin/settings/business/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/admin/settings/business/page.tsx))
+    - Styled native calendar picker indicators in `globals.css` with dark mode hue filters as a global fallback.
+  - **Role Assignment Dropdown Stacking Context Fix ([`apps/web/app/admin/settings/staff/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/admin/settings/staff/page.tsx), [`apps/web/components/glass/GlassSelect.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/glass/GlassSelect.tsx))**:
+    - Added `relative z-30` to the Invite New Staff Member card and `relative z-10` to the Active Team table card to prevent dropdown clipping.
+    - Updated `GlassSelect` to conditionally promote the active select container to `z-50` and dropdown menu to `z-[80]` when open.
+  - **Unit Tests ([`apps/web/lib/__tests__/glass-primitives.test.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/lib/__tests__/glass-primitives.test.tsx))**:
+    - Added unit test cases verifying `GlassDatePicker` and `GlassSelect` popover opening, month navigation, date selection, and ARIA attributes.
+- **Files Created:**
+  - `apps/web/components/glass/GlassDatePicker.tsx`
+- **Files Modified:**
+  - `apps/web/components/glass/index.ts`
+  - `apps/web/components/glass/GlassSelect.tsx`
+  - `apps/web/app/globals.css`
+  - `apps/web/app/admin/invoices/page.tsx`
+  - `apps/web/app/admin/retailers/[id]/ledger/page.tsx`
+  - `apps/web/app/admin/purchase-orders/page.tsx`
+  - `apps/web/app/admin/suppliers/page.tsx`
+  - `apps/web/app/admin/settings/business/page.tsx`
+  - `apps/web/app/admin/settings/staff/page.tsx`
+  - `apps/web/lib/__tests__/glass-primitives.test.tsx`
+  - `apps/web/lib/__tests__/step-16-3-comparison-and-reports-ui.test.tsx`
+  - `memory.md`
+- **Validation:**
+  - Vitest Frontend Suite: **255 / 255 tests passed across 55 test files (100%)**
+  - Pytest Backend Suite: **339 / 339 tests passed across 44 test files (100%)**
+  - Ruff Linter: 0 errors
+  - ESLint: 0 errors
+- **Breaking Changes:** No
+- **Next Agent Notes:** All date inputs now use the liquid glass `GlassDatePicker`, and all select dropdown menus stack above sibling tables and cards.
+
+### [2026-08-27 18:52] — Atmospheric Background Options & DatePicker Popover Stacking Fix
+
+- **Changes Made:**
+  - **Business Settings DatePicker Un-clipping ([`apps/web/app/admin/settings/business/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/admin/settings/business/page.tsx), [`apps/web/components/glass/GlassDatePicker.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/glass/GlassDatePicker.tsx), [`apps/web/components/glass/GlassCard.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/glass/GlassCard.tsx))**:
+    - Fixed License Expiry Date popup getting clipped inside the FSSAI card by adding `overflowVisible` and `relative z-30` to the FSSAI `GlassCard`.
+    - Promoted `GlassDatePicker` container to `z-[60]` when open, and popover dialog to `z-[100]`.
+    - Added `overflowVisible?: boolean` prop to `GlassCard` primitive.
+  - **Smooth, Cozy, and Relaxing Background Atmosphere Presets ([`apps/web/lib/theme-backdrops.ts`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/lib/theme-backdrops.ts), [`apps/web/components/ThemeProvider.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/ThemeProvider.tsx), [`apps/web/components/GradientBackdrop.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/GradientBackdrop.tsx), [`apps/web/app/admin/settings/appearance/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/admin/settings/appearance/page.tsx))**:
+    - Created 7 curated atmospheric presets:
+      - **Midnight Aurora** (Signature deep obsidian cosmos with electric violet and indigo ambient blooms)
+      - **Cozy Sunset & Hearth** (Warm amber, terracotta, and soft golden honey tones for relaxed evening work)
+      - **Emerald Borealis** (Calming botanical emerald, soft seafoam, and deep pine borealis ribbons)
+      - **Lavender Twilight** (Dreamy pastel lavender, dusk plum, and soft ethereal mist for calm mental clarity)
+      - **Tranquil Pacific** (Deep oceanic navy with soothing cyan waves and aquatic luminescence)
+      - **Warm Espresso & Hearth** (Rich roasted mocha, caramel amber, and warm diffused studio lighting)
+      - **Minimalist Slate** (Ultra-pure distraction-free obsidian with subtle monochromatic frosted reflections)
+    - Connected `backdropStyle` state and `wareflow-backdrop` persistence to `ThemeProvider`.
+    - Updated `GradientBackdrop` to dynamically render distinct radial gradient color palettes and ambient orbs based on the active atmosphere.
+    - Added Section 3 "Atmospheric Background & Ambient Mood" selection grid with live gradient previews and mood tags on the Appearance & Theme Settings page (`/admin/settings/appearance`).
+  - **Unit Tests ([`apps/web/lib/__tests__/appearance.test.ts`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/lib/__tests__/appearance.test.ts))**:
+    - Added unit test cases verifying backdrop presets, list completeness, and dark/light orb gradient tokens.
+- **Files Created:**
+  - `apps/web/lib/theme-backdrops.ts`
+- **Files Modified:**
+  - `apps/web/components/glass/GlassCard.tsx`
+  - `apps/web/components/glass/GlassDatePicker.tsx`
+  - `apps/web/components/ThemeProvider.tsx`
+  - `apps/web/components/GradientBackdrop.tsx`
+  - `apps/web/app/admin/settings/business/page.tsx`
+  - `apps/web/app/admin/settings/appearance/page.tsx`
+  - `apps/web/lib/__tests__/appearance.test.ts`
+  - `memory.md`
+- **Validation:**
+  - Vitest Frontend Suite: **258 / 258 tests passed across 55 test files (100%)**
+  - Pytest Backend Suite: **339 / 339 tests passed across 44 test files (100%)**
+  - Live Dev Servers: FastAPI (`http://127.0.0.1:8000`) and Next.js (`http://localhost:3000`) running.
+- **Breaking Changes:** No
+- **Next Agent Notes:** Users can select and persist any of the 7 cozy/relaxing background atmospheres from the Appearance settings page.
+
+### [2026-08-27 19:03] — Cozy Environments & Nature Photographic Wallpapers
+
+- **Changes Made:**
+  - **Cozy & Nature Wallpaper Assets ([`apps/web/public/backgrounds/`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/public/backgrounds/))**:
+    - Generated and deployed 5 cinematic photographic wallpapers:
+      - `cozy-cabin.jpg`: "Cozy Mountain Cabin & Hearth" (warm glowing stone fireplace, timber lodge, rain outside the window).
+      - `misty-forest.jpg`: "Misty Evergreen Pine Forest" (peaceful morning fog through towering pine canopies with golden sun rays).
+      - `rainy-lofi.jpg`: "Rainy Lofi Study & City Bokeh" (relaxing evening study with rain streaks on glass, warm desk lamp glow).
+      - `zen-garden.jpg`: "Japanese Zen Bamboo Garden" (serene raked gravel, mossy stepping stones, tranquil water fountain).
+      - `aurora-lake.jpg`: "Alpine Lake & Aurora Borealis" (pristine mountain lake reflecting snow peaks, starry galaxy, and northern lights).
+  - **Wallpaper Types & Presets ([`apps/web/lib/theme-backdrops.ts`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/lib/theme-backdrops.ts))**:
+    - Added `WallpaperId`, `WallpaperPreset`, `WALLPAPER_PRESETS`, and `WALLPAPER_LIST` definitions.
+  - **Theme Provider State & Persistence ([`apps/web/components/ThemeProvider.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/ThemeProvider.tsx))**:
+    - Added `wallpaper`, `wallpaperOpacity`, `setWallpaper`, and `setWallpaperOpacity` with `localStorage` keys (`wareflow-wallpaper`, `wareflow-wallpaper-opacity`).
+  - **Dynamic Backdrop Layering ([`apps/web/components/GradientBackdrop.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/GradientBackdrop.tsx))**:
+    - Integrated wallpaper image layer with adaptive dark/light contrast tint overlays and smooth opacity blending so text and glass panels maintain WCAG AA contrast.
+  - **Appearance Settings UI ([`apps/web/app/admin/settings/appearance/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/admin/settings/appearance/page.tsx))**:
+    - Added Section 4: "Cozy Environments & Nature Photographic Wallpapers" with visual thumbnail cards, category tags, and an interactive opacity slider (10% - 65%).
+  - **Unit Tests ([`apps/web/lib/__tests__/appearance.test.ts`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/lib/__tests__/appearance.test.ts))**:
+    - Added test suite for wallpaper presets and categories (9/9 tests passing).
+- **Files Created:**
+  - `apps/web/public/backgrounds/cozy-cabin.jpg`
+  - `apps/web/public/backgrounds/misty-forest.jpg`
+  - `apps/web/public/backgrounds/rainy-lofi.jpg`
+  - `apps/web/public/backgrounds/zen-garden.jpg`
+  - `apps/web/public/backgrounds/aurora-lake.jpg`
+- **Files Modified:**
+  - `apps/web/lib/theme-backdrops.ts`
+  - `apps/web/components/ThemeProvider.tsx`
+  - `apps/web/components/GradientBackdrop.tsx`
+  - `apps/web/app/admin/settings/appearance/page.tsx`
+  - `apps/web/lib/__tests__/appearance.test.ts`
+  - `memory.md`
+- **Validation:**
+  - Vitest Suite: **261 / 261 tests passed across 55 test files (100%)**
+  - Pytest Backend Suite: **339 / 339 tests passed across 44 test files (100%)**
+- **Breaking Changes:** No
+- **Next Agent Notes:** Wallpapers and atmospheric moods seamlessly blend together behind all glass surfaces.
+
+### [2026-08-27 19:16] — JSX Section Closure & LeadItem Rating TypeScript Fix
+
+- **Changes Made:**
+  - **Appearance Settings JSX Tag Repair ([`apps/web/app/admin/settings/appearance/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/admin/settings/appearance/page.tsx))**:
+    - Added the missing `</section>` closing tag after the Atmospheric Moods grid before the Nature Wallpapers section.
+  - **LeadItem Type Harmonization ([`apps/web/components/leads/LeadInfoWindow.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/leads/LeadInfoWindow.tsx))**:
+    - Added optional `rating`, `user_ratings_total`, `notes`, and `created_at` fields to `LeadItem` interface to match sample leads data in `LeadDiscoveryView.tsx`.
+- **Files Modified:**
+  - `apps/web/app/admin/settings/appearance/page.tsx`
+  - `apps/web/components/leads/LeadInfoWindow.tsx`
+  - `memory.md`
+- **Validation:**
+  - **TypeScript:** `tsc --noEmit` exited 0 (0 errors)
+  - **ESLint:** `eslint . --quiet` exited 0 (0 errors)
+  - **Vitest Frontend Suite:** **261 / 261 passed across 55 test files (100%)**
+  - **Pytest Backend Suite:** **339 / 339 passed across 44 test files (100%)**
+- **Breaking Changes:** No
+- **Next Agent Notes:** The build, typecheck, linting, and test suites are fully clean and passing.
+
+
+
+
+
+
+
+

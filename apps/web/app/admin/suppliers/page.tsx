@@ -9,6 +9,7 @@ import { GlassInput } from "@/components/glass/GlassInput";
 import { GlassModal } from "@/components/glass/GlassModal";
 import { GlassBadge } from "@/components/glass/GlassBadge";
 import { GlassCard } from "@/components/glass/GlassCard";
+import { GlassDatePicker } from "@/components/glass/GlassDatePicker";
 import { apiClient } from "@/lib/api-client";
 import {
   Truck,
@@ -614,10 +615,10 @@ export default function SuppliersAdminPage() {
                 <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                   FSSAI Expiry Date
                 </label>
-                <GlassInput
-                  type="date"
+                <GlassDatePicker
                   value={formData.fssai_expiry_date}
-                  onChange={(e) => setFormData({ ...formData, fssai_expiry_date: e.target.value })}
+                  onChange={(val) => setFormData({ ...formData, fssai_expiry_date: val })}
+                  size="sm"
                 />
               </div>
             </div>

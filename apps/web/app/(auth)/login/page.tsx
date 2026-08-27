@@ -9,6 +9,7 @@ import {
   type AuthError,
 } from "firebase/auth";
 import { auth, googleProvider, appleProvider } from "@/lib/firebase-client";
+import { setTwoFactorVerified } from "@/lib/api-client";
 
 /**
  * Firebase reports a missing/incorrect NEXT_PUBLIC_FIREBASE_API_KEY as
@@ -122,6 +123,7 @@ function LoginForm() {
       if (requires2FA) {
         router.push(`/login/2fa?from=${encodeURIComponent(from)}`);
       } else {
+        setTwoFactorVerified(true);
         router.push(from);
       }
       router.refresh();
@@ -154,6 +156,7 @@ function LoginForm() {
       if (requires2FA) {
         router.push(`/login/2fa?from=${encodeURIComponent(from)}`);
       } else {
+        setTwoFactorVerified(true);
         router.push(from);
       }
       router.refresh();
@@ -199,6 +202,7 @@ function LoginForm() {
       if (requires2FA) {
         router.push(`/login/2fa?from=${encodeURIComponent(from)}`);
       } else {
+        setTwoFactorVerified(true);
         router.push(from);
       }
       router.refresh();

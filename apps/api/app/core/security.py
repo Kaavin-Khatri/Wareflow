@@ -282,7 +282,20 @@ def require_permission(permission_code: str):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Missing required permission: {permission_code}",
             )
-        if current_user.is_2fa_enabled and not current_user.is_2fa_verified:
+        sensitive_permissions = {
+            "staff:manage",
+            "staff:view",
+            "settings:manage",
+            "security:manage",
+            "roles:manage",
+            "2fa:manage",
+            "staff:delete",
+        }
+        if (
+            permission_code in sensitive_permissions
+            and current_user.is_2fa_enabled
+            and not current_user.is_2fa_verified
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Two-factor authentication required for sensitive operations.",

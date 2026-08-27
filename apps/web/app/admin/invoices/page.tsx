@@ -7,6 +7,8 @@ import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassBadge } from "@/components/glass/GlassBadge";
 import { GlassModal } from "@/components/glass/GlassModal";
 import { GlassInput } from "@/components/glass/GlassInput";
+import { GlassSelect } from "@/components/glass/GlassSelect";
+import { GlassDatePicker } from "@/components/glass/GlassDatePicker";
 import { DataTable, DataTableColumn } from "@/components/DataTable";
 import { apiClient } from "@/lib/api-client";
 import {
@@ -1360,28 +1362,29 @@ export default function InvoicesPage() {
                 <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                   Payment Mode *
                 </label>
-                <select
+                <GlassSelect
                   value={payMethod}
-                  onChange={(e) => setPayMethod(e.target.value)}
-                  className="w-full px-3 py-2 bg-[var(--surface)] border border-[var(--glass-border)] rounded-xl text-xs text-[var(--text)] focus:outline-none focus:border-purple-500"
-                >
-                  <option value="upi">UPI / QR Transfer</option>
-                  <option value="neft_rtgs">NEFT / RTGS</option>
-                  <option value="cheque">Cheque</option>
-                  <option value="cash">Cash Receipt</option>
-                  <option value="credit_note">Credit Note / Adjustment</option>
-                </select>
+                  onChange={setPayMethod}
+                  options={[
+                    { value: "upi", label: "UPI / QR Transfer" },
+                    { value: "neft_rtgs", label: "NEFT / RTGS" },
+                    { value: "cheque", label: "Cheque" },
+                    { value: "cash", label: "Cash Receipt" },
+                    { value: "credit_note", label: "Credit Note / Adjustment" },
+                  ]}
+                  size="sm"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
                   Settlement Date *
                 </label>
-                <GlassInput
-                  type="date"
+                <GlassDatePicker
                   value={payDate}
-                  onChange={(e) => setPayDate(e.target.value)}
+                  onChange={setPayDate}
                   required
+                  size="sm"
                 />
               </div>
             </div>

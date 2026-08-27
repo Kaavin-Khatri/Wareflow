@@ -9,6 +9,8 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassModal } from "@/components/glass/GlassModal";
 import { GlassInput } from "@/components/glass/GlassInput";
+import { GlassSelect } from "@/components/glass/GlassSelect";
+import { GlassDatePicker } from "@/components/glass/GlassDatePicker";
 import { DataTable, DataTableColumn } from "@/components/DataTable";
 import { apiClient } from "@/lib/api-client";
 import {
@@ -666,17 +668,18 @@ export default function RetailerLedgerPage() {
                 <label className="block text-xs font-medium text-[var(--text)] mb-1.5">
                   Payment Method <span className="text-rose-400">*</span>
                 </label>
-                <select
+                <GlassSelect
                   value={payMethod}
-                  onChange={(e) => setPayMethod(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-black/40 border border-white/10 text-white focus:outline-none focus:ring-1 focus:ring-purple-500"
-                >
-                  <option value="upi">UPI / QR</option>
-                  <option value="bank_transfer">Bank Transfer (NEFT/RTGS/IMPS)</option>
-                  <option value="cheque">Cheque</option>
-                  <option value="cash">Cash</option>
-                  <option value="card">Debit / Credit Card</option>
-                </select>
+                  onChange={setPayMethod}
+                  options={[
+                    { value: "upi", label: "UPI / QR" },
+                    { value: "bank_transfer", label: "Bank Transfer (NEFT/RTGS/IMPS)" },
+                    { value: "cheque", label: "Cheque" },
+                    { value: "cash", label: "Cash" },
+                    { value: "card", label: "Debit / Credit Card" },
+                  ]}
+                  size="sm"
+                />
               </div>
             </div>
 
@@ -684,10 +687,10 @@ export default function RetailerLedgerPage() {
               <label className="block text-xs font-medium text-[var(--text)] mb-1.5">
                 Payment Date
               </label>
-              <GlassInput
-                type="date"
+              <GlassDatePicker
                 value={payDate}
-                onChange={(e) => setPayDate(e.target.value)}
+                onChange={setPayDate}
+                size="sm"
               />
             </div>
 

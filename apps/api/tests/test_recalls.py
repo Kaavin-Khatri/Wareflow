@@ -389,3 +389,18 @@ def test_http_recall_endpoints(test_data):
     resolve_resp = client.patch(f"/stock/recalls/{recall_id}/resolve")
     assert resolve_resp.status_code == status.HTTP_200_OK
     assert resolve_resp.json()["status"] == "resolved"
+
+    # 6. Sample / Demo Recall Fallback Tests (rec-1)
+    sample_get = client.get("/stock/recalls/rec-1")
+    assert sample_get.status_code == status.HTTP_200_OK
+    assert sample_get.json()["id"] == "rec-1"
+    assert sample_get.json()["batch_no"] == "BATCH-2026-0801"
+
+    sample_notify = client.patch("/stock/recalls/rec-1/notify")
+    assert sample_notify.status_code == status.HTTP_200_OK
+    assert sample_notify.json()["status"] == "notifying"
+    assert sample_notify.json()["retailers_notified_count"] == 2
+
+    sample_resolve = client.patch("/stock/recalls/rec-1/resolve")
+    assert sample_resolve.status_code == status.HTTP_200_OK
+    assert sample_resolve.json()["status"] == "resolved"

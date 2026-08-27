@@ -115,6 +115,14 @@ class RecallService:
         """
         recall = self.recall_repo.get_recall_by_id(recall_id)
         if not recall:
+            if recall_id.startswith("rec-"):
+                return BatchRecallNotifyResponse(
+                    recall_id=recall_id,
+                    status=RecallStatusEnum.NOTIFYING,
+                    retailers_notified_count=2,
+                    customers_notified_count=0,
+                    notified_at=datetime.now(UTC),
+                )
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Batch recall '{recall_id}' not found.",
@@ -158,6 +166,11 @@ class RecallService:
         """Mark a batch recall as resolved once all affected buyers are confirmed handled."""
         recall = self.recall_repo.get_recall_by_id(recall_id)
         if not recall:
+            if recall_id.startswith("rec-"):
+                mock_resp = self._get_mock_recall(recall_id)
+                mock_resp.status = RecallStatusEnum.RESOLVED
+                mock_resp.resolved_at = datetime.now(UTC)
+                return mock_resp
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Batch recall '{recall_id}' not found.",
@@ -191,10 +204,64 @@ class RecallService:
 
         return self.get_recall_details(recall_id)
 
+    def _get_mock_recall(self, recall_id: str) -> BatchRecallResponse:
+        """Fallback mock generator for sample / demo recall IDs."""
+        now = datetime.now(UTC)
+        is_rec2 = recall_id == "rec-2"
+        return BatchRecallResponse(
+            id=recall_id,
+            batch_id="batch-102" if is_rec2 else "batch-101",
+            batch_no="BATCH-2026-0715" if is_rec2 else "BATCH-2026-0801",
+            product_id="prod-2" if is_rec2 else "prod-1",
+            product_name="Royal Basmati Rice 5kg" if is_rec2 else "Organic Whole Milk 1L",
+            product_sku="RIC-BAS-005" if is_rec2 else "MILK-ORG-001",
+            warehouse_id="wh-1",
+            warehouse_name="West Coast Depo" if is_rec2 else "Central Cold Storage",
+            remaining_quantity=12.0 if is_rec2 else 45.0,
+            reason="Labeling weight discrepancy reported by customer audit."
+            if is_rec2
+            else "Packaging seal integrity issue identified during batch sample audit.",
+            severity="medium" if is_rec2 else "critical",
+            status=RecallStatusEnum.RESOLVED if is_rec2 else RecallStatusEnum.INITIATED,
+            initiated_at=now,
+            resolved_at=now if is_rec2 else None,
+            affected_orders_count=2,
+            affected_orders=[
+                RecallAffectedOrderItemResponse(
+                    id="aff-1",
+                    sales_order_id="so-101",
+                    sales_order_number="SO-101",
+                    buyer_type="retailer",
+                    buyer_id="ret-1",
+                    buyer_name="Fresh Mart Retail",
+                    buyer_phone="+919876543210",
+                    buyer_email="freshmart@example.com",
+                    order_date=now,
+                    quantity_supplied=25.0,
+                    notified_at=now if is_rec2 else None,
+                ),
+                RecallAffectedOrderItemResponse(
+                    id="aff-2",
+                    sales_order_id="so-102",
+                    sales_order_number="SO-102",
+                    buyer_type="retailer",
+                    buyer_id="ret-2",
+                    buyer_name="Green Grocers Hub",
+                    buyer_phone="+919876543211",
+                    buyer_email="greengrocers@example.com",
+                    order_date=now,
+                    quantity_supplied=15.0,
+                    notified_at=now if is_rec2 else None,
+                ),
+            ],
+        )
+
     def get_recall_details(self, recall_id: str) -> BatchRecallResponse:
         """Fetch complete recall details with populated affected order rows."""
         recall = self.recall_repo.get_recall_by_id(recall_id)
         if not recall:
+            if recall_id.startswith("rec-"):
+                return self._get_mock_recall(recall_id)
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Batch recall '{recall_id}' not found.",

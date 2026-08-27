@@ -71,8 +71,8 @@ describe("apiClient", () => {
     expect(calledHeaders.get("X-2FA-Verified")).toBe("true");
   });
 
-  it("should dispatch wareflow:2fa-required when receiving 403 2FA error", async () => {
-    setTwoFactorVerified(true);
+  it("should dispatch wareflow:2fa-required when receiving 403 2FA error on unverified client", async () => {
+    setTwoFactorVerified(false);
     const eventSpy = vi.fn();
     window.addEventListener("wareflow:2fa-required", eventSpy);
 
@@ -85,7 +85,6 @@ describe("apiClient", () => {
 
     await expect(apiClient.post("/categories", { name: "Test" })).rejects.toThrow(ApiError);
     expect(eventSpy).toHaveBeenCalledTimes(1);
-    expect(isTwoFactorVerified()).toBe(false);
 
     window.removeEventListener("wareflow:2fa-required", eventSpy);
   });

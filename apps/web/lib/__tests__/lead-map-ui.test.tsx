@@ -369,5 +369,31 @@ describe("Step 17.2 & 17.3: Retail Lead Discovery Map UI & Contact/Convert", () 
         });
       });
     });
+
+    it("renders 2FA challenge banner when 403 2FA is required and auto-reloads on wareflow:2fa-verified", async () => {
+      const error2FA = new Error("Two-factor authentication required for sensitive operations.") as any;
+      error2FA.status = 403;
+
+      vi.mocked(apiClient.get).mockRejectedValueOnce(error2FA).mockResolvedValueOnce({
+        leads: MOCK_LEADS,
+        total: 3,
+        page: 1,
+        page_size: 200,
+      });
+
+      render(<LeadDiscoveryView />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Two-Factor Authentication Required")).toBeDefined();
+        expect(screen.getByRole("button", { name: /Unlock with 2FA/i })).toBeDefined();
+      });
+
+      // Dispatch 2fa verified event
+      window.dispatchEvent(new CustomEvent("wareflow:2fa-verified"));
+
+      await waitFor(() => {
+        expect(screen.queryByText("Two-Factor Authentication Required")).toBeNull();
+      });
+    });
   });
 });

@@ -5,6 +5,9 @@ import { GlassButton } from "../../components/glass/GlassButton";
 import { GlassBadge } from "../../components/glass/GlassBadge";
 import { GlassInput } from "../../components/glass/GlassInput";
 import { GlassCard, GlassCardTitle } from "../../components/glass/GlassCard";
+import { GlassDatePicker } from "../../components/glass/GlassDatePicker";
+import { GlassSelect } from "../../components/glass/GlassSelect";
+import { fireEvent } from "@testing-library/react";
 
 describe("Glass Component Primitives", () => {
   it("renders GlassButton with primary variant and specular sheen", () => {
@@ -46,5 +49,41 @@ describe("Glass Component Primitives", () => {
     );
     const title = screen.getByText("Batch FIFO");
     expect(title).toBeDefined();
+  });
+
+  it("renders GlassDatePicker, opens calendar popover, and handles date selection", () => {
+    const handleChange = () => {};
+    render(
+      <GlassDatePicker
+        value="2026-08-27"
+        onChange={handleChange}
+        placeholder="Select settlement date..."
+      />
+    );
+    expect(screen.getByText("27-08-2026")).toBeDefined();
+
+    // Click trigger to open popover
+    fireEvent.click(screen.getByRole("button", { name: /27-08-2026/i }));
+    expect(screen.getByRole("dialog", { name: /date picker calendar/i })).toBeDefined();
+    expect(screen.getByText("August")).toBeDefined();
+    expect(screen.getByText("2026")).toBeDefined();
+  });
+
+  it("renders GlassSelect with options and handles selection", () => {
+    const handleChange = () => {};
+    render(
+      <GlassSelect
+        value="upi"
+        onChange={handleChange}
+        options={[
+          { value: "upi", label: "UPI / QR Transfer" },
+          { value: "bank", label: "Bank Transfer" },
+        ]}
+      />
+    );
+    expect(screen.getAllByText("UPI / QR Transfer").length).toBeGreaterThanOrEqual(1);
+
+    fireEvent.click(screen.getByRole("button", { name: /upi \/ qr transfer/i }));
+    expect(screen.getByRole("listbox")).toBeDefined();
   });
 });

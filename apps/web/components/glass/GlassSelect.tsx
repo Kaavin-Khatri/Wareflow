@@ -131,7 +131,7 @@ export function GlassSelect({
   return (
     <div
       ref={containerRef}
-      className={cn("relative inline-block w-full min-w-[140px] text-left select-none", className)}
+      className={cn("relative inline-block w-full min-w-[140px] text-left select-none", isOpen ? "z-50" : "z-auto", className)}
     >
       {/* Hidden Native Select for Form & Testing Accessibility */}
       <select
@@ -160,7 +160,7 @@ export function GlassSelect({
         onKeyDown={handleKeyDown}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        aria-label={ariaLabel || placeholder}
+        aria-label={ariaLabel || selectedOption?.label || placeholder}
         className={cn(
           "w-full flex items-center justify-between gap-2 bg-[var(--surface)]/80 hover:bg-[var(--surface-hover)] border border-[var(--glass-border)] text-[var(--text)] transition-all duration-200 outline-none focus-visible:border-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent-subtle)] focus-visible:shadow-[0_0_16px_-2px_var(--accent-glow)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
           sizeClasses[size],
@@ -193,7 +193,7 @@ export function GlassSelect({
             role="listbox"
             tabIndex={-1}
             className={cn(
-              "absolute left-0 right-0 z-50 mt-1.5 min-w-full rounded-2xl bg-[var(--surface-elevated)] backdrop-blur-2xl border border-[var(--glass-border)] shadow-2xl p-1.5 space-y-0.5 overflow-hidden",
+              "absolute left-0 right-0 z-[80] mt-1.5 min-w-full rounded-2xl bg-[var(--surface-elevated)] backdrop-blur-2xl border border-[var(--glass-border)] shadow-2xl p-1.5 space-y-0.5 overflow-hidden",
               menuClassName,
             )}
           >

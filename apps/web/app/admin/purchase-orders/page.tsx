@@ -12,6 +12,7 @@ import { GlassModal } from "@/components/glass/GlassModal";
 import { GlassBadge } from "@/components/glass/GlassBadge";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassSelect } from "@/components/glass/GlassSelect";
+import { GlassDatePicker } from "@/components/glass/GlassDatePicker";
 import { apiClient } from "@/lib/api-client";
 import {
   FileSpreadsheet,
@@ -836,10 +837,10 @@ export default function PurchaseOrdersPage() {
                 <label className="block text-xs font-medium text-slate-300 mb-1">
                   Expected Delivery Date
                 </label>
-                <GlassInput
-                  type="date"
+                <GlassDatePicker
                   value={draftExpectedDate}
-                  onChange={(e) => setDraftExpectedDate(e.target.value)}
+                  onChange={setDraftExpectedDate}
+                  size="sm"
                 />
               </div>
             </div>
@@ -1062,15 +1063,14 @@ export default function PurchaseOrdersPage() {
                       <label className="block text-[11px] font-medium text-slate-400 mb-1">
                         Expiry Date
                       </label>
-                      <input
-                        type="date"
+                      <GlassDatePicker
                         value={line.expiry_date}
-                        onChange={(e) => {
+                        onChange={(val) => {
                           const updated = [...receiveLines];
-                          updated[idx].expiry_date = e.target.value;
+                          updated[idx].expiry_date = val;
                           setReceiveLines(updated);
                         }}
-                        className="w-full bg-slate-950 border border-white/10 text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500"
+                        size="sm"
                       />
                     </div>
 

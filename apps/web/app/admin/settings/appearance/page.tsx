@@ -27,8 +27,25 @@ import {
 } from "lucide-react";
 
 export default function AppearanceSettingsPage() {
-  const { theme, resolvedTheme, accent, currentSwatch, availableAccents, setTheme, setAccent } =
-    useTheme();
+  const {
+    theme,
+    resolvedTheme,
+    accent,
+    currentSwatch,
+    availableAccents,
+    backdropStyle,
+    currentBackdrop,
+    availableBackdrops,
+    wallpaper,
+    wallpaperOpacity,
+    currentWallpaper,
+    availableWallpapers,
+    setTheme,
+    setAccent,
+    setBackdropStyle,
+    setWallpaper,
+    setWallpaperOpacity,
+  } = useTheme();
 
   const [isSaved, setIsSaved] = useState(false);
 
@@ -209,7 +226,157 @@ export default function AppearanceSettingsPage() {
           </div>
         </section>
 
-        {/* Section 3: Live Component Preview */}
+        {/* Section 3: Atmospheric Background & Ambient Mood */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-[var(--text)] tracking-tight">
+                Atmospheric Background & Ambient Mood
+              </h2>
+              <p className="text-xs text-[var(--text-muted)]">
+                Choose a smooth, cozy, or relaxing atmospheric lighting mood. Tuned for physical depth and anti-banding comfort.
+              </p>
+            </div>
+            <GlassBadge variant="accent" dot>
+              Mood: {currentBackdrop.name}
+            </GlassBadge>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {availableBackdrops.map((preset) => {
+              const isSelected = backdropStyle === preset.id;
+              return (
+                <div
+                  key={preset.id}
+                  onClick={() => setBackdropStyle(preset.id)}
+                  className={`p-4 rounded-2xl cursor-pointer transition-all duration-200 border text-left relative overflow-hidden group ${
+                    isSelected
+                      ? "bg-[var(--glass-bg)] border-[var(--accent)] shadow-lg ring-2 ring-[var(--accent)]"
+                      : "bg-[var(--glass-bg)] border-[var(--glass-border)] hover:border-[var(--border-strong)] opacity-85 hover:opacity-100"
+                  }`}
+                >
+                  {/* Visual Background Palette Preview Strip */}
+                  <div
+                    className="h-16 w-full rounded-xl mb-3 shadow-inner border border-white/10 relative overflow-hidden transition-transform duration-300 group-hover:scale-[1.02]"
+                    style={{ background: preset.previewGradient }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end justify-between p-2">
+                      <span className="text-[10px] font-bold text-white uppercase tracking-wider font-mono px-1.5 py-0.5 rounded bg-black/40 backdrop-blur-md border border-white/10">
+                        {preset.moodTag}
+                      </span>
+                      {isSelected && (
+                        <span className="w-4 h-4 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-[10px] shadow-md">
+                          <Check className="w-2.5 h-2.5" />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <h3 className="text-xs font-bold text-[var(--text)] flex items-center justify-between">
+                    {preset.name}
+                  </h3>
+
+                  <p className="text-[11px] text-[var(--text-muted)] leading-snug mt-1 line-clamp-2">
+                    {preset.description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Section 4: Cozy Environments & Nature Photographic Wallpapers */}
+        <section className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-bold text-[var(--text)] tracking-tight flex items-center gap-2">
+                <span>Cozy Environments & Nature Wallpapers</span>
+              </h2>
+              <p className="text-xs text-[var(--text-muted)]">
+                Immerse your glass dashboard in cozy fireplaces, misty forests, rainy study lofts, or tranquil zen nature.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Opacity Control Pill */}
+              {wallpaper !== "none" && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs">
+                  <span className="text-[var(--text-muted)] text-[11px] font-mono">Opacity:</span>
+                  <input
+                    type="range"
+                    min="10"
+                    max="65"
+                    step="5"
+                    value={wallpaperOpacity}
+                    onChange={(e) => setWallpaperOpacity(Number(e.target.value))}
+                    className="w-20 accent-[var(--accent)] cursor-pointer h-1.5 bg-[var(--surface-hover)] rounded-lg"
+                  />
+                  <span className="font-mono font-bold text-[var(--accent)] text-[11px] w-7 text-right">
+                    {wallpaperOpacity}%
+                  </span>
+                </div>
+              )}
+              <GlassBadge variant="accent" dot>
+                {currentWallpaper.name}
+              </GlassBadge>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {availableWallpapers.map((wp) => {
+              const isSelected = wallpaper === wp.id;
+              return (
+                <div
+                  key={wp.id}
+                  onClick={() => setWallpaper(wp.id)}
+                  className={`p-3.5 rounded-2xl cursor-pointer transition-all duration-200 border text-left relative overflow-hidden group ${
+                    isSelected
+                      ? "bg-[var(--glass-bg)] border-[var(--accent)] shadow-lg ring-2 ring-[var(--accent)]"
+                      : "bg-[var(--glass-bg)] border-[var(--glass-border)] hover:border-[var(--border-strong)] opacity-85 hover:opacity-100"
+                  }`}
+                >
+                  {/* Photo Preview Thumbnail */}
+                  <div className="h-28 w-full rounded-xl mb-3 border border-white/10 relative overflow-hidden bg-[var(--surface)] transition-transform duration-300 group-hover:scale-[1.02]">
+                    {wp.imageSrc ? (
+                      <div
+                        className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+                        style={{ backgroundImage: `url(${wp.imageSrc})` }}
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-[var(--text-subtle)] gap-1.5 bg-gradient-to-br from-violet-950/40 to-black/60">
+                        <Sparkles className="w-6 h-6 text-purple-400 opacity-60" />
+                        <span className="text-[10px] font-mono uppercase tracking-wider">
+                          Ambient Aurora Only
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Gradient Overlay & Tag */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end justify-between p-2.5">
+                      <span className="text-[10px] font-bold text-white uppercase tracking-wider font-mono px-2 py-0.5 rounded-md bg-black/50 backdrop-blur-md border border-white/15">
+                        {wp.category}
+                      </span>
+                      {isSelected && (
+                        <span className="w-5 h-5 rounded-full bg-[var(--accent)] text-white flex items-center justify-center text-xs shadow-lg">
+                          <Check className="w-3 h-3" />
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <h3 className="text-xs font-bold text-[var(--text)] flex items-center justify-between">
+                    {wp.name}
+                  </h3>
+
+                  <p className="text-[11px] text-[var(--text-muted)] leading-snug mt-1 line-clamp-2">
+                    {wp.description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Section 5: Live Component Preview */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div>

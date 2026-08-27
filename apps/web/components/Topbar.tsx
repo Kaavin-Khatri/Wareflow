@@ -13,7 +13,7 @@ import {
 } from "firebase/firestore";
 import ThemeToggle from "./ThemeToggle";
 import { GlassBadge } from "./glass";
-import { apiClient, getAuthToken } from "@/lib/api-client";
+import { apiClient, getAuthToken, clearAuthSession } from "@/lib/api-client";
 import { db } from "@/lib/firebase-client";
 import { SearchCommandPalette } from "./SearchCommandPalette";
 import { usePwa } from "./pwa/PwaProvider";
@@ -288,10 +288,12 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   const handleLogout = async () => {
     try {
+      clearAuthSession();
       await fetch("/api/auth/session", { method: "DELETE" });
       router.push("/login");
       router.refresh();
     } catch {
+      clearAuthSession();
       router.push("/login");
     }
   };

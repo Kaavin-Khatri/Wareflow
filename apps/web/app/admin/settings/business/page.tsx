@@ -6,6 +6,7 @@ import { GlassButton } from "@/components/glass/GlassButton";
 import { GlassInput } from "@/components/glass/GlassInput";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { GlassBadge } from "@/components/glass/GlassBadge";
+import { GlassDatePicker } from "@/components/glass/GlassDatePicker";
 import { apiClient } from "@/lib/api-client";
 import {
   Building2,
@@ -313,7 +314,7 @@ export default function BusinessSettingsPage() {
           </GlassCard>
 
           {/* FSSAI Food Safety License */}
-          <GlassCard className="p-5 space-y-4">
+          <GlassCard overflowVisible className="p-5 space-y-4 overflow-visible relative z-30">
             <h2 className="text-sm font-bold tracking-wider uppercase text-[var(--text-muted)] flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-purple-400" />
               FSSAI Food Safety License
@@ -337,10 +338,10 @@ export default function BusinessSettingsPage() {
                   <CalendarClock className="w-3 h-3 inline mr-1 text-amber-400" />
                   License Expiry Date
                 </label>
-                <GlassInput
-                  type="date"
+                <GlassDatePicker
                   value={formData.fssai_expiry_date}
-                  onChange={(e) => updateField("fssai_expiry_date", e.target.value)}
+                  onChange={(val) => updateField("fssai_expiry_date", val)}
+                  size="sm"
                 />
               </div>
             </div>
