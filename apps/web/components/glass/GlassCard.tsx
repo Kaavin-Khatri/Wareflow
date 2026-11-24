@@ -36,7 +36,7 @@ export const GlassCard = forwardRef<HTMLDivElement, GlassCardProps>(
           className="absolute inset-0 rounded-[inherit] pointer-events-none opacity-40 group-hover:opacity-70 transition-opacity bg-gradient-to-b from-white/5 via-transparent to-black/5 dark:from-white/10 dark:to-transparent"
         />
 
-        <div className="relative z-10">{children}</div>
+        <div className="relative z-10 h-full w-full flex flex-col flex-1">{children}</div>
       </div>
     );
   },

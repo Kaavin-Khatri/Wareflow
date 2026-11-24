@@ -145,19 +145,16 @@ export interface FormSectionProps {
   className?: string;
 }
 
-/**
- * Reusable card section for grouping related fields inside FormTemplate.
- */
 export function FormSection({ title, description, children, className = "" }: FormSectionProps) {
   return (
     <div
-      className={`p-6 rounded-3xl bg-[var(--glass-bg)] backdrop-blur-xl border border-[var(--glass-border)] space-y-5 ${className}`}
+      className={`p-6 sm:p-8 rounded-3xl bg-[var(--glass-bg)] backdrop-blur-xl border border-[var(--glass-border)] space-y-6 shadow-sm ${className}`}
     >
-      <div className="border-b border-[var(--border)] pb-3">
-        <h2 className="text-sm font-bold text-[var(--text)] tracking-tight">{title}</h2>
-        {description && <p className="text-xs text-[var(--text-muted)] mt-0.5">{description}</p>}
+      <div className="border-b border-[var(--border)] pb-3.5">
+        <h2 className="text-base font-bold text-[var(--text)] tracking-tight">{title}</h2>
+        {description && <p className="text-xs text-[var(--text-muted)] mt-1 leading-relaxed">{description}</p>}
       </div>
-      <div className="grid grid-cols-12 gap-4">{children}</div>
+      <div className="grid grid-cols-12 gap-4.5">{children}</div>
     </div>
   );
 }

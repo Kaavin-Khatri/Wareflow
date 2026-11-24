@@ -57,54 +57,54 @@ export function DashboardTemplate({
 }: DashboardTemplateProps) {
   return (
     <FadeIn className="w-full space-y-6 pb-16">
-      {/* 1. Header with Controls */}
+      {/* 1. Page Header with Title and Primary Actions */}
       <PageHeader
         title={title}
         description={description}
         badge={badge}
         primaryAction={primaryAction}
-        secondaryActions={
-          filters || secondaryActions ? (
-            <div className="flex items-center gap-2.5 flex-wrap">
-              {filters}
-              {secondaryActions}
-            </div>
-          ) : undefined
-        }
+        secondaryActions={secondaryActions}
       />
+
+      {/* 2. Dynamic View Controls Toolbar (Dedicated Row to prevent squashing) */}
+      {filters && (
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          {filters}
+        </div>
+      )}
 
       {/* 2. Top KPI Metric Cards */}
       {customKpiSlot ? (
         <div>{customKpiSlot}</div>
       ) : kpiMetrics && kpiMetrics.length > 0 ? (
-        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {kpiMetrics.map((kpi) => (
-            <StaggerItem key={kpi.id}>
-              <GlassCard hoverable className="p-5 space-y-3 relative overflow-hidden">
+            <div key={kpi.id}>
+              <GlassCard hoverable className="p-6 sm:p-7 space-y-4 relative overflow-hidden">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[var(--text-muted)]">
+                  <span className="text-xs font-semibold text-[var(--text-muted)] tracking-wide">
                     {kpi.title}
                   </span>
                   {kpi.icon && (
-                    <div className="w-8 h-8 rounded-xl bg-[var(--surface-hover)] text-[var(--accent)] flex items-center justify-center">
+                    <div className="w-9 h-9 rounded-2xl bg-[var(--surface-hover)] text-[var(--accent)] flex items-center justify-center border border-[var(--glass-border)] shadow-sm">
                       {kpi.icon}
                     </div>
                   )}
                 </div>
 
                 <div className="flex items-baseline justify-between gap-2">
-                  <div className="text-2xl font-bold tracking-tight text-[var(--text)] font-mono">
+                  <div className="text-3xl font-extrabold tracking-tight text-[var(--text)] font-mono">
                     {kpi.value}
                   </div>
 
                   {kpi.change && (
                     <span
-                      className={`inline-flex items-center text-xs font-semibold ${
+                      className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${
                         kpi.trend === "up"
-                          ? "text-emerald-400"
+                          ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
                           : kpi.trend === "down"
-                            ? "text-rose-400"
-                            : "text-[var(--text-muted)]"
+                            ? "text-rose-400 bg-rose-500/10 border border-rose-500/20"
+                            : "text-[var(--text-muted)] bg-[var(--surface-hover)] border border-[var(--glass-border)]"
                       }`}
                     >
                       {kpi.trend === "up" && <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />}
@@ -115,26 +115,26 @@ export function DashboardTemplate({
                 </div>
 
                 {(kpi.subtitle || kpi.badge) && (
-                  <div className="flex items-center justify-between text-[11px] text-[var(--text-subtle)] pt-1 border-t border-[var(--border)]">
+                  <div className="flex items-center justify-between text-[11px] text-[var(--text-subtle)] pt-2 border-t border-[var(--glass-border)] font-mono">
                     <span>{kpi.subtitle}</span>
                     {kpi.badge}
                   </div>
                 )}
               </GlassCard>
-            </StaggerItem>
+            </div>
           ))}
-        </StaggerContainer>
+        </div>
       ) : null}
 
       {/* 3. 12-Column Responsive Dashboard Body */}
-      <div className="grid grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-12 gap-6 lg:gap-8 items-start">
         {/* Main 8-Column Content */}
-        <div className={`${sideContent ? "col-span-12 lg:col-span-8" : "col-span-12"} space-y-6`}>
+        <div className={`${sideContent ? "col-span-12 lg:col-span-8" : "col-span-12"} space-y-6 lg:space-y-8`}>
           {mainContent}
         </div>
 
         {/* 4-Column Side Content */}
-        {sideContent && <div className="col-span-12 lg:col-span-4 space-y-6">{sideContent}</div>}
+        {sideContent && <div className="col-span-12 lg:col-span-4 space-y-6 lg:space-y-8">{sideContent}</div>}
       </div>
 
       {/* 4. Optional Full-Width Bottom Section */}

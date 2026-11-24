@@ -6,36 +6,14 @@ export function AceternityBeams() {
   return (
     <div
       aria-hidden="true"
-      className="absolute inset-0 overflow-hidden pointer-events-none -z-10 select-none"
+      className="absolute inset-0 pointer-events-none -z-10 select-none flex items-center justify-center overflow-visible"
     >
-      {/* 1. Animated Spotlight Cone from Top Center */}
+      {/* Soft, fully-feathered radial ambient aura with zero rectangular box edges */}
       <div
-        className="absolute -top-[30%] left-1/2 -translate-x-1/2 w-[80vw] max-w-[1200px] h-[700px] opacity-30 dark:opacity-20 blur-[90px] will-change-transform"
+        className="absolute top-8 w-[85vw] max-w-[700px] h-[360px] rounded-full opacity-20 dark:opacity-25 blur-[100px] pointer-events-none"
         style={{
           background:
-            "conic-gradient(from 90deg at 50% 0%, var(--accent) 0deg, rgba(168, 85, 247, 0.4) 60deg, transparent 120deg, transparent 240deg, rgba(168, 85, 247, 0.4) 300deg, var(--accent) 360deg)",
-        }}
-      />
-
-      {/* 2. Radiant Luminous Grid Lines */}
-      <div
-        className="absolute inset-0 opacity-[0.07] dark:opacity-[0.12]"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, var(--accent-border) 1px, transparent 1px),
-            linear-gradient(to bottom, var(--accent-border) 1px, transparent 1px)
-          `,
-          backgroundSize: "48px 48px",
-          maskImage: "radial-gradient(ellipse 65% 50% at 50% 30%, #000 30%, transparent 85%)",
-          WebkitMaskImage: "radial-gradient(ellipse 65% 50% at 50% 30%, #000 30%, transparent 85%)",
-        }}
-      />
-
-      {/* 3. Horizontal Drifting Scanning Laser Beam */}
-      <div
-        className="absolute top-[28%] left-0 right-0 h-[1px] opacity-40 dark:opacity-30 animate-pulse"
-        style={{
-          background: "linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%)",
+            "radial-gradient(ellipse at center, var(--accent) 0%, rgba(168, 85, 247, 0.35) 45%, transparent 70%)",
         }}
       />
     </div>

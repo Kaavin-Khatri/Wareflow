@@ -78,13 +78,13 @@ export function PageHeader({
       )}
 
       {/* Main Row: Title + Badge + Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text)]">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="space-y-1.5 flex-1 min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--text)] whitespace-normal">
               {title}
             </h1>
-            {badge && <div>{badge}</div>}
+            {badge && <div className="shrink-0">{badge}</div>}
           </div>
           {description && (
             <p className="text-xs sm:text-sm text-[var(--text-muted)] max-w-3xl leading-relaxed">

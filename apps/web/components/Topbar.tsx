@@ -32,6 +32,8 @@ import {
   Search,
   WifiOff,
   Layers,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 
 interface UserProfile {
@@ -60,6 +62,8 @@ interface ToastItem {
 
 interface TopbarProps {
   onMenuClick?: () => void;
+  onToggleSidebar?: () => void;
+  isSidebarCollapsed?: boolean;
 }
 
 function formatRelativeTime(dateStr?: string | Date): string {
@@ -91,7 +95,7 @@ function mapNotificationType(rawType?: string): NotificationItem["type"] {
   return "accent";
 }
 
-export function Topbar({ onMenuClick }: TopbarProps) {
+export function Topbar({ onMenuClick, onToggleSidebar, isSidebarCollapsed }: TopbarProps) {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -300,17 +304,37 @@ export function Topbar({ onMenuClick }: TopbarProps) {
 
   return (
     <>
-      <header className="relative z-50 h-16 shrink-0 border-b border-[var(--border)] px-4 sm:px-8 flex items-center justify-between glass-panel glass-panel-unclipped select-none">
-        {/* Left: Mobile Menu Trigger + Workspace Title */}
-        <div className="flex items-center gap-3">
+      <header className="relative z-40 h-16 shrink-0 border-b border-[var(--glass-border)] px-4 sm:px-6 lg:px-8 flex items-center justify-between bg-[var(--surface-elevated)]/65 dark:bg-[#09090b]/75 backdrop-blur-2xl backdrop-saturate-150 shadow-sm select-none">
+        {/* Top Specular Sheen */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-[1px] bg-[var(--glass-highlight)] pointer-events-none z-10"
+        />
+
+        {/* Left: Desktop Sidebar Collapse Toggle + Mobile Menu Trigger + Workspace Title */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Mobile Menu Trigger */}
           {onMenuClick && (
             <button
               type="button"
               onClick={onMenuClick}
               aria-label="Open Navigation Menu"
-              className="lg:hidden p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              className="lg:hidden p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)] cursor-pointer"
             >
               <Menu className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Desktop Sidebar Collapse / Expand Toggle Button */}
+          {onToggleSidebar && (
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              aria-label={isSidebarCollapsed ? "Expand Sidebar (Ctrl+B)" : "Collapse Sidebar (Ctrl+B)"}
+              title={isSidebarCollapsed ? "Expand Sidebar (Ctrl+B)" : "Collapse Sidebar (Ctrl+B)"}
+              className="hidden lg:flex items-center justify-center w-8 h-8 rounded-xl bg-[var(--surface-hover)] hover:bg-[var(--surface)] border border-[var(--glass-border)] text-[var(--text-muted)] hover:text-[var(--text)] transition-all cursor-pointer shadow-sm hover:scale-105"
+            >
+              {isSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4 text-[var(--accent)]" /> : <PanelLeftClose className="w-4 h-4" />}
             </button>
           )}
 
@@ -329,14 +353,14 @@ export function Topbar({ onMenuClick }: TopbarProps) {
             type="button"
             data-testid="global-search-trigger"
             onClick={() => setIsSearchOpen(true)}
-            className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl bg-[var(--surface)] hover:bg-[var(--surface-hover)] border border-[var(--border)] text-xs text-[var(--text-muted)] transition-all hover:border-[var(--accent-border)] group"
+            className="w-full flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-[var(--surface)]/50 hover:bg-[var(--surface-hover)] border border-[var(--glass-border)] text-xs text-[var(--text-muted)] transition-all hover:border-[var(--accent-border)] group shadow-inner"
           >
-            <div className="flex items-center gap-2">
-              <Search className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors" />
-              <span className="hidden sm:inline">Search across ERP (SKU, orders, invoices)...</span>
-              <span className="sm:hidden">Search ERP...</span>
+            <div className="flex items-center gap-2 truncate">
+              <Search className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors shrink-0" />
+              <span className="hidden sm:inline truncate">Search across ERP (SKU, orders, invoices)...</span>
+              <span className="sm:hidden truncate">Search ERP...</span>
             </div>
-            <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--glass-bg)] text-[10px] font-mono font-semibold text-[var(--text-muted)] group-hover:text-[var(--accent)] group-hover:border-[var(--accent-border)]">
+            <kbd className="hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-[var(--border)] bg-[var(--glass-bg)] text-[10px] font-mono font-semibold text-[var(--text-muted)] group-hover:text-[var(--accent)] group-hover:border-[var(--accent-border)] shrink-0">
               ⌘K
             </kbd>
           </button>

@@ -19,11 +19,11 @@ import { ArrowRight, ShieldCheck, Layers, Sparkles, Lock, CheckCircle2 } from "l
 export default function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col justify-between selection:bg-[var(--accent)] selection:text-white">
-      {/* Top Navbar */}
+      {/* Top Navbar: Full-Width iOS Liquid Glass */}
       <MarketingNav />
 
-      {/* Main Content Sections */}
-      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 w-full space-y-24 sm:space-y-32 pt-8 sm:pt-16 pb-12">
+      {/* Main Content Sections with generous vertical spacing and refined padding */}
+      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 w-full space-y-28 sm:space-y-36 pt-10 sm:pt-16 pb-20">
         {/* ==========================================================================
             HERO SECTION with Aceternity Beams + 3D Canvas
             ========================================================================== */}
@@ -32,16 +32,16 @@ export default function LandingPage() {
           <AceternityBeams />
 
           {/* Live Telemetry Status Pill */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--surface-hover)] border border-[var(--glass-border)] text-xs text-[var(--text-muted)] backdrop-blur-xl shadow-sm hover:border-[var(--accent-border)] transition-colors">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[var(--surface-hover)] border border-[var(--glass-border)] text-xs text-[var(--text-muted)] backdrop-blur-xl shadow-sm hover:border-[var(--accent-border)] transition-colors">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-medium text-[var(--text)]">WareFlow v0.4.5</span>
+            <span className="font-semibold text-[var(--text)]">WareFlow v0.4.5</span>
             <span className="text-[var(--text-subtle)]">•</span>
             <span>Next-Gen Wholesale Architecture</span>
           </div>
 
           {/* Main Headline */}
-          <div className="space-y-4 max-w-4xl">
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-[var(--text)] leading-[1.08]">
+          <div className="space-y-5 max-w-4xl">
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-[var(--text)] leading-[1.12]">
               Autonomous Wholesale{" "}
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-[var(--accent)] via-purple-400 to-[var(--accent-hover)]">
                 Inventory & Order
@@ -55,12 +55,12 @@ export default function LandingPage() {
           </div>
 
           {/* Action Call-to-Actions */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 w-full max-w-md pt-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md pt-2">
             <Link href="/login" className="w-full sm:w-auto">
               <GlassButton
                 variant="primary"
                 size="lg"
-                className="w-full sm:w-auto px-8 py-3.5 text-sm font-bold gap-2 shadow-lg hover:scale-105 transition-all"
+                className="w-full sm:w-auto px-8 py-3.5 text-sm font-bold gap-2 shadow-[0_0_25px_-5px_var(--accent-glow)] hover:scale-105 transition-all"
               >
                 <span>Launch Workspace</span>
                 <ArrowRight className="w-4 h-4" />
@@ -70,7 +70,7 @@ export default function LandingPage() {
               <GlassButton
                 variant="secondary"
                 size="lg"
-                className="w-full sm:w-auto px-6 py-3.5 text-sm font-semibold gap-2"
+                className="w-full sm:w-auto px-6 py-3.5 text-sm font-semibold gap-2 hover:scale-[1.02] transition-all"
               >
                 <Sparkles className="w-4 h-4 text-[var(--accent)]" />
                 <span>Explore Design System</span>
@@ -88,38 +88,38 @@ export default function LandingPage() {
             id="telemetry"
             className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-4xl pt-4"
           >
-            <div className="p-4 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-md text-left">
+            <div className="p-5 rounded-2xl bg-[var(--surface-elevated)]/40 border border-[var(--glass-border)] backdrop-blur-xl text-left shadow-lg hover:border-[var(--accent-border)] transition-all">
               <div className="text-xs text-[var(--text-muted)] font-medium">Daily Movement</div>
               <div className="text-xl sm:text-2xl font-black text-[var(--text)] font-mono mt-1">
                 14,820 <span className="text-xs font-normal text-[var(--text-muted)]">bags</span>
               </div>
-              <div className="text-[10px] text-emerald-400 font-mono mt-0.5">↑ 18.4% velocity</div>
+              <div className="text-[11px] text-emerald-400 font-mono mt-1">↑ 18.4% velocity</div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-md text-left">
+            <div className="p-5 rounded-2xl bg-[var(--surface-elevated)]/40 border border-[var(--glass-border)] backdrop-blur-xl text-left shadow-lg hover:border-[var(--accent-border)] transition-all">
               <div className="text-xs text-[var(--text-muted)] font-medium">Daily GMV Volume</div>
               <div className="text-xl sm:text-2xl font-black text-[var(--text)] font-mono mt-1">
                 ₹8.45M
               </div>
-              <div className="text-[10px] text-emerald-400 font-mono mt-0.5">38 POs Cleared</div>
+              <div className="text-[11px] text-emerald-400 font-mono mt-1">38 POs Cleared</div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-md text-left">
+            <div className="p-5 rounded-2xl bg-[var(--surface-elevated)]/40 border border-[var(--glass-border)] backdrop-blur-xl text-left shadow-lg hover:border-[var(--accent-border)] transition-all">
               <div className="text-xs text-[var(--text-muted)] font-medium">Ledger Settlement</div>
               <div className="text-xl sm:text-2xl font-black text-[var(--text)] font-mono mt-1">
                 0.02s
               </div>
-              <div className="text-[10px] text-[var(--accent)] font-mono mt-0.5">
+              <div className="text-[11px] text-[var(--accent)] font-mono mt-1 font-semibold">
                 Append-only DB
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[var(--glass-bg)] border border-[var(--glass-border)] backdrop-blur-md text-left">
+            <div className="p-5 rounded-2xl bg-[var(--surface-elevated)]/40 border border-[var(--glass-border)] backdrop-blur-xl text-left shadow-lg hover:border-[var(--accent-border)] transition-all">
               <div className="text-xs text-[var(--text-muted)] font-medium">API Uptime</div>
               <div className="text-xl sm:text-2xl font-black text-[var(--text)] font-mono mt-1">
                 99.98%
               </div>
-              <div className="text-[10px] text-emerald-400 font-mono mt-0.5">
+              <div className="text-[11px] text-emerald-400 font-mono mt-1">
                 Supabase + FastAPI
               </div>
             </div>
@@ -144,54 +144,54 @@ export default function LandingPage() {
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-[var(--text)]">
               Sovereign Security & Immutable Audit Logs
             </h2>
-            <p className="text-xs sm:text-sm text-[var(--text-muted)]">
+            <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">
               Built on banking-grade cryptographic principles to ensure zero reconciliation drift
               and absolute data accountability.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <GlassCard hoverable className="p-6 space-y-4">
-              <div className="w-10 h-10 rounded-2xl bg-[var(--accent-subtle)] border border-[var(--accent-border)] flex items-center justify-center text-[var(--accent)]">
+            <GlassCard hoverable className="p-7 sm:p-8 space-y-4">
+              <div className="w-11 h-11 rounded-2xl bg-[var(--accent-subtle)] border border-[var(--accent-border)] flex items-center justify-center text-[var(--accent)] shadow-sm">
                 <Lock className="w-5 h-5" />
               </div>
-              <GlassCardTitle className="text-base">RFC 6238 TOTP 2FA</GlassCardTitle>
-              <GlassCardDescription className="text-xs leading-relaxed">
+              <GlassCardTitle className="text-lg font-bold">RFC 6238 TOTP 2FA</GlassCardTitle>
+              <GlassCardDescription className="text-xs leading-relaxed text-[var(--text-muted)]">
                 Mandatory hardware-backed 2FA for Owner, Manager, and Accountant roles. TOTP secrets
                 and single-use recovery codes encrypted with Fernet AES-128 at rest.
               </GlassCardDescription>
-              <div className="pt-2 flex items-center gap-2 text-[11px] text-emerald-400 font-mono">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+              <div className="pt-3 border-t border-[var(--border)] flex items-center gap-2 text-xs text-emerald-400 font-mono">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>Zero Paid SMS Dependency</span>
               </div>
             </GlassCard>
 
-            <GlassCard hoverable className="p-6 space-y-4">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <GlassCard hoverable className="p-7 sm:p-8 space-y-4">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-sm">
                 <ShieldCheck className="w-5 h-5" />
               </div>
-              <GlassCardTitle className="text-base">Immutable Audit Trail</GlassCardTitle>
-              <GlassCardDescription className="text-xs leading-relaxed">
+              <GlassCardTitle className="text-lg font-bold">Immutable Audit Trail</GlassCardTitle>
+              <GlassCardDescription className="text-xs leading-relaxed text-[var(--text-muted)]">
                 Every sensitive change (product price alterations, retailer credit limit
                 adjustments, staff role assignments) records complete before/after JSON diffs.
               </GlassCardDescription>
-              <div className="pt-2 flex items-center gap-2 text-[11px] text-emerald-400 font-mono">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+              <div className="pt-3 border-t border-[var(--border)] flex items-center gap-2 text-xs text-emerald-400 font-mono">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>Cryptographic Provenance</span>
               </div>
             </GlassCard>
 
-            <GlassCard hoverable className="p-6 space-y-4">
-              <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+            <GlassCard hoverable className="p-7 sm:p-8 space-y-4">
+              <div className="w-11 h-11 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shadow-sm">
                 <Layers className="w-5 h-5" />
               </div>
-              <GlassCardTitle className="text-base">Append-Only Stock Ledger</GlassCardTitle>
-              <GlassCardDescription className="text-xs leading-relaxed">
+              <GlassCardTitle className="text-lg font-bold">Append-Only Stock Ledger</GlassCardTitle>
+              <GlassCardDescription className="text-xs leading-relaxed text-[var(--text-muted)]">
                 Stock levels are never mutated in-place. Every inbound GRN, dispatch, return, and
                 adjustment is stored as an immutable signed movement event.
               </GlassCardDescription>
-              <div className="pt-2 flex items-center gap-2 text-[11px] text-cyan-400 font-mono">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+              <div className="pt-3 border-t border-[var(--border)] flex items-center gap-2 text-xs text-cyan-400 font-mono">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>Zero Balancing Discrepancies</span>
               </div>
             </GlassCard>
@@ -199,31 +199,31 @@ export default function LandingPage() {
         </section>
 
         {/* ==========================================================================
-            FINAL CTA BANNER
+            FINAL CTA BANNER (Frosted Translucent Liquid Glass — No Hard Color Cuts)
             ========================================================================== */}
-        <section className="relative p-8 sm:p-12 rounded-3xl bg-[var(--surface-elevated)] border border-[var(--accent-border)] backdrop-blur-2xl text-center space-y-6 overflow-hidden shadow-[0_0_50px_-10px_var(--accent-glow)]">
+        <section className="relative p-10 sm:p-16 rounded-3xl bg-[var(--glass-bg)]/80 dark:bg-[var(--surface-elevated)]/45 border border-[var(--glass-border)] hover:border-[var(--accent-border)] backdrop-blur-2xl text-center space-y-6 overflow-hidden shadow-2xl transition-all duration-300">
           <div
             aria-hidden="true"
-            className="absolute inset-0 opacity-20 pointer-events-none"
+            className="absolute inset-0 opacity-15 dark:opacity-25 pointer-events-none"
             style={{
-              background: "radial-gradient(circle at center, var(--accent) 0%, transparent 70%)",
+              background: "radial-gradient(circle at center, var(--accent) 0%, transparent 65%)",
             }}
           />
           <div className="relative z-10 max-w-2xl mx-auto space-y-3">
-            <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-[var(--text)]">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-[var(--text)]">
               Modernize Your Wholesale Fleet Today
             </h2>
-            <p className="text-xs sm:text-sm text-[var(--text-muted)]">
+            <p className="text-xs sm:text-sm text-[var(--text-muted)] leading-relaxed">
               Instant single-click Google/Apple sign-in with automatic first-user Owner
               bootstrapping.
             </p>
           </div>
-          <div className="relative z-10 flex justify-center pt-2">
+          <div className="relative z-10 flex justify-center pt-3">
             <Link href="/login">
               <GlassButton
                 variant="primary"
                 size="lg"
-                className="px-8 py-3.5 text-sm font-bold gap-2 shadow-xl hover:scale-105 transition-all"
+                className="px-9 py-3.5 text-sm font-bold gap-2 shadow-[0_0_30px_-5px_var(--accent-glow)] hover:scale-105 transition-all"
               >
                 <span>Enter Workspace</span>
                 <ArrowRight className="w-4 h-4" />
@@ -233,7 +233,7 @@ export default function LandingPage() {
         </section>
       </main>
 
-      {/* Footer */}
+      {/* Footer (Seamless Translucent Glass) */}
       <MarketingFooter />
     </div>
   );

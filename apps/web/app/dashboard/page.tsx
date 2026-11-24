@@ -205,6 +205,9 @@ export default function DashboardPage() {
   const [loadingDashboard, setLoadingDashboard] = useState(true);
   const [insight, setInsight] = useState<WeeklyInsight | null>(null);
   const [loadingInsight, setLoadingInsight] = useState(false);
+  const [dashboardTab, setDashboardTab] = useState<"pulse" | "velocity" | "stock" | "orders">("pulse");
+  const [sideTab, setSideTab] = useState<"stock" | "receivables">("stock");
+  const [isBriefingExpanded, setIsBriefingExpanded] = useState(true);
 
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([
     {
@@ -328,9 +331,18 @@ export default function DashboardPage() {
   };
 
   const kpis = dashboard?.kpi_metrics || DEFAULT_KPIS;
-  const currentMonthName = useMemo(() => {
-    return new Date().toLocaleString("en-IN", { month: "long", year: "numeric" });
+  const [currentMonthName, setCurrentMonthName] = useState("August 2026");
+
+  useEffect(() => {
+    try {
+      setCurrentMonthName(new Date().toLocaleString("en-IN", { month: "long", year: "numeric" }));
+    } catch {
+      // safe fallback
+    }
   }, []);
+
+  const lowStockCount = dashboard?.low_stock_quick_list?.length || 0;
+  const overdueCount = dashboard?.overdue_invoices_quick_list?.length || 0;
 
   return (
     <AppLayout>
@@ -362,6 +374,54 @@ export default function DashboardPage() {
                 <span>Audit Ledger</span>
               </GlassButton>
             </Link>
+          </div>
+        }
+        filters={
+          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-[var(--surface-elevated)]/60 dark:bg-[#09090b]/60 backdrop-blur-xl border border-[var(--glass-border)] text-xs">
+            <button
+              type="button"
+              onClick={() => setDashboardTab("pulse")}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all ${
+                dashboardTab === "pulse"
+                  ? "bg-[var(--accent)] text-white shadow-[0_0_12px_var(--accent-glow)] font-semibold"
+                  : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
+              }`}
+            >
+              ✨ Executive Pulse
+            </button>
+            <button
+              type="button"
+              onClick={() => setDashboardTab("velocity")}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all ${
+                dashboardTab === "velocity"
+                  ? "bg-[var(--accent)] text-white shadow-[0_0_12px_var(--accent-glow)] font-semibold"
+                  : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
+              }`}
+            >
+              📊 Movement & Velocity
+            </button>
+            <button
+              type="button"
+              onClick={() => setDashboardTab("stock")}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all ${
+                dashboardTab === "stock"
+                  ? "bg-[var(--accent)] text-white shadow-[0_0_12px_var(--accent-glow)] font-semibold"
+                  : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
+              }`}
+            >
+              ⚠️ Stock Alerts & Deficits
+            </button>
+            <button
+              type="button"
+              onClick={() => setDashboardTab("orders")}
+              className={`px-3 py-1.5 rounded-xl font-medium transition-all ${
+                dashboardTab === "orders"
+                  ? "bg-[var(--accent)] text-white shadow-[0_0_12px_var(--accent-glow)] font-semibold"
+                  : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)]"
+              }`}
+            >
+              📋 Sales Orders & Ledger
+            </button>
           </div>
         }
         kpiMetrics={[
@@ -433,16 +493,16 @@ export default function DashboardPage() {
             )}
 
             {/* 2. AI Executive Weekly Intelligence Narrative Briefing */}
-            {insight && (
-              <GlassCard className="p-6 relative overflow-hidden border border-purple-500/30 bg-gradient-to-br from-purple-950/20 via-background to-background shadow-2xl">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[var(--glass-border)]">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30">
+            {insight && (dashboardTab === "pulse" || dashboardTab === "velocity") && (
+              <GlassCard className="p-6 sm:p-7 relative overflow-hidden border border-purple-500/25 bg-gradient-to-br from-purple-950/15 via-background/40 to-background/30 backdrop-blur-2xl shadow-xl space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--glass-border)]">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-2xl bg-purple-500/20 text-purple-300 border border-purple-500/30">
                       <Sparkles className="w-4 h-4" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <GlassCardTitle className="text-sm font-semibold text-white">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <GlassCardTitle className="text-base font-bold text-white tracking-tight">
                           AI Executive Intelligence Briefing
                         </GlassCardTitle>
                         <GlassBadge
@@ -457,44 +517,56 @@ export default function DashboardPage() {
                           </GlassBadge>
                         )}
                       </div>
-                      <GlassCardDescription className="text-xs text-purple-200/70">
+                      <GlassCardDescription className="text-xs text-purple-200/70 mt-0.5">
                         Synthesized 7-day executive pulse across dispatches, top velocity products,
                         and inventory risks.
                       </GlassCardDescription>
                     </div>
                   </div>
 
-                  <GlassButton
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => fetchWeeklyInsight(true)}
-                    disabled={loadingInsight}
-                    className="text-xs self-start sm:self-auto text-purple-300 hover:text-purple-100"
-                  >
-                    <RefreshCw
-                      className={`w-3.5 h-3.5 mr-1.5 ${loadingInsight ? "animate-spin" : ""}`}
-                    />
-                    {loadingInsight ? "Analyzing..." : "Refresh Pulse"}
-                  </GlassButton>
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <GlassButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsBriefingExpanded(!isBriefingExpanded)}
+                      className="text-xs text-purple-200 hover:text-white"
+                    >
+                      {isBriefingExpanded ? "Compact View" : "Expand Summary"}
+                    </GlassButton>
+                    <GlassButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => fetchWeeklyInsight(true)}
+                      disabled={loadingInsight}
+                      className="text-xs text-purple-300 hover:text-purple-100"
+                    >
+                      <RefreshCw
+                        className={`w-3.5 h-3.5 mr-1.5 ${loadingInsight ? "animate-spin" : ""}`}
+                      />
+                      {loadingInsight ? "Analyzing..." : "Refresh Pulse"}
+                    </GlassButton>
+                  </div>
                 </div>
 
-                <div className="pt-4 space-y-4">
+                <div className="space-y-4">
                   <div className="space-y-2">
                     <h3 className="text-sm font-bold text-white flex items-center gap-2">
                       <Zap className="w-4 h-4 text-amber-400 shrink-0" />
                       <span>{insight.headline}</span>
                     </h3>
-                    <p className="text-xs text-[var(--text)] leading-relaxed bg-black/20 p-3.5 rounded-xl border border-[var(--glass-border)] font-normal">
-                      {insight.narrative}
-                    </p>
+                    {isBriefingExpanded && (
+                      <p className="text-xs text-[var(--text)] leading-relaxed bg-black/20 p-4 rounded-2xl border border-[var(--glass-border)] font-normal">
+                        {insight.narrative}
+                      </p>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1 text-xs">
-                    <div className="p-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--glass-border)]">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 text-xs">
+                    <div className="p-3 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] space-y-1">
                       <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-mono">
                         7D Sales Revenue
                       </span>
-                      <span className="text-xs font-mono font-bold text-emerald-400">
+                      <span className="text-sm font-mono font-bold text-emerald-400 block">
                         ₹
                         {Number(insight.metrics_summary.weekly_revenue).toLocaleString("en-IN", {
                           minimumFractionDigits: 2,
@@ -502,22 +574,22 @@ export default function DashboardPage() {
                       </span>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--glass-border)]">
+                    <div className="p-3 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] space-y-1">
                       <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-mono">
                         Orders / Confirmed
                       </span>
-                      <span className="text-xs font-mono font-bold text-white">
+                      <span className="text-sm font-mono font-bold text-white block">
                         {insight.metrics_summary.weekly_orders_count} orders (
                         {insight.metrics_summary.confirmed_orders_count} conf)
                       </span>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--glass-border)]">
+                    <div className="p-3 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] space-y-1">
                       <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-mono">
                         Velocity Leader
                       </span>
                       <span
-                        className="text-xs font-semibold text-[var(--accent)] truncate block"
+                        className="text-sm font-semibold text-[var(--accent)] truncate block"
                         title={insight.metrics_summary.top_mover_product_name || "None"}
                       >
                         {insight.metrics_summary.top_mover_product_name || "—"} (
@@ -525,11 +597,11 @@ export default function DashboardPage() {
                       </span>
                     </div>
 
-                    <div className="p-2.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--glass-border)]">
+                    <div className="p-3 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] space-y-1">
                       <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider block font-mono">
                         Dead Capital Risk
                       </span>
-                      <span className="text-xs font-mono font-bold text-amber-400">
+                      <span className="text-sm font-mono font-bold text-amber-400 block">
                         ₹
                         {Number(insight.metrics_summary.dead_stock_capital).toLocaleString(
                           "en-IN",
@@ -544,357 +616,363 @@ export default function DashboardPage() {
             )}
 
             {/* 3. Interactive 30-Day Inbound vs Outbound Movement Velocity Chart */}
-            <GlassCard className="p-6 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <GlassCardTitle className="text-base flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-[var(--accent)]" />
-                    30-Day Inventory Movement Velocity
-                  </GlassCardTitle>
-                  <GlassCardDescription className="text-xs">
-                    Aggregated daily inbound purchase receipts vs outbound wholesale dispatches.
-                  </GlassCardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <GlassBadge variant="success" className="text-[11px]">
-                    ● Inbound Receipts
-                  </GlassBadge>
-                  <GlassBadge variant="accent" className="text-[11px]">
-                    ● Outbound Dispatches
-                  </GlassBadge>
-                </div>
-              </div>
-
-              <div className="h-[280px] w-full pt-2">
-                {dashboard?.movement_trend_30d && dashboard.movement_trend_30d.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={dashboard.movement_trend_30d}
-                      margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
-                    >
-                      <defs>
-                        <linearGradient id="inboundGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
-                        </linearGradient>
-                        <linearGradient id="outboundGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                      <XAxis
-                        dataKey="date"
-                        tickFormatter={(d: string) => d.slice(5)}
-                        stroke="var(--text-muted)"
-                        fontSize={11}
-                      />
-                      <YAxis
-                        stroke="var(--text-muted)"
-                        fontSize={11}
-                        tickFormatter={(v: number) => Number(v).toLocaleString()}
-                      />
-                      <Tooltip content={<CustomMovementTooltip />} />
-                      <Legend
-                        verticalAlign="top"
-                        height={36}
-                        iconType="circle"
-                        formatter={(val) => (
-                          <span className="text-xs text-[var(--text-muted)] font-medium">
-                            {val}
-                          </span>
-                        )}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="inbound_qty"
-                        name="Inbound Receipts"
-                        stroke="#10b981"
-                        strokeWidth={2}
-                        fillOpacity={1}
-                        fill="url(#inboundGrad)"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="outbound_qty"
-                        name="Outbound Dispatches"
-                        stroke="#8b5cf6"
-                        strokeWidth={2}
-                        fillOpacity={1}
-                        fill="url(#outboundGrad)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="h-full flex items-center justify-center text-xs text-[var(--text-muted)]">
-                    No movement telemetry recorded in the trailing 30 days.
-                  </div>
-                )}
-              </div>
-            </GlassCard>
-
-            {/* 4. Top Velocity Movers & Dead Stock Risk Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Top 5 Fastest-Moving Products */}
-              <GlassCard className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Flame className="w-4 h-4 text-emerald-400" />
-                    <GlassCardTitle className="text-sm font-semibold">
-                      Top Velocity Products (30 Days)
+            {(dashboardTab === "pulse" || dashboardTab === "velocity") && (
+              <GlassCard className="p-6 sm:p-7 space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <GlassCardTitle className="text-base flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-[var(--accent)]" />
+                      30-Day Inventory Movement Velocity
                     </GlassCardTitle>
+                    <GlassCardDescription className="text-xs mt-0.5">
+                      Aggregated daily inbound purchase receipts vs outbound wholesale dispatches.
+                    </GlassCardDescription>
                   </div>
-                  <GlassBadge variant="success" className="text-[10px]">
-                    Sales Velocity
-                  </GlassBadge>
-                </div>
-
-                {dashboard?.top_fastest_moving && dashboard.top_fastest_moving.length > 0 ? (
-                  <div className="space-y-2.5">
-                    {dashboard.top_fastest_moving.map((p, idx) => (
-                      <div
-                        key={p.product_id || `fast-${idx}`}
-                        className="p-3 rounded-xl bg-[var(--surface-hover)] border border-[var(--glass-border)] flex items-center justify-between gap-3 text-xs"
-                      >
-                        <div className="min-w-0">
-                          <div className="font-semibold text-white truncate" title={p.product_name}>
-                            {p.product_name}
-                          </div>
-                          <div className="text-[10px] text-[var(--text-muted)] font-mono">
-                            {p.sku} {p.category_name ? `• ${p.category_name}` : ""}
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <div className="font-mono font-bold text-emerald-400">
-                            {Number(p.units_moved).toLocaleString("en-IN")} units
-                          </div>
-                          <div className="text-[10px] text-[var(--text-muted)] font-mono">
-                            ₹{Number(p.revenue).toLocaleString("en-IN")}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-6 text-center text-xs text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-xl">
-                    No outbound sales volume in trailing 30 days.
-                  </div>
-                )}
-              </GlassCard>
-
-              {/* Top 5 Dead Stock Capital Risks */}
-              <GlassCard className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <AlertOctagon className="w-4 h-4 text-amber-400" />
-                    <GlassCardTitle className="text-sm font-semibold">
-                      Dead Stock Capital Risk (60+ Days)
-                    </GlassCardTitle>
+                    <GlassBadge variant="success" className="text-[11px]">
+                      ● Inbound Receipts
+                    </GlassBadge>
+                    <GlassBadge variant="accent" className="text-[11px]">
+                      ● Outbound Dispatches
+                    </GlassBadge>
                   </div>
-                  <GlassBadge variant="warning" className="text-[10px]">
-                    Tied-Up Capital
-                  </GlassBadge>
                 </div>
 
-                {dashboard?.top_dead_stock && dashboard.top_dead_stock.length > 0 ? (
-                  <div className="space-y-2.5">
-                    {dashboard.top_dead_stock.map((p, idx) => (
-                      <div
-                        key={p.product_id || `dead-${idx}`}
-                        className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 flex items-center justify-between gap-3 text-xs"
+                <div className="h-[280px] w-full pt-2">
+                  {dashboard?.movement_trend_30d && dashboard.movement_trend_30d.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={dashboard.movement_trend_30d}
+                        margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
                       >
-                        <div className="min-w-0">
-                          <div className="font-semibold text-white truncate" title={p.product_name}>
-                            {p.product_name}
-                          </div>
-                          <div className="text-[10px] text-amber-300/80 font-mono">
-                            {p.sku} • {p.days_inactive}d inactive ({p.units_on_hand} on-hand)
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <div className="font-mono font-bold text-amber-400">
-                            ₹{Number(p.tied_up_capital).toLocaleString("en-IN")}
-                          </div>
-                          <Link
-                            href="/admin/inventory"
-                            className="text-[10px] text-[var(--accent)] hover:underline block"
-                          >
-                            Liquidate →
-                          </Link>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-6 text-center text-xs text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-xl">
-                    Zero dead stock identified. Inventory is actively turning.
-                  </div>
-                )}
-              </GlassCard>
-            </div>
-
-            {/* 5. Live Recent Sales Orders Stream Table */}
-            <GlassCard className="p-6 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <GlassCardTitle className="text-base">
-                    Recent Wholesale Sales Orders
-                  </GlassCardTitle>
-                  <GlassCardDescription className="text-xs">
-                    Live settlement stream with zero-latency table row mutations.
-                  </GlassCardDescription>
-                </div>
-                <GlassBadge
-                  variant="neutral"
-                  className="font-mono text-[11px] self-start sm:self-auto"
-                >
-                  {recentOrders.length} Total Orders
-                </GlassBadge>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead>
-                    <tr className="border-b border-[var(--border)] text-[var(--text-muted)]">
-                      <th className="p-3">Order No</th>
-                      <th className="p-3">Retailer Account</th>
-                      <th className="p-3">Bags</th>
-                      <th className="p-3">Total (₹)</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody ref={ordersListRef}>
-                    {recentOrders.map((ord) => (
-                      <tr
-                        key={ord.id}
-                        className="border-b border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors"
-                      >
-                        <td className="p-3 font-mono font-bold text-[var(--accent)]">
-                          {ord.orderNumber}
-                        </td>
-                        <td className="p-3 font-medium text-[var(--text)]">{ord.retailer}</td>
-                        <td className="p-3 font-mono">{ord.itemsCount}</td>
-                        <td className="p-3 font-mono font-semibold">
-                          ₹{ord.total.toLocaleString("en-IN")}
-                        </td>
-                        <td className="p-3">
-                          <GlassBadge
-                            variant={
-                              ord.status === "dispatched"
-                                ? "success"
-                                : ord.status === "processing"
-                                  ? "accent"
-                                  : "warning"
-                            }
-                            dot
-                          >
-                            {ord.status}
-                          </GlassBadge>
-                        </td>
-                        <td className="p-3 text-right">
-                          {ord.status !== "dispatched" ? (
-                            <button
-                              type="button"
-                              onClick={() => markDispatched(ord.id)}
-                              className="text-[11px] text-[var(--accent)] hover:underline font-semibold"
-                            >
-                              Dispatch
-                            </button>
-                          ) : (
-                            <span className="text-[11px] text-[var(--text-subtle)] font-mono">
-                              Cleared
+                        <defs>
+                          <linearGradient id="inboundGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                          </linearGradient>
+                          <linearGradient id="outboundGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                        <XAxis
+                          dataKey="date"
+                          tickFormatter={(d: string) => d.slice(5)}
+                          stroke="var(--text-muted)"
+                          fontSize={11}
+                        />
+                        <YAxis
+                          stroke="var(--text-muted)"
+                          fontSize={11}
+                          tickFormatter={(v: number) => Number(v).toLocaleString()}
+                        />
+                        <Tooltip content={<CustomMovementTooltip />} />
+                        <Legend
+                          verticalAlign="top"
+                          height={36}
+                          iconType="circle"
+                          formatter={(val) => (
+                            <span className="text-xs text-[var(--text-muted)] font-medium">
+                              {val}
                             </span>
                           )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="inbound_qty"
+                          name="Inbound Receipts"
+                          stroke="#10b981"
+                          strokeWidth={2}
+                          fillOpacity={1}
+                          fill="url(#inboundGrad)"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="outbound_qty"
+                          name="Outbound Dispatches"
+                          stroke="#8b5cf6"
+                          strokeWidth={2}
+                          fillOpacity={1}
+                          fill="url(#outboundGrad)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-xs text-[var(--text-muted)]">
+                      No movement telemetry recorded in the trailing 30 days.
+                    </div>
+                  )}
+                </div>
+              </GlassCard>
+            )}
+
+            {/* 4. Top Velocity Movers & Dead Stock Risk Grid */}
+            {(dashboardTab === "pulse" || dashboardTab === "velocity" || dashboardTab === "stock") && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Top 5 Fastest-Moving Products */}
+                <GlassCard className="p-6 sm:p-7 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Flame className="w-4 h-4 text-emerald-400" />
+                      <GlassCardTitle className="text-sm font-semibold">
+                        Top Velocity Products (30 Days)
+                      </GlassCardTitle>
+                    </div>
+                    <GlassBadge variant="success" className="text-[10px]">
+                      Sales Velocity
+                    </GlassBadge>
+                  </div>
+
+                  {dashboard?.top_fastest_moving && dashboard.top_fastest_moving.length > 0 ? (
+                    <div className="space-y-3">
+                      {dashboard.top_fastest_moving.map((p, idx) => (
+                        <div
+                          key={p.product_id || `fast-${idx}`}
+                          className="p-3.5 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] flex items-center justify-between gap-3 text-xs"
+                        >
+                          <div className="min-w-0">
+                            <div className="font-semibold text-white truncate" title={p.product_name}>
+                              {p.product_name}
+                            </div>
+                            <div className="text-[10px] text-[var(--text-muted)] font-mono mt-0.5">
+                              {p.sku} {p.category_name ? `• ${p.category_name}` : ""}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="font-mono font-bold text-emerald-400">
+                              {Number(p.units_moved).toLocaleString("en-IN")} units
+                            </div>
+                            <div className="text-[10px] text-[var(--text-muted)] font-mono mt-0.5">
+                              ₹{Number(p.revenue).toLocaleString("en-IN")}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6 text-center text-xs text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-2xl">
+                      No outbound sales volume in trailing 30 days.
+                    </div>
+                  )}
+                </GlassCard>
+
+                {/* Top 5 Dead Stock Capital Risks */}
+                <GlassCard className="p-6 sm:p-7 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <AlertOctagon className="w-4 h-4 text-amber-400" />
+                      <GlassCardTitle className="text-sm font-semibold">
+                        Dead Stock Capital Risk (60+ Days)
+                      </GlassCardTitle>
+                    </div>
+                    <GlassBadge variant="warning" className="text-[10px]">
+                      Tied-Up Capital
+                    </GlassBadge>
+                  </div>
+
+                  {dashboard?.top_dead_stock && dashboard.top_dead_stock.length > 0 ? (
+                    <div className="space-y-3">
+                      {dashboard.top_dead_stock.map((p, idx) => (
+                        <div
+                          key={p.product_id || `dead-${idx}`}
+                          className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 flex items-center justify-between gap-3 text-xs"
+                        >
+                          <div className="min-w-0">
+                            <div className="font-semibold text-white truncate" title={p.product_name}>
+                              {p.product_name}
+                            </div>
+                            <div className="text-[10px] text-amber-300/80 font-mono mt-0.5">
+                              {p.sku} • {p.days_inactive}d inactive ({p.units_on_hand} on-hand)
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <div className="font-mono font-bold text-amber-400">
+                              ₹{Number(p.tied_up_capital).toLocaleString("en-IN")}
+                            </div>
+                            <Link
+                              href="/admin/inventory"
+                              className="text-[10px] text-[var(--accent)] hover:underline block mt-0.5"
+                            >
+                              Liquidate →
+                            </Link>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6 text-center text-xs text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-2xl">
+                      Zero dead stock identified. Inventory is actively turning.
+                    </div>
+                  )}
+                </GlassCard>
               </div>
-            </GlassCard>
+            )}
+
+            {/* 5. Live Recent Sales Orders Stream Table */}
+            {(dashboardTab === "pulse" || dashboardTab === "orders") && (
+              <GlassCard className="p-6 sm:p-7 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <GlassCardTitle className="text-base font-bold">
+                      Recent Wholesale Sales Orders
+                    </GlassCardTitle>
+                    <GlassCardDescription className="text-xs mt-0.5">
+                      Live settlement stream with zero-latency table row mutations.
+                    </GlassCardDescription>
+                  </div>
+                  <GlassBadge
+                    variant="neutral"
+                    className="font-mono text-[11px] self-start sm:self-auto"
+                  >
+                    {recentOrders.length} Total Orders
+                  </GlassBadge>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-[var(--border)] text-[var(--text-muted)]">
+                        <th className="p-3.5">Order No</th>
+                        <th className="p-3.5">Retailer Account</th>
+                        <th className="p-3.5">Bags</th>
+                        <th className="p-3.5">Total (₹)</th>
+                        <th className="p-3.5">Status</th>
+                        <th className="p-3.5 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody ref={ordersListRef}>
+                      {recentOrders.map((ord) => (
+                        <tr
+                          key={ord.id}
+                          className="border-b border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors"
+                        >
+                          <td className="p-3.5 font-mono font-bold text-[var(--accent)]">
+                            {ord.orderNumber}
+                          </td>
+                          <td className="p-3.5 font-medium text-[var(--text)]">{ord.retailer}</td>
+                          <td className="p-3.5 font-mono">{ord.itemsCount}</td>
+                          <td className="p-3.5 font-mono font-semibold">
+                            ₹{ord.total.toLocaleString("en-IN")}
+                          </td>
+                          <td className="p-3.5">
+                            <GlassBadge
+                              variant={
+                                ord.status === "dispatched"
+                                  ? "success"
+                                  : ord.status === "processing"
+                                    ? "accent"
+                                    : "warning"
+                              }
+                              dot
+                            >
+                              {ord.status}
+                            </GlassBadge>
+                          </td>
+                          <td className="p-3.5 text-right">
+                            {ord.status !== "dispatched" ? (
+                              <button
+                                type="button"
+                                onClick={() => markDispatched(ord.id)}
+                                className="text-[11px] text-[var(--accent)] hover:underline font-semibold"
+                              >
+                                Dispatch
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-[var(--text-subtle)] font-mono">
+                                Cleared
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </GlassCard>
+            )}
 
             {/* 6. Administrative & Security Navigation Controls */}
-            <GlassCard className="p-6 space-y-4">
-              <GlassCardTitle className="text-sm">
-                Administrative & Security Controls
-              </GlassCardTitle>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Link
-                  href="/admin/settings/staff"
-                  className="p-3.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--glass-border)] hover:border-[var(--accent-border)] transition-all flex items-center justify-between text-xs group"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Users className="w-4 h-4 text-[var(--accent)]" />
-                    <span className="font-semibold text-[var(--text)]">Staff & Roles</span>
-                  </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text)] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </Link>
+            {(dashboardTab === "pulse" || dashboardTab === "orders") && (
+              <GlassCard className="p-6 sm:p-7 space-y-4">
+                <GlassCardTitle className="text-sm font-semibold">
+                  Administrative & Security Controls
+                </GlassCardTitle>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <Link
+                    href="/admin/settings/staff"
+                    className="p-4 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] hover:border-[var(--accent-border)] transition-all flex items-center justify-between text-xs group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Users className="w-4 h-4 text-[var(--accent)]" />
+                      <span className="font-semibold text-[var(--text)]">Staff & Roles</span>
+                    </div>
+                    <ArrowUpRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text)] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                  </Link>
 
-                <Link
-                  href="/admin/settings/permissions"
-                  className="p-3.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--glass-border)] hover:border-[var(--accent-border)] transition-all flex items-center justify-between text-xs group"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Shield className="w-4 h-4 text-emerald-400" />
-                    <span className="font-semibold text-[var(--text)]">RBAC Matrix</span>
-                  </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text)] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </Link>
+                  <Link
+                    href="/admin/settings/permissions"
+                    className="p-4 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] hover:border-[var(--accent-border)] transition-all flex items-center justify-between text-xs group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Shield className="w-4 h-4 text-emerald-400" />
+                      <span className="font-semibold text-[var(--text)]">RBAC Matrix</span>
+                    </div>
+                    <ArrowUpRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text)] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                  </Link>
 
-                <Link
-                  href="/admin/audit"
-                  className="p-3.5 rounded-xl bg-[var(--surface-hover)] border border-[var(--glass-border)] hover:border-[var(--accent-border)] transition-all flex items-center justify-between text-xs group"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <FileSpreadsheet className="w-4 h-4 text-cyan-400" />
-                    <span className="font-semibold text-[var(--text)]">Audit Log</span>
-                  </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text)] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </Link>
-              </div>
-            </GlassCard>
+                  <Link
+                    href="/admin/audit"
+                    className="p-4 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)] hover:border-[var(--accent-border)] transition-all flex items-center justify-between text-xs group"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <FileSpreadsheet className="w-4 h-4 text-cyan-400" />
+                      <span className="font-semibold text-[var(--text)]">Audit Log</span>
+                    </div>
+                    <ArrowUpRight className="w-3.5 h-3.5 text-[var(--text-muted)] group-hover:text-[var(--text)] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                  </Link>
+                </div>
+              </GlassCard>
+            )}
           </div>
         }
         sideContent={
           <div className="space-y-4">
             {/* 1. Low-Stock Quick-List Widget */}
-            <GlassCard className="p-5 space-y-3">
+            <GlassCard className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-400" />
-                  <GlassCardTitle className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
+                  <GlassCardTitle className="text-xs uppercase tracking-wider text-[var(--text-muted)] font-mono font-bold">
                     Low Stock Quick Action
                   </GlassCardTitle>
                 </div>
                 <GlassBadge
-                  variant={
-                    (dashboard?.low_stock_quick_list?.length || 0) > 0 ? "warning" : "success"
-                  }
+                  variant={lowStockCount > 0 ? "warning" : "success"}
                   className="text-[10px] py-0"
                 >
-                  {dashboard?.low_stock_quick_list?.length || 0} Alerts
+                  {lowStockCount} Alerts
                 </GlassBadge>
               </div>
 
               {dashboard?.low_stock_quick_list && dashboard.low_stock_quick_list.length > 0 ? (
-                <div className="space-y-2.5 text-xs">
+                <div className="space-y-3 text-xs">
                   {dashboard.low_stock_quick_list.slice(0, 5).map((item) => (
                     <div
                       key={item.product_id}
-                      className={`p-3 rounded-xl border space-y-1.5 ${
+                      className={`p-3.5 rounded-2xl border space-y-2 ${
                         item.urgency === "critical"
                           ? "bg-rose-500/10 border-rose-500/30 text-rose-300"
                           : "bg-amber-500/10 border-amber-500/20 text-amber-300"
                       }`}
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-start justify-between gap-2">
                         <span className="font-bold text-white truncate" title={item.product_name}>
                           {item.product_name}
                         </span>
                         <GlassBadge
                           variant={item.urgency === "critical" ? "error" : "warning"}
-                          className="text-[9px] uppercase tracking-wide font-mono px-1.5 py-0"
+                          className="text-[9px] uppercase tracking-wide font-mono px-1.5 py-0 shrink-0"
                         >
                           {item.urgency}
                         </GlassBadge>
@@ -909,13 +987,13 @@ export default function DashboardPage() {
                       </div>
 
                       {item.primary_supplier_name && (
-                        <div className="text-[10px] text-[var(--text-subtle)] flex items-center gap-1 truncate">
-                          <Building2 className="w-3 h-3 text-purple-400 shrink-0" />
+                        <div className="text-[10px] text-[var(--text-subtle)] flex items-center gap-1.5 truncate pt-0.5">
+                          <Building2 className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                           <span className="truncate">Supplier: {item.primary_supplier_name}</span>
                         </div>
                       )}
 
-                      <div className="pt-1 flex items-center justify-end">
+                      <div className="pt-1 flex items-center justify-end border-t border-white/5">
                         <Link href="/admin/purchase-orders">
                           <span className="text-[11px] text-[var(--accent)] hover:underline font-semibold flex items-center gap-1">
                             + Restock PO →
@@ -926,44 +1004,42 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="p-4 text-center text-xs text-[var(--text-muted)] bg-black/10 rounded-xl border border-[var(--glass-border)]">
+                <div className="p-4 text-center text-xs text-[var(--text-muted)] bg-black/10 rounded-2xl border border-[var(--glass-border)]">
                   All inventory healthy above safety threshold.
                 </div>
               )}
             </GlassCard>
 
             {/* 2. Overdue Invoices Quick-List Widget */}
-            <GlassCard className="p-5 space-y-3">
+            <GlassCard className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <IndianRupee className="w-4 h-4 text-rose-400" />
-                  <GlassCardTitle className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
+                  <GlassCardTitle className="text-xs uppercase tracking-wider text-[var(--text-muted)] font-mono font-bold">
                     Overdue Receivables Queue
                   </GlassCardTitle>
                 </div>
                 <GlassBadge
-                  variant={
-                    (dashboard?.overdue_invoices_quick_list?.length || 0) > 0 ? "error" : "neutral"
-                  }
+                  variant={overdueCount > 0 ? "error" : "neutral"}
                   className="text-[10px] py-0"
                 >
-                  {dashboard?.overdue_invoices_quick_list?.length || 0} Overdue
+                  {overdueCount} Overdue
                 </GlassBadge>
               </div>
 
               {dashboard?.overdue_invoices_quick_list &&
               dashboard.overdue_invoices_quick_list.length > 0 ? (
-                <div className="space-y-2.5 text-xs">
+                <div className="space-y-3 text-xs">
                   {dashboard.overdue_invoices_quick_list.slice(0, 5).map((inv) => (
                     <div
                       key={inv.invoice_id}
-                      className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 space-y-1"
+                      className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 space-y-1.5"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-start justify-between gap-2">
                         <span className="font-bold text-white truncate" title={inv.retailer_name}>
                           {inv.retailer_name}
                         </span>
-                        <span className="font-mono text-[10px] text-rose-400 font-bold bg-rose-950/40 px-1.5 py-0.5 rounded">
+                        <span className="font-mono text-[10px] text-rose-400 font-bold bg-rose-950/40 px-1.5 py-0.5 rounded shrink-0">
                           {inv.overdue_days}d Overdue
                         </span>
                       </div>
@@ -975,7 +1051,7 @@ export default function DashboardPage() {
                         </span>
                       </div>
 
-                      <div className="pt-1 flex items-center justify-end">
+                      <div className="pt-1 flex items-center justify-end border-t border-rose-500/10">
                         <Link href="/admin/invoices">
                           <span className="text-[11px] text-[var(--accent)] hover:underline font-semibold">
                             Collect Payment →
@@ -986,19 +1062,19 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="p-4 text-center text-xs text-[var(--text-muted)] bg-black/10 rounded-xl border border-[var(--glass-border)]">
+                <div className="p-4 text-center text-xs text-[var(--text-muted)] bg-black/10 rounded-2xl border border-[var(--glass-border)]">
                   Zero overdue receivables. All accounts current.
                 </div>
               )}
             </GlassCard>
 
             {/* 3. Warehouse Telemetry Status */}
-            <GlassCard className="p-5 space-y-3 text-xs">
-              <GlassCardTitle className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
+            <GlassCard className="p-6 space-y-3.5 text-xs">
+              <GlassCardTitle className="text-xs uppercase tracking-wider text-[var(--text-muted)] font-mono font-bold">
                 Terminal Sync Telemetry
               </GlassCardTitle>
 
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-[var(--text-muted)]">Postgres Connection</span>
                   <span className="text-emerald-400 font-mono flex items-center gap-1">

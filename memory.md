@@ -5329,6 +5329,180 @@ WareFlow has progressed from initial concept through **22 complete engineering p
 - **Breaking Changes:** No
 - **Next Agent Notes:** The build, typecheck, linting, and test suites are fully clean and passing.
 
+### [2026-08-29 15:33] — Full-Width iOS Liquid Glass Navbar, UI/UX Spacing Refinements, & Seamless Footer
+
+- **Changes Made:**
+  - **Full-Width iOS-Style Liquid Glass Navbar ([`apps/web/components/marketing/MarketingNav.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/marketing/MarketingNav.tsx))**:
+    - Replaced the floating pill container with a full-width edge-to-edge sticky liquid glass header (`sticky top-0 w-full bg-[var(--surface-elevated)]/70 backdrop-blur-2xl backdrop-saturate-150 border-b border-[var(--glass-border)]`).
+    - Added top specular sheen line and responsive mobile drawer menu using `motion/react`.
+    - Scrolling content now flows and stretches underneath the full-width frosted glass with zero clipping or gap anomalies.
+  - **Bento Grid Padding & Typography Refinement ([`apps/web/components/marketing/BentoGrid.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/marketing/BentoGrid.tsx))**:
+    - Upgraded card padding from `p-6` to `p-7 sm:p-9` with comfortable spacing around headlines, descriptions, badges, and progress meters.
+    - Balanced section header with responsive flex alignment between the category badge, title, and subtitle text.
+    - Improved micro-ledger cards with `p-5` inner containers and refined typography leading.
+  - **Seamless Translucent Footer & CTA Banner ([`apps/web/components/marketing/MarketingFooter.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/marketing/MarketingFooter.tsx), [`apps/web/app/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/page.tsx))**:
+    - Eliminated harsh solid dark color cuts by switching the footer and bottom CTA banner to translucent liquid glass (`bg-[var(--surface-elevated)]/35 backdrop-blur-2xl border-t border-[var(--glass-border)]`).
+    - The nature wallpaper and ambient glow now flow continuously and seamlessly to the very bottom of the page.
+- **Files Modified:**
+  - `apps/web/components/marketing/MarketingNav.tsx`
+  - `apps/web/components/marketing/BentoGrid.tsx`
+  - `apps/web/components/marketing/MarketingFooter.tsx`
+  - `apps/web/app/page.tsx`
+  - `memory.md`
+- **Validation:**
+  - **TypeScript:** `tsc --noEmit` exited 0 (0 errors)
+  - **ESLint:** `eslint . --quiet` exited 0 (0 errors)
+  - **Vitest Frontend Suite:** **261 / 261 passed across 55 test files (100%)**
+  - **Pytest Backend Suite:** **339 / 339 passed across 44 test files (100%)**
+- **Breaking Changes:** No
+- **Next Agent Notes:** Full landing page experience is polished with authentic iOS glassmorphism and balanced typography hierarchy.
+
+### [2026-08-29 15:38] — Fixed Bento Grid Description-to-Box Vertical Spacing & GlassCard Flex Container
+
+- **Changes Made:**
+  - **GlassCard Flex Container Expansion ([`apps/web/components/glass/GlassCard.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/glass/GlassCard.tsx))**:
+    - Updated the internal wrapper `<div className="relative z-10">` to `<div className="relative z-10 h-full w-full flex flex-col flex-1">` so child components stretch and inherit full card height and flex distribution.
+  - **Bento Grid Spacing & Margins ([`apps/web/components/marketing/BentoGrid.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/marketing/BentoGrid.tsx))**:
+    - Added explicit `mt-8` on upper row interactive widgets (`Basmati Extra Long Grain` micro-ledger and `Diwali Rice Surge Buffer` metric chip) and `mt-6` on lower row status chips (`WhatsApp Dispatches`, `GST & FSSAI Guardrails`, `APMC Wholesale Map`).
+    - Added `flex` container wrapper to `bento-cell` elements and `w-full flex flex-col justify-between` on cards, creating spacious, comfortable breathing room between paragraph descriptions and lower boxes across all resolutions.
+- **Files Modified:**
+  - `apps/web/components/glass/GlassCard.tsx`
+  - `apps/web/components/marketing/BentoGrid.tsx`
+  - `memory.md`
+- **Validation:**
+  - **TypeScript:** `tsc --noEmit` exited 0 (0 errors)
+- **Breaking Changes:** No
+- **Next Agent Notes:** Spacing between text and inner boxes is clean and generous across all viewports.
+
+### [2026-08-29 15:40] — Removed Rectangular Box / Container Artifact Around Hero Title
+
+- **Changes Made:**
+  - **AceternityBeams Seamless Feathering ([`apps/web/components/marketing/AceternityBeams.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/marketing/AceternityBeams.tsx))**:
+    - Replaced the hard-clipped rectangular container (`inset-0 overflow-hidden`), square grid lines, and horizontal scanning laser with a soft, organic radial ambient aura (`blur-[100px]`, `radial-gradient(ellipse ...)`).
+    - Completely eliminated the rectangular tint boundary/box cut visible around the hero title against wallpapers.
+- **Files Modified:**
+  - `apps/web/components/marketing/AceternityBeams.tsx`
+  - `memory.md`
+- **Validation:**
+  - **TypeScript:** `tsc --noEmit` exited 0 (0 errors)
+- **Breaking Changes:** No
+- **Next Agent Notes:** Hero section is clean with no clipping boxes or harsh gradient edges.
+
+### [2026-08-29 15:55] — Expandable & Retractable Liquid Glass Sidebar, Full-Site UI/UX Layout & Padding Polish
+
+- **Changes Made:**
+  - **Expandable & Retractable (Collapsible) Sidebar ([`apps/web/components/Sidebar.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/Sidebar.tsx), [`apps/web/components/AppLayout.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/AppLayout.tsx), [`apps/web/components/Topbar.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/Topbar.tsx))**:
+    - Implemented collapsible sidebar state (`isSidebarCollapsed`) with `localStorage` persistence (`"wareflow-sidebar-collapsed"`).
+    - Added global `Ctrl+B` / `Cmd+B` keyboard shortcut to toggle sidebar collapse from anywhere in the application.
+    - Added dedicated collapse/expand toggle buttons (`PanelLeftClose` / `PanelLeftOpen`) in both `Sidebar.tsx` and `Topbar.tsx`.
+    - Compact mini icon-rail mode (`w-[72px]`) renders centered icon buttons with floating tooltips displaying item name, section, and badge on hover.
+    - Upgraded sidebar and topbar from dark opaque containers to genuine translucent frosted liquid glass (`bg-[var(--surface-elevated)]/65 dark:bg-[#09090b]/75 backdrop-blur-2xl backdrop-saturate-150 border-r border-[var(--glass-border)]`).
+  - **Full-Site Padding, Spacing & Layout Polish ([`apps/web/components/AppLayout.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/AppLayout.tsx), [`apps/web/app/styleguide/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/styleguide/page.tsx), [`apps/web/components/templates/FormTemplate.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/templates/FormTemplate.tsx))**:
+    - Main container in `AppLayout.tsx` updated to `p-5 sm:p-7 lg:p-9` with `space-y-6` to ensure generous margins across all viewports.
+    - Styleguide and form templates upgraded to generous card padding (`p-6 sm:p-8`), comfortable line heights, and refined typography leading.
+- **Files Modified:**
+  - `apps/web/components/Sidebar.tsx`
+  - `apps/web/components/AppLayout.tsx`
+  - `apps/web/components/Topbar.tsx`
+  - `apps/web/app/styleguide/page.tsx`
+  - `apps/web/components/templates/FormTemplate.tsx`
+  - `memory.md`
+- **Validation:**
+  - **TypeScript:** `tsc --noEmit` exited 0 (0 errors)
+  - **ESLint:** `eslint . --quiet` exited 0 (0 errors)
+  - **Vitest Frontend Suite:** **261 / 261 passed across 55 test files (100%)**
+  - **Pytest Backend Suite:** **339 / 339 passed across 44 test files (100%)**
+- **Breaking Changes:** No
+- **Next Agent Notes:** Full website is polished with responsive collapsible navigation and liquid glass design tokens.
+
+### [2026-08-29 16:05] — Dashboard Redesign: Decluttered Dynamic View, High-Visibility Sidebar Retraction, and Spacing Polish
+
+- **Changes Made:**
+  - **Prominent Retractable Sidebar Controls ([`apps/web/components/Sidebar.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/Sidebar.tsx), [`apps/web/components/Topbar.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/Topbar.tsx))**:
+    - Placed high-contrast, tactile collapse and expand buttons (`w-8 h-8 rounded-xl bg-[var(--surface-hover)] hover:bg-[var(--surface)] border border-[var(--glass-border)] shadow-sm`) prominently at the top of the Sidebar and Topbar.
+    - In collapsed mini rail mode (`w-[72px]`), the expand toggle is prominently displayed under the logo with hover glow.
+    - Global `Ctrl+B` / `Cmd+B` shortcut remains active across all views.
+  - **Decluttered Dynamic Dashboard ([`apps/web/app/dashboard/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/dashboard/page.tsx))**:
+    - Added dynamic segmented view tabs below the KPI row:
+      - `✨ Executive Pulse` (Default unified view)
+      - `📊 Movement & Velocity` (Expands 30-day velocity chart & top movers)
+      - `⚠️ Stock Alerts & Deficits` (Dedicated low stock action queue & dead capital risk)
+      - `📋 Sales Orders & Ledger` (Real-time dispatches table & administrative controls)
+    - **Executive Intelligence Briefing**:
+      - Rebuilt as a sleek frosted card with generous padding (`p-6 sm:p-7`) and an interactive **Compact View / Expand Summary** toggle.
+      - 4-metric grid given spacious padding (`p-3 rounded-2xl bg-[var(--surface-hover)] border border-[var(--glass-border)]`).
+    - **Action Priority Center (Right Panel)**:
+      - Refined low-stock and overdue invoice cards with generous breathing room (`p-3.5 sm:p-4 rounded-2xl`), clean alignment, clear subtitle spacing, and dedicated restock buttons.
+- **Files Modified:**
+  - `apps/web/components/Sidebar.tsx`
+  - `apps/web/components/Topbar.tsx`
+  - `apps/web/app/dashboard/page.tsx`
+  - `memory.md`
+- **Validation:**
+  - **TypeScript:** `tsc --noEmit` exited 0 (0 errors)
+  - **Vitest:** `owner-dashboard-ui.test.tsx` and `sidebar-ui.test.tsx` passed 100%
+- **Breaking Changes:** No
+- **Next Agent Notes:** Dashboard is clean, dynamic, and intuitive with prominent sidebar toggle.
+
+### [2026-08-29 16:30] — Resolved React Hydration Mismatch on Dashboard KPI Grid & Date Formatting
+
+- **Changes Made:**
+  - **Hydration Safety on DashboardTemplate ([`apps/web/components/templates/DashboardTemplate.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/templates/DashboardTemplate.tsx))**:
+    - Replaced the outer `StaggerContainer` (`motion.div` with initial/animate opacity styling) on the KPI metrics grid with clean, static SSR-friendly `div` containers.
+    - Eliminated style attribute hydration warnings caused by client-side animation variant differences.
+  - **Hydration-Safe Date Locale ([`apps/web/app/dashboard/page.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/app/dashboard/page.tsx))**:
+    - Initialized `currentMonthName` to a stable initial state and populated dynamically in `useEffect` on client mount, avoiding timezone/locale mismatch between server (Node.js runtime) and client browser.
+- **Files Modified:**
+  - `apps/web/components/templates/DashboardTemplate.tsx`
+  - `apps/web/app/dashboard/page.tsx`
+  - `memory.md`
+- **Validation:**
+  - **TypeScript:** `tsc --noEmit` exited 0 (0 errors)
+  - **Vitest:** `owner-dashboard-ui.test.tsx` and `templates.test.tsx` passed 100%
+- **Breaking Changes:** No
+- **Next Agent Notes:** Zero hydration errors during SSR and client hydration.
+
+### [2026-08-29 16:37] — Fixed Title Text Squashing & Separated Filter Toolbar
+
+- **Changes Made:**
+  - **Un-Squashed Dashboard Title ([`apps/web/components/PageHeader.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/PageHeader.tsx), [`apps/web/components/templates/DashboardTemplate.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/templates/DashboardTemplate.tsx))**:
+    - Removed `filters` from inside `PageHeader`'s action container, moving it into its own clean dedicated horizontal toolbar row below the header.
+    - Added `flex-1 min-w-0` and `whitespace-normal` to the `PageHeader` title container so "Owner Wholesale Command Center" expands across the screen with zero squashing or awkward vertical word wrapping.
+  - **Sidebar Alignment Refinement ([`apps/web/components/Sidebar.tsx`](file:///c:/Users/khatr/Documents/GitHub/Wareflow/apps/web/components/Sidebar.tsx))**:
+    - In expanded full mode (`w-64`), navigation items and icons are left-aligned with section headers.
+    - In collapsed mini rail mode (`w-[72px]`), icon buttons have floating popover tooltips with crisp alignment.
+- **Files Modified:**
+  - `apps/web/components/PageHeader.tsx`
+  - `apps/web/components/templates/DashboardTemplate.tsx`
+  - `apps/web/components/Sidebar.tsx`
+  - `memory.md`
+- **Validation:**
+  - **TypeScript:** `tsc --noEmit` exited 0 (0 errors)
+  - **Vitest:** `owner-dashboard-ui.test.tsx`, `sidebar-ui.test.tsx`, and `templates.test.tsx` passed 100% (10/10 tests)
+- **Breaking Changes:** No
+- **Next Agent Notes:** Title text has full horizontal room and never squashes.
+
+### [2026-08-29 19:35] — Development Servers Started
+
+- **Changes Made:**
+  - Started FastAPI backend daemon on `http://0.0.0.0:8000` with hot-reloading.
+  - Started Next.js 16 (Turbopack) frontend daemon on `http://localhost:3000`.
+- **Files Modified:**
+  - `memory.md`
+- **Validation:**
+  - Backend healthy at `http://localhost:8000/docs`
+  - Frontend ready at `http://localhost:3000/dashboard`
+- **Breaking Changes:** No
+- **Next Agent Notes:** Full application is live and running.
+
+
+
+
+
+
+
+
+
 
 
 

@@ -365,26 +365,38 @@ export default function StyleguidePage() {
                 2. GlassCard & Modal Primitives
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <GlassCard hoverable className="p-6 space-y-3">
-                  <GlassBadge variant="accent">GlassCard Hoverable</GlassBadge>
-                  <GlassCardTitle>Linear-Grade Surface Card</GlassCardTitle>
-                  <GlassCardDescription>
-                    Specially calibrated specular top-border gradient simulating real physical glass
-                    thickness.
-                  </GlassCardDescription>
-                </GlassCard>
-
-                <GlassCard className="p-6 space-y-3 flex flex-col justify-between">
-                  <div>
-                    <GlassBadge variant="neutral">GlassModal Trigger</GlassBadge>
-                    <GlassCardTitle className="mt-2">Elevated Modal Layer</GlassCardTitle>
-                    <GlassCardDescription>
-                      Full-screen backdrop blur and spring scale entrance.
+                <GlassCard hoverable className="p-7 sm:p-8 space-y-4 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <GlassBadge variant="accent">GlassCard Hoverable</GlassBadge>
+                    </div>
+                    <GlassCardTitle className="text-xl font-bold">Linear-Grade Surface Card</GlassCardTitle>
+                    <GlassCardDescription className="text-sm leading-relaxed text-[var(--text-muted)]">
+                      Specially calibrated specular top-border gradient simulating real physical glass
+                      thickness with responsive hover lift.
                     </GlassCardDescription>
                   </div>
-                  <GlassButton variant="primary" size="sm" onClick={() => setModalOpen(true)}>
-                    Open Elevated GlassModal
-                  </GlassButton>
+                  <div className="pt-4 border-t border-[var(--glass-border)] text-xs text-[var(--text-muted)] font-mono flex items-center justify-between">
+                    <span>Backdrop Blur: 24px</span>
+                    <span className="text-[var(--accent)] font-semibold">Refraction 1.5</span>
+                  </div>
+                </GlassCard>
+
+                <GlassCard className="p-7 sm:p-8 space-y-4 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <GlassBadge variant="neutral">GlassModal Trigger</GlassBadge>
+                    </div>
+                    <GlassCardTitle className="text-xl font-bold">Elevated Modal Layer</GlassCardTitle>
+                    <GlassCardDescription className="text-sm leading-relaxed text-[var(--text-muted)]">
+                      Full-screen backdrop blur and spring scale entrance with hardware-accelerated dismissal.
+                    </GlassCardDescription>
+                  </div>
+                  <div className="pt-4">
+                    <GlassButton variant="primary" size="md" onClick={() => setModalOpen(true)}>
+                      Open Elevated GlassModal
+                    </GlassButton>
+                  </div>
                 </GlassCard>
               </div>
             </section>

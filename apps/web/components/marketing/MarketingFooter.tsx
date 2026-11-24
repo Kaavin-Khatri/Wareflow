@@ -6,17 +6,23 @@ import { GlassBadge } from "@/components/glass";
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-[var(--glass-border)] bg-[var(--surface-elevated)] backdrop-blur-xl mt-24 py-12 px-4 sm:px-6">
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-[var(--text-muted)]">
+    <footer className="border-t border-[var(--glass-border)] bg-[var(--surface-elevated)]/35 dark:bg-[#09090b]/40 backdrop-blur-2xl py-12 px-4 sm:px-6 relative z-10">
+      {/* Specular Top Border Sheen */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-[1px] bg-[var(--glass-highlight)] pointer-events-none"
+      />
+
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-[var(--text-muted)]">
         {/* Brand & Mission */}
         <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] flex items-center justify-center text-white font-black text-xs">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--accent-hover)] flex items-center justify-center text-white font-black text-xs shadow-sm">
               W
             </div>
             <span className="font-bold text-[var(--text)]">WareFlow ERP</span>
           </div>
-          <span className="hidden sm:inline">•</span>
+          <span className="hidden sm:inline text-[var(--text-subtle)]">•</span>
           <span>Next-Generation Wholesale Inventory & Order Telemetry</span>
         </div>
 
